@@ -249,7 +249,6 @@ export function printInvoice(order: any, restaurantName: string = "SmartResto", 
   const orderIdSuffix = order.id ? order.id.slice(-6).toUpperCase() : "INV-0000";
 
   const html = `
-  const html = `
     <div class="center" style="margin-bottom: 15px;">
       <div class="bold big upper" style="font-size: 20px; letter-spacing: -0.5px;">${restaurantName}</div>
       ${telephone ? `<div class="small bold">SERVICE CLIENT : ${telephone}</div>` : ""}
