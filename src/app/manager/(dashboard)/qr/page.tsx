@@ -10,8 +10,15 @@ import { useEffect } from "react";
 export default function QRGeneratorPage({ searchParams }: { searchParams: { resto_id?: string } }) {
   const restoId = searchParams.resto_id || "resto-99-default";
   const [tableCount, setTableCount] = useState(10);
-  const [baseUrl, setBaseUrl] = useState("https://smartresto.vercel.app/client/menu");
+  const [baseUrl, setBaseUrl] = useState("");
   const [restaurant, setRestaurant] = useState<any>(null);
+
+  useEffect(() => {
+    // Set the base URL dynamically based on the current domain
+    if (typeof window !== "undefined") {
+      setBaseUrl(`${window.location.origin}/client/menu`);
+    }
+  }, []);
 
   useEffect(() => {
     getRestaurantById(restoId).then((r) => {
