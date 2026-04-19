@@ -491,38 +491,7 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* ─── TAB: RESTAURANTS ─── */}
-      {activeTab === 'restaurants' && (
-        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-                    <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                        <Building2 className="w-5 h-5 text-primary" /> Établissements ({restaurants?.length || 0})
-                    </h3>
-                    
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <div className="relative flex-1 sm:w-64">
-                            <input 
-                                type="text"
-                                placeholder="Rechercher un restaurant ou email..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl py-3 pl-4 pr-10 text-xs text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-zinc-600"
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                                <Search className="w-4 h-4" />
-                            </div>
-                        </div>
-                        <button 
-                            onClick={fetchRestos} 
-                            className="p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors border border-zinc-700 text-zinc-400 hover:text-white"
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                        </button>
-                    </div>
-                </div>
-                </div>
-            )}
+
 
       {/* ─── TAB: RESTAURANTS ─── */}
       {activeTab === 'restaurants' && (
@@ -751,23 +720,6 @@ export default function SuperAdminPage() {
                         </div>
                         );
                     })}
-                </div>
-                
-                {restaurants?.filter(r => 
-                    r.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                    r.email.toLowerCase().includes(searchQuery.toLowerCase())
-                ).length > 5 && !showAll && (
-                    <div className="mt-6 text-center">
-                        <button 
-                            onClick={() => setShowAll(true)}
-                            className="text-xs font-black uppercase tracking-widest text-zinc-500 hover:text-primary transition-colors py-2 px-4 rounded-xl border border-zinc-800 hover:border-primary/30"
-                        >
-                            Voir tous les restaurants ({restaurants.length})
-                        </button>
-                    </div>
-                )}
-                
-                {showAll && (
                     <div className="mt-6 text-center">
                         <button 
                             onClick={() => setShowAll(false)}
@@ -778,8 +730,6 @@ export default function SuperAdminPage() {
                     </div>
                 )}
             </div>
-        </div>
-
         </div>
       )}
 
@@ -1140,6 +1090,7 @@ export default function SuperAdminPage() {
             </div>
         </div>
       )}
+
       {/* Settings Modal (Sécurité) */}
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">

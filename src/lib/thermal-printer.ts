@@ -132,32 +132,48 @@ export function printReceipt(order: any, restaurantName: string = "SmartResto", 
 
   const html = `
     <div class="center" style="margin-bottom: 12px;">
-      <div class="bold big upper">${restaurantName}</div>
-      ${telephone ? `<div class="tiny">Tél: ${telephone}</div>` : ""}
-      <div class="small">Reçu - Table ${order.table || "—"}</div>
-      <div class="small">${formatDate()}</div>
-      <div class="small" style="margin-top: 4px;">Ticket #${orderIdSuffix}</div>
+      <div class="bold big upper" style="letter-spacing: 1px;">${restaurantName}</div>
+      ${telephone ? `<div class="tiny" style="opacity: 0.8;">Tél: ${telephone}</div>` : ""}
+      <div class="small" style="margin-top: 4px; border: 1px solid #000; display: inline-block; padding: 2px 8px; border-radius: 4px;">RECEIPT</div>
+      <div class="tiny" style="margin-top: 4px;">${formatDate()}</div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 8px;">
+      <span>Table: <span class="bold">${order.table || "—"}</span></span>
+      <span>Ticket: <span class="bold">#${orderIdSuffix}</span></span>
     </div>
 
     <div class="separator"></div>
 
+    <div class="bold upper tiny" style="margin-bottom: 6px; display: flex; justify-content: space-between;">
+      <span>Description</span>
+      <span>Total</span>
+    </div>
     ${itemsHtml}
 
     <div class="separator"></div>
 
-    <div class="total-row">
-      <span>TOTAL USD</span>
+    <div class="total-row" style="margin-top: 8px;">
+      <span class="upper">Total USD</span>
       <span>${formatCurrency(order.totalUsd)}</span>
     </div>
-    <div class="row" style="margin-bottom: 12px;">
-      <span class="bold small">Total CDF (≃${taux})</span>
-      <span class="small">${(order.totalUsd * taux).toLocaleString("fr-CD")} FC</span>
+    
+    <div style="background: #f0f0f0; padding: 8px; border-radius: 4px; margin-top: 4px; border: 1px dashed #000;">
+      <div class="row">
+        <span class="bold tiny upper">Total Francs (CDF)</span>
+        <span class="bold small">${(order.totalUsd * taux).toLocaleString("fr-CD")} FC</span>
+      </div>
+      <div class="tiny center" style="margin-top: 4px; opacity: 0.6; font-style: italic;">
+        Taux appliqué : 1$ = ${taux} FC
+      </div>
     </div>
 
-    <div class="footer">
-      <div class="bold small">Merci de votre visite !</div>
-      <div class="tiny" style="margin-top: 2px;">À très bientôt.</div>
-      <div class="tiny" style="margin-top: 8px; opacity: 0.5;">Software: SmartResto SaaS</div>
+    <div class="footer" style="margin-top: 20px;">
+      <div class="bold small upper">Merci de votre visite !</div>
+      <div class="tiny" style="margin-top: 2px; opacity: 0.7;">Veuillez conserver ce ticket.</div>
+      <div class="tiny" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 4px; opacity: 0.4;">
+        Powered by SmartResto Platform
+      </div>
     </div>
   `;
 
@@ -233,51 +249,56 @@ export function printInvoice(order: any, restaurantName: string = "SmartResto", 
   const orderIdSuffix = order.id ? order.id.slice(-6).toUpperCase() : "INV-0000";
 
   const html = `
-    <div class="center" style="border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
-      <div class="bold big upper" style="letter-spacing: -1px;">${restaurantName}</div>
-      ${telephone ? `<div class="tiny">Tél: ${telephone}</div>` : ""}
-      <div class="tiny">Propulsé par SmartResto</div>
+  const html = `
+    <div class="center" style="margin-bottom: 15px;">
+      <div class="bold big upper" style="font-size: 20px; letter-spacing: -0.5px;">${restaurantName}</div>
+      ${telephone ? `<div class="small bold">SERVICE CLIENT : ${telephone}</div>` : ""}
+      <div class="tiny uppercase" style="letter-spacing: 1px; margin-top: 4px; opacity: 0.6;">Facture Officielle</div>
     </div>
 
-    <div style="margin-bottom: 8px;">
-      <div class="row"><span class="bold">Facture #</span><span>${orderIdSuffix}</span></div>
-      <div class="row"><span class="bold">Date:</span><span>${formatDate()}</span></div>
-      <div class="row" style="border-top: 1px solid #000; padding-top: 4px; margin-top: 4px;">
-        <span class="bold upper">Table:</span>
-        <span class="bold big">${order.table || "—"}</span>
-      </div>
-      <div class="row">
-        <span class="bold upper">Client:</span>
-        <span class="bold upper">${order.client || "—"}</span>
-      </div>
+    <div style="background: #000; color: #fff; padding: 4px; text-align: center; font-weight: bold; font-size: 10px; margin-bottom: 10px; border-radius: 4px;">
+      FACTURE N° ${orderIdSuffix}
     </div>
 
-    <div style="border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 6px 0; margin-bottom: 8px;">
-      <div class="row bold" style="margin-bottom: 4px;">
-        <span>Article</span><span>Total</span>
+    <div style="margin-bottom: 12px; font-size: 11px;">
+      <div class="row"><span>DATE :</span><span>${formatDate()}</span></div>
+      <div class="row"><span>TABLE :</span><span class="bold big">${order.table || "—"}</span></div>
+      <div class="row"><span>CLIENT :</span><span class="upper">${order.client || "—"}</span></div>
+    </div>
+
+    <div style="border-top: 2px solid #000; border-bottom: 1px solid #000; padding: 8px 0; margin-bottom: 8px;">
+      <div class="row bold tiny upper" style="margin-bottom: 6px;">
+        <span>Désignation</span><span>Total</span>
       </div>
       ${itemsHtml}
     </div>
 
-    <div style="text-align: right; margin-bottom: 8px;">
-      <div class="tiny" style="font-style: italic;">Sous-total: ${formatCurrency(order.totalUsd - tva)}</div>
-      <div class="tiny" style="font-style: italic;">TVA (16%): ${formatCurrency(tva)}</div>
+    <div style="text-align: right; margin-bottom: 12px;">
+      <div class="row tiny"><span>Sous-total HT:</span><span>${formatCurrency(order.totalUsd - tva)}</span></div>
+      <div class="row tiny"><span>TVA (16.0%):</span><span>${formatCurrency(tva)}</span></div>
     </div>
 
-    <div style="border-top: 1px solid #000; padding-top: 6px;">
+    <div style="border-top: 2px solid #000; padding-top: 8px;">
       <div class="total-row">
-        <span>TOTAL USD:</span>
+        <span class="upper">NET À PAYER (USD)</span>
         <span>${formatCurrency(order.totalUsd)}</span>
       </div>
-      <div class="row bold small" style="opacity: 0.8;">
-        <span>TOTAL CDF:</span>
-        <span>${totalCdf.toLocaleString()} FC</span>
+      
+      <div style="background: #f0f0f0; padding: 10px; border-radius: 4px; margin-top: 6px; border: 1px solid #000;">
+        <div class="row" style="font-size: 14px;">
+          <span class="bold upper">TOTAL CDF</span>
+          <span class="bold">${totalCdf.toLocaleString()} FC</span>
+        </div>
+        <div class="tiny center" style="margin-top: 4px; opacity: 0.7; font-size: 8px;">
+          Taux appliqué : 1 USD = ${order.tauxChange || 2800} FC
+        </div>
       </div>
     </div>
 
-    <div class="footer">
-      <div class="bold upper small">Merci de votre visite !</div>
-      <div class="tiny" style="margin-top: 4px;">Logiciel de gestion par SmartResto</div>
+    <div class="footer" style="margin-top: 25px;">
+      <div class="bold upper small">Merci de votre fidélité</div>
+      <div class="tiny" style="margin-top: 4px; font-style: italic;">Logiciel de gestion : SmartResto SaaS</div>
+      <div class="tiny" style="margin-top: 8px; opacity: 0.3;">---------------------------</div>
     </div>
   `;
 

@@ -19,13 +19,17 @@ import {
   Filter,
   Printer,
   Power,
-  Package
+  Package,
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getRecentCommandes, updateOrderStatus, confirmOrderPayment, getPlats, getRestaurantStatus } from "@/lib/actions";
+import { updateRestaurantTauxChange } from "@/lib/actions-settings";
 import { getManagerAnalytics } from "@/lib/analytics-actions";
 import { printInvoice } from "@/lib/thermal-printer";
 import { MultiSiteWidget } from "@/components/manager/MultiSiteWidget";
+import { toast } from "sonner";
 
 import { getManagerSession } from "@/lib/manager-actions";
 
@@ -128,6 +132,10 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [restoStatus, setRestoStatus] = useState<any>(null);
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number>(2800);
+  const [showTauxModal, setShowTauxModal] = useState(false);
+  const [newTaux, setNewTaux] = useState<string>("");
+  const [tauxLoading, setTauxLoading] = useState(false);
 
   useEffect(() => {
     // Si l'ID est absent au montage (ex: clic depuis la sidebar sans le paramètre), le récuperer de la session !
@@ -162,6 +170,11 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
     
     const current = await getRestaurantStatus(restaurantId);
     setRestoStatus(current);
+    const session = await getManagerSession();
+    if (session?.tauxChange) {
+      setExchangeRate(session.tauxChange);
+      setNewTaux(String(session.tauxChange));
+    }
     
     setIsRefreshing(false);
   };
@@ -247,7 +260,23 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent italic tracking-tighter">Réception & Comptabilité</h1>
           <p className="text-muted-foreground">{restoStatus?.nom || "SmartResto"} • Validation et Encaissement</p>
         </div>
-        
+
+        <div className="flex flex-wrap items-center gap-4">
+           {/* Widget Taux Rapide */}
+           <button 
+             onClick={() => setShowTauxModal(true)}
+             className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-2xl hover:bg-emerald-500/20 transition-all group"
+           >
+              <div className="p-1.5 bg-emerald-500/20 rounded-lg group-hover:rotate-180 transition-transform duration-500">
+                <RefreshCw className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="text-left">
+                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Taux USD/CDF</p>
+                <p className="text-sm font-black text-white leading-none">1$ = <span className="text-emerald-400">{exchangeRate} FC</span></p>
+              </div>
+           </button>
+        </div>
+
         <div className="flex items-center gap-2 bg-card p-1.5 rounded-2xl border border-border shadow-sm">
           {['day', 'week', 'month'].map((p) => (
             <button
@@ -574,6 +603,66 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
            </div>
         </div>
       </div>
+
+      {/* Taux Change Quick Update Modal */}
+      {showTauxModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-sm bg-card border border-border rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-300">
+            <h3 className="text-xl font-bold italic tracking-tighter mb-4 text-foreground flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-emerald-500" /> Taux du Jour
+            </h3>
+            <p className="text-xs text-muted-foreground mb-6">Mettez à jour le taux de conversion pour les factures.</p>
+            
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-muted-foreground uppercase ml-2 tracking-widest">1 USD = ? CDF</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                  <input 
+                    type="number"
+                    value={newTaux}
+                    onChange={(e) => setNewTaux(e.target.value)}
+                    className="w-full bg-secondary border-border rounded-xl py-3 pl-12 text-sm text-foreground focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all font-black"
+                    placeholder="Ex: 2850"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setShowTauxModal(false)}
+                  className="flex-1 py-3 bg-secondary text-muted-foreground font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-secondary/80 transition-all"
+                >
+                  Annuler
+                </button>
+                <button 
+                  disabled={tauxLoading || !newTaux}
+                  onClick={async () => {
+                    const rate = parseFloat(newTaux);
+                    if (isNaN(rate) || rate <= 0) {
+                      toast.error("Taux invalide");
+                      return;
+                    }
+                    setTauxLoading(true);
+                    const res = await updateRestaurantTauxChange(restaurantId, rate);
+                    setTauxLoading(false);
+                    if (res.success) {
+                      setExchangeRate(rate);
+                      setShowTauxModal(false);
+                      toast.success(`Taux mis à jour : ${rate} FC`);
+                    } else {
+                      toast.error("Erreur mise à jour");
+                    }
+                  }}
+                  className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                >
+                  {tauxLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Appliquer"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
