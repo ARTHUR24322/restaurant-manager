@@ -84,6 +84,22 @@ export async function getGlobalAnalytics() {
 
     const saasRevenue = activeRestos.reduce((sum: number, r: any) => sum + (r.monthlyPrice || 0), 0);
 
+    // Répartition par Plan (pour Donut Chart)
+    const allRestos = await prisma.restaurant.findMany({
+      select: { plan: true, ville: true }
+    });
+
+    const planStats: Record<string, number> = {};
+    const cityStats: Record<string, number> = {};
+
+    allRestos.forEach((r: any) => {
+      planStats[r.plan] = (planStats[r.plan] || 0) + 1;
+      cityStats[r.ville] = (cityStats[r.ville] || 0) + 1;
+    });
+
+    const planDistribution = Object.entries(planStats).map(([name, value]) => ({ name, value }));
+    const cityDistribution = Object.entries(cityStats).map(([name, value]) => ({ name, value }));
+
     // Récupérer les 10 derniers logs d'abonnement pour le flux d'activité
     const recentLogs = await prisma.subscriptionLog.findMany({
       take: 10,
@@ -106,6 +122,8 @@ export async function getGlobalAnalytics() {
       topRestaurants,
       globalRevenue,
       saasRevenue,
+      planDistribution,
+      cityDistribution,
       subscriptionActivity: logsWithRestos
     };
 

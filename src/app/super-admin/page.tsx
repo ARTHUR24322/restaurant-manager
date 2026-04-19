@@ -23,7 +23,12 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  User
+  User,
+  Search,
+  RefreshCw,
+  ChevronRight,
+  ArrowLeft,
+  Send
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant } from "@/lib/admin-actions";
@@ -31,6 +36,70 @@ import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, ve
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
 import { getAllDemandes, approveDemande, rejectDemande } from "@/lib/demande-actions";
 import { toast } from "sonner";
+import { sendBroadcastNotification } from "@/lib/admin-broadcast";
+
+// --- COMPOSANTS DE VISUALISATION (SVG) ---
+
+function DonutChart({ data }: { data: { name: string, value: number }[] }) {
+  const total = data.reduce((acc, curr) => acc + curr.value, 0);
+  let currentOffset = 0;
+  
+  const colors = ["#818cf8", "#f472b6", "#fbbf24", "#34d399", "#a78bfa"];
+
+  return (
+    <div className="relative w-48 h-48 flex items-center justify-center">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 32 32">
+        {data.map((item, idx) => {
+          const percentage = (item.value / total) * 100;
+          const strokeDasharray = `${percentage} ${100 - percentage}`;
+          const offset = currentOffset;
+          currentOffset += percentage;
+          
+          return (
+            <circle
+              key={idx}
+              cx="16" cy="16" r="14"
+              fill="transparent"
+              stroke={colors[idx % colors.length]}
+              strokeWidth="4"
+              strokeDasharray={strokeDasharray}
+              strokeDashoffset={-offset}
+              className="transition-all duration-1000 ease-out hover:opacity-80 cursor-pointer"
+            />
+          );
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 rounded-full m-8 border border-zinc-800 shadow-inner">
+        <span className="text-xl font-black text-white">{total}</span>
+        <span className="text-[8px] font-bold text-zinc-500 uppercase">Total Items</span>
+      </div>
+    </div>
+  );
+}
+
+function MiniBarChart({ data }: { data: { name: string, value: number }[] }) {
+  const max = Math.max(...data.map(d => d.value), 1);
+  
+  return (
+    <div className="flex items-end gap-2 h-32 w-full pt-4">
+      {data.map((item, idx) => (
+        <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
+          <div className="relative w-full flex items-end justify-center h-full">
+            <div 
+              className="w-full bg-indigo-500/20 group-hover:bg-indigo-500/40 rounded-t-lg transition-all duration-700 ease-out border-b-2 border-indigo-500"
+              style={{ height: `${(item.value / max) * 100}%` }}
+            >
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-zinc-800 px-2 py-0.5 rounded text-[8px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    {item.value}
+                </div>
+            </div>
+          </div>
+          <span className="text-[8px] font-black text-zinc-500 uppercase truncate w-full text-center">{item.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function SuperAdminPage() {
   const [isLogged, setIsLogged] = useState(false);
@@ -52,6 +121,13 @@ export default function SuperAdminPage() {
   const [showPinStep, setShowPinStep] = useState(false);
   const [pin, setPin] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'demandes' | 'broadcast' | 'settings'>('dashboard');
+  
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastType, setBroadcastType] = useState<any>("INFO");
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+
   const [oldPin, setOldPin] = useState("");
   const [newPin, setNewPin] = useState("");
 
@@ -170,6 +246,30 @@ export default function SuperAdminPage() {
     setLoading(false);
   };
 
+  const handleBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTitle || !broadcastMessage) {
+        toast.error("Veuillez remplir tous les champs.");
+        return;
+    }
+
+    setBroadcastLoading(true);
+    const res = await sendBroadcastNotification({
+        title: broadcastTitle,
+        message: broadcastMessage,
+        type: broadcastType
+    });
+    setBroadcastLoading(false);
+
+    if (res.success) {
+        toast.success(`🚀 Broadcast envoyé à ${res.count} restaurants !`);
+        setBroadcastTitle("");
+        setBroadcastMessage("");
+    } else {
+        toast.error(res.error || "Erreur lors de l'envoi.");
+    }
+  };
+
   if (!isLogged) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
@@ -267,256 +367,170 @@ export default function SuperAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 space-y-8 animate-in fade-in duration-1000">
+      {/* Header & Nav */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-10">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-700">
+            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800">
                 <ShieldCheck className="w-4 h-4 text-primary" />
             </div>
-            <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest">SaaS Control Center</h2>
+            <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest italic">SaaS Command Center</h2>
           </div>
-          <h1 className="text-4xl font-black italic tracking-tighter text-white">Bonjour, Arthur.</h1>
+          <h1 className="text-5xl font-black italic tracking-tighter text-white">Bonjour, Arthur.</h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 hover:border-zinc-700 transition-all text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-primary"
-          >
-            <ShieldCheck className="w-4 h-4" /> Sécurité
-          </button>
-          
-          <div className="flex flex-wrap gap-4">
-            <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex items-center gap-4">
-                <div className="text-right">
-                    <p className="text-[10px] font-black text-zinc-500 uppercase">Scans Globaux</p>
-                    <p className="text-xl font-black text-primary">{analytics?.totalVisites || 0}</p>
-                </div>
-                <Activity className="w-6 h-6 text-primary/50" />
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex items-center gap-4">
-                <div className="text-right">
-                    <p className="text-[10px] font-black text-zinc-500 uppercase">Ventes Restaurateurs</p>
-                    <p className="text-xl font-black text-emerald-500">$ {analytics?.globalRevenue ? analytics.globalRevenue.toFixed(2) : "0.00"}</p>
-                </div>
-                <DollarSign className="w-6 h-6 text-emerald-500/50" />
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex items-center gap-4">
-                <div className="text-right">
-                    <p className="text-[10px] font-black text-zinc-500 uppercase">Revenu SaaS</p>
-                    <p className="text-xl font-black text-indigo-500">$ {analytics?.saasRevenue ? analytics.saasRevenue.toFixed(2) : "0.00"}</p>
-                </div>
-                <Building2 className="w-6 h-6 text-indigo-500/50" />
-            </div>
-          </div>
-        </div>
+        <nav className="flex items-center bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800/50 backdrop-blur-xl">
+            {[
+                { id: 'dashboard', label: 'Command Center', icon: <Activity className="w-4 h-4" /> },
+                { id: 'restaurants', label: 'Restaurants', icon: <Building2 className="w-4 h-4" /> },
+                { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
+                { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
+                { id: 'settings', label: 'System', icon: <Settings className="w-4 h-4" /> },
+            ].map((tab) => (
+                <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={cn(
+                        "flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden",
+                        activeTab === tab.id 
+                            ? "bg-primary text-black shadow-lg shadow-primary/20" 
+                            : "text-zinc-500 hover:text-white hover:bg-zinc-800/50"
+                    )}
+                >
+                    {tab.icon}
+                    {tab.label}
+                    {tab.count ? (
+                        <span className={cn(
+                            "absolute top-1.5 right-1.5 w-2 h-2 rounded-full",
+                            activeTab === tab.id ? "bg-black" : "bg-primary animate-pulse"
+                        )} />
+                    ) : null}
+                </button>
+            ))}
+        </nav>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        {/* Colonne Gauche : Liste des restos & Leaderboard */}
-        <div className="xl:col-span-2 space-y-6">
-        
-            {/* Leaderboard Scans */}
-            {analytics?.topRestaurants && analytics.topRestaurants.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
-                    <div className="flex items-center justify-between mb-6">
-                       <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                           <Activity className="w-5 h-5 text-primary" /> Top Restaurants (Scans QR)
-                       </h3>
-                       <span className="text-[10px] font-bold text-zinc-500 uppercase bg-zinc-800 px-2 py-1 rounded">Aujourd'hui : +{analytics.visitesJour}</span>
+      {/* ─── TAB: DASHBOARD ─── */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                 {[
+                    { label: 'Revenu SaaS Mensuel', val: `$ ${analytics?.saasRevenue?.toFixed(2)}`, color: 'text-indigo-500', icon: <Building2 className="w-5 h-5" />, trend: '+12% ce mois' },
+                    { label: 'Volume d\'Affaires (GMV)', val: `$ ${analytics?.globalRevenue?.toFixed(2)}`, color: 'text-emerald-500', icon: <DollarSign className="w-5 h-5" />, trend: 'Tout le temps' },
+                    { label: 'Scans QR Totaux', val: analytics?.totalVisites || 0, color: 'text-primary', icon: <Activity className="w-5 h-5" />, trend: 'Engagement global' },
+                    { label: 'Inscriptions', val: restaurants.length, color: 'text-white', icon: <Users className="w-5 h-5" />, trend: 'Total Restaurants' },
+                 ].map((stat, i) => (
+                    <div key={i} className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                            {stat.icon}
+                        </div>
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">{stat.label}</p>
+                        <p className={cn("text-3xl font-black italic tracking-tighter mb-4", stat.color)}>{stat.val}</p>
+                        <div className="flex items-center gap-2 text-[9px] font-black uppercase text-zinc-600 tracking-tight">
+                            <span className="w-1 h-1 rounded-full bg-zinc-700" /> {stat.trend}
+                        </div>
                     </div>
-                    <div className="space-y-4">
-                        {analytics.topRestaurants.slice(0, 5).map((resto: any, idx: number) => {
-                            const percent = analytics.totalVisites > 0 ? (resto.scans / analytics.totalVisites) * 100 : 0;
-                            return (
-                                <div key={resto.id} className="relative">
-                                    <div className="flex justify-between items-center mb-1 text-xs font-bold">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-zinc-500 w-4">#{idx + 1}</span>
-                                            <span className="text-white uppercase truncate max-w-[200px]">{resto.nom}</span>
-                                        </div>
-                                        <span className="text-primary">{resto.scans} scans</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${percent}%` }} />
-                                    </div>
+                 ))}
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Graphiques Section */}
+                <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Donut: Plans Distribution */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500 mb-8">Répartition des Plans</h3>
+                        <DonutChart data={analytics?.planDistribution || []} />
+                        <div className="grid grid-cols-2 gap-4 mt-8 w-full">
+                            {(analytics?.planDistribution || []).map((d: any, i: number) => (
+                                <div key={i} className="flex items-center gap-2 text-[10px] font-bold text-white uppercase">
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ["#818cf8", "#f472b6", "#fbbf24", "#34d399", "#a78bfa"][i % 5] }} />
+                                    {d.name} : <span className="text-zinc-500">{d.value}</span>
                                 </div>
-                            )
-                        })}
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Bars: City Distribution */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 flex flex-col items-center justify-between">
+                        <div className="w-full text-center">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500 mb-2">Expansion Géographique</h3>
+                            <p className="text-[10px] font-bold text-indigo-500 uppercase mb-8">Restaurants par Ville</p>
+                        </div>
+                        <MiniBarChart data={analytics?.cityDistribution || []} />
                     </div>
                 </div>
-            )}
 
-            {/* ─── Demandes d'abonnement ─── */}
-            {demandes.filter((d: any) => d.statut === "EN_ATTENTE").length > 0 && (
-                <div className="bg-zinc-900 border border-violet-500/30 rounded-[2.5rem] p-8 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-blue-500 animate-pulse" />
-                    <div className="flex items-center justify-between mb-6">
-                       <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                           <Bell className="w-5 h-5 text-violet-500 animate-bounce" /> Nouvelles Demandes ({demandes.filter((d: any) => d.statut === "EN_ATTENTE").length})
+                {/* Flux d'activité existant */}
+                <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 overflow-hidden">
+                    <div className="flex items-center justify-between mb-8">
+                       <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                           <Clock className="w-4 h-4 text-indigo-500" /> Activité Récente
                        </h3>
-                       <span className="text-[10px] font-bold text-violet-400 uppercase bg-violet-500/10 px-3 py-1 rounded-full border border-violet-500/20">En attente de validation</span>
                     </div>
                     <div className="space-y-4">
-                        {demandes.filter((d: any) => d.statut === "EN_ATTENTE").map((demande: any) => {
-                            const isExisting = restaurants.some((r: any) => r.email === demande.email && r.nom === demande.nomRestaurant);
-                            return (
-                                <div key={demande.id} className="bg-zinc-800/50 border border-zinc-700/50 rounded-3xl p-6 hover:border-violet-500/30 transition-all">
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                        <div className="space-y-2 flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <Building2 className="w-4 h-4 text-violet-400" />
-                                                <h4 className="font-black text-white uppercase tracking-tighter">{demande.nomRestaurant}</h4>
-                                                <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded bg-violet-500/20 text-violet-400 border border-violet-500/20">{demande.plan}</span>
-                                                {isExisting ? (
-                                                    <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/20">Mise à jour</span>
-                                                ) : (
-                                                    <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">Nouveau</span>
-                                                )}
-                                            </div>
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                                <div className="flex items-center gap-1.5 text-zinc-400">
-                                                    <User className="w-3 h-3 text-zinc-500" />
-                                                    <span className="font-medium">{demande.nomProprietaire}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 text-zinc-400">
-                                                    <Mail className="w-3 h-3 text-zinc-500" />
-                                                    <span className="truncate font-medium">{demande.email}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 text-zinc-400">
-                                                    <Phone className="w-3 h-3 text-zinc-500" />
-                                                    <span className="font-medium">{demande.telephone}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 text-zinc-400">
-                                                    <MapPin className="w-3 h-3 text-zinc-500" />
-                                                    <span className="font-medium">{demande.ville}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3 text-[10px] text-zinc-500 font-bold">
-                                                <span>Cycle: {demande.cycle === "monthly" ? "Mensuel" : demande.cycle === "semiannual" ? "6 Mois" : "Annuel"}</span>
-                                                <span className="w-1 h-1 bg-zinc-600 rounded-full" />
-                                                <span className="text-emerald-400">${demande.montant}</span>
-                                                <span className="w-1 h-1 bg-zinc-600 rounded-full" />
-                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(demande.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            {approvingId === demande.id ? (
-                                                <div className="flex items-center gap-2 animate-in slide-in-from-right-4 duration-200">
-                                                    {!isExisting && (
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Mot de passe initial"
-                                                            value={approvePassword}
-                                                            onChange={(e) => setApprovePassword(e.target.value)}
-                                                            className="bg-zinc-900 border border-zinc-700 rounded-xl py-2 px-3 text-xs text-white w-40 focus:ring-1 focus:ring-emerald-500 outline-none"
-                                                        />
-                                                    )}
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (!isExisting && !approvePassword) { toast.error("Veuillez saisir un mot de passe."); return; }
-                                                            const res = await approveDemande(demande.id, approvePassword || "UPDATE");
-                                                            if (res.success) {
-                                                                toast.success(res.isUpdate ? "🚀 Plan mis à jour !" : `✅ Restaurant créé ! ID: ${res.restoId}`, { duration: 8000 });
-                                                                setApprovingId(null);
-                                                                setApprovePassword("");
-                                                                fetchRestos();
-                                                            } else {
-                                                                toast.error(res.error || "Erreur");
-                                                            }
-                                                        }}
-                                                        className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all active:scale-95"
-                                                        title="Confirmer"
-                                                    >
-                                                        <CheckCircle2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { setApprovingId(null); setApprovePassword(""); }}
-                                                        className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-xl transition-all"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => setApprovingId(demande.id)}
-                                                        className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-600/20 rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest active:scale-95"
-                                                    >
-                                                        <CheckCircle2 className="w-4 h-4" /> {isExisting ? "Approuver Mise à jour" : "Approuver Nouveau"}
-                                                    </button>
-                                                    <button
-                                                        onClick={async () => {
-                                                            const res = await rejectDemande(demande.id);
-                                                            if (res.success) {
-                                                                toast.success("Demande refusée.");
-                                                                fetchRestos();
-                                                            }
-                                                        }}
-                                                        className="p-2.5 bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 border border-zinc-700 hover:border-red-500/30 rounded-2xl transition-all active:scale-95"
-                                                        title="Refuser"
-                                                    >
-                                                        <XCircle className="w-4 h-4" />
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
+                        {analytics?.subscriptionActivity?.map((log: any) => (
+                            <div key={log.id} className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-900">
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="text-[10px] font-black text-white uppercase leading-none">{log.restaurantNom}</span>
+                                    <span className="text-[8px] font-bold text-zinc-600 uppercase">{new Date(log.createdAt).toLocaleDateString()}</span>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* ─── Flux d'Activité des Abonnements ─── */}
-            {analytics?.subscriptionActivity && analytics.subscriptionActivity.length > 0 && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
-                    <div className="flex items-center justify-between mb-6">
-                       <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                           <Activity className="w-5 h-5 text-indigo-500" /> Activité des Abonnements
-                       </h3>
-                       <span className="text-[10px] font-bold text-zinc-500 uppercase">Derniers mouvements</span>
-                    </div>
-                    <div className="space-y-4">
-                        {analytics.subscriptionActivity.map((log: any) => (
-                            <div key={log.id} className="flex items-center justify-between bg-zinc-800/20 p-4 rounded-2xl border border-zinc-800/50">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn(
-                                        "p-2 rounded-xl",
-                                        log.type === "UPGRADE" ? "bg-emerald-500/10 text-emerald-500" :
-                                        log.type === "DOWNGRADE" ? "bg-red-500/10 text-red-500" :
-                                        log.type === "NEW" ? "bg-primary/10 text-primary" : "bg-zinc-700/50 text-zinc-400"
-                                    )}>
-                                        <Activity className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-white uppercase tracking-tight">{log.restaurantNom}</p>
-                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                                            {log.type === "NEW" ? `Nouveau : ${log.newPlan}` : 
-                                             log.type === "UPGRADE" ? `Upgrade : ${log.oldPlan} ➜ ${log.newPlan}` :
-                                             log.type === "DOWNGRADE" ? `Downgrade : ${log.oldPlan} ➜ ${log.newPlan}` :
-                                             `Renouvellement : ${log.newPlan}`}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xs font-black text-emerald-500">+${log.monthlyPrice.toFixed(2)}/mois</p>
-                                    <p className="text-[8px] text-zinc-600 font-bold uppercase">{new Date(log.createdAt).toLocaleDateString()}</p>
+                                <div className="flex items-center gap-2">
+                                     <span className={cn(
+                                         "text-[9px] font-black px-2 py-0.5 rounded-full uppercase",
+                                         log.type === 'UPGRADE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-800 text-zinc-400'
+                                     )}>{log.type}</span>
+                                     <span className="text-[10px] font-medium text-zinc-500 italic">{log.newPlan}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
-            )}
+            </div>
+        </div>
+      )}
 
+      {/* ─── TAB: RESTAURANTS ─── */}
+      {activeTab === 'restaurants' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
             <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                     <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                        <Building2 className="w-5 h-5 text-primary" /> Restaurants Actifs ({restaurants?.length || 0})
+                        <Building2 className="w-5 h-5 text-primary" /> Établissements ({restaurants?.length || 0})
+                    </h3>
+                    
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="relative flex-1 sm:w-64">
+                            <input 
+                                type="text"
+                                placeholder="Rechercher un restaurant ou email..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl py-3 pl-4 pr-10 text-xs text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-zinc-600"
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                                <Search className="w-4 h-4" />
+                            </div>
+                        </div>
+                        <button 
+                            onClick={fetchRestos} 
+                            className="p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors border border-zinc-700 text-zinc-400 hover:text-white"
+                        >
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        </button>
+                    </div>
+                </div>
+                </div>
+            )}
+
+      {/* ─── TAB: RESTAURANTS ─── */}
+      {activeTab === 'restaurants' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+                    <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                        <Building2 className="w-5 h-5 text-primary" /> Établissements ({restaurants?.length || 0})
                     </h3>
                     
                     <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -766,147 +780,218 @@ export default function SuperAdminPage() {
             </div>
         </div>
 
-        {/* Colonne Droite : Formulaire Ajout */}
-        <div className="space-y-6">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 shadow-xl">
-                 <h3 className="text-lg font-black uppercase tracking-tighter mb-6">Instancier un Restaurant</h3>
-                 <form ref={formRef} action={clientAction} className="space-y-4">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Nom de l'établissement</label>
-                        <input 
-                            name="nom" 
-                            required 
-                            className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 px-4 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
-                            placeholder="ex: Le Grand Buffet"
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Email du gérant</label>
-                        <div className="relative">
-                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                            <input 
-                                name="email"
-                                type="email" 
-                                required 
-                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all"
-                                placeholder="gerant@email.com"
-                            />
-                        </div>
-                    </div>
+        </div>
+      )}
 
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Téléphone</label>
-                        <div className="relative">
-                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                            <input 
-                                name="telephone"
-                                type="tel"
-                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all"
-                                placeholder="+243..."
-                            />
-                        </div>
+      {/* ─── TAB: DEMANDES ─── */}
+      {activeTab === 'demandes' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto">
+            <div className="bg-zinc-900 border border-violet-500/30 rounded-[2.5rem] p-10 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-blue-500 animate-pulse" />
+                <div className="flex items-center justify-between mb-10">
+                    <div>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter italic flex items-center gap-3">
+                            <Bell className="w-8 h-8 text-violet-500" /> File de Validation
+                        </h3>
+                        <p className="text-zinc-500 text-xs font-bold uppercase mt-1">Approuvez les nouvelles inscriptions et upgrades</p>
                     </div>
+                </div>
 
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Mot de passe initial (donné au gérant)</label>
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                            <input 
-                                name="adminPassword"
-                                type="text" 
-                                required 
-                                minLength={4}
-                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all"
-                                placeholder="Ex: Resto2024!"
-                            />
+                <div className="space-y-4">
+                    {demandes.filter(d => d.statut === "EN_ATTENTE").length === 0 ? (
+                        <div className="py-20 text-center space-y-4 opacity-30">
+                            <CheckCircle2 className="w-12 h-12 mx-auto" />
+                            <p className="font-black text-xs uppercase tracking-widest">Aucune demande en attente</p>
                         </div>
-                    </div>
+                    ) : demandes.filter(d => d.statut === "EN_ATTENTE").map((demande: any) => {
+                        const isExisting = restaurants.some(r => r.email === demande.email);
+                        return (
+                            <div key={demande.id} className="bg-zinc-950/50 p-6 rounded-[2rem] border border-zinc-800/80 hover:border-violet-500/30 transition-all">
+                                <div className="flex flex-col md:flex-row justify-between gap-6 text-left">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            {isExisting ? (
+                                                <div className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded text-[8px] font-black uppercase">Mise à jour</div>
+                                            ) : (
+                                                <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[8px] font-black uppercase">Nouveau</div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xl font-black text-white uppercase tracking-tighter leading-none mb-2">{demande.nomRestaurant}</h4>
+                                            <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold text-zinc-500 uppercase">
+                                                <span className="flex items-center gap-1"><User className="w-3 h-3" />{demande.nomProprietaire}</span>
+                                                <span className="w-1 h-1 bg-zinc-600 rounded-full" />
+                                                <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{demande.email}</span>
+                                                <span className="w-1 h-1 bg-zinc-600 rounded-full" />
+                                                <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{demande.telephone}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest">
+                                            <span className="text-violet-400">{demande.plan}</span>
+                                            <span className="w-1 h-1 bg-zinc-600 rounded-full" />
+                                            <span className="text-emerald-400">${demande.montant}</span>
+                                            <span className="w-1 h-1 bg-zinc-600 rounded-full" />
+                                            <span className="text-zinc-500">{new Date(demande.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
 
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Code PIN Dashboard (6 chiffres)</label>
-                        <div className="relative">
-                            <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                            <input 
-                                name="pinCode"
-                                type="text" 
-                                required 
-                                maxLength={6}
-                                defaultValue="0000"
-                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all font-mono tracking-widest"
-                                placeholder="0000"
-                            />
-                        </div>
-                    </div>
-    
-                    <p className="text-[9px] text-zinc-600 font-bold ml-2 mt-1">Le gérant pourra le modifier dans ses paramètres.</p>
-
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Logo de l'établissement</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="relative group">
-                                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    name="logoUrl"
-                                    type="url" 
-                                    className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-zinc-600"
-                                    placeholder="Lien URL (ex: https://...)"
-                                />
-                            </div>
-                            <div className="relative group flex items-center bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-2 hover:border-primary transition-all cursor-pointer">
-                                <input 
-                                    name="logoFile"
-                                    type="file" 
-                                    accept="image/*"
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                                <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase truncate pointer-events-none">
-                                     Ou importer fichier local
+                                    <div className="flex items-center gap-2">
+                                        {approvingId === demande.id ? (
+                                            <div className="flex items-center gap-3 animate-in slide-in-from-right-4">
+                                                {!isExisting && (
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Mot de passe gérant"
+                                                        value={approvePassword}
+                                                        onChange={(e) => setApprovePassword(e.target.value)}
+                                                        className="bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-xs text-white w-48 outline-none focus:ring-1 focus:ring-emerald-500"
+                                                    />
+                                                )}
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!isExisting && !approvePassword) { toast.error("Mot de passe requis."); return; }
+                                                        const res = await approveDemande(demande.id, approvePassword || "UPDATE");
+                                                        if (res.success) {
+                                                            toast.success("Opération réussie !");
+                                                            setApprovingId(null); setApprovePassword(""); fetchRestos();
+                                                        }
+                                                    }}
+                                                    className="p-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-500 shadow-lg shadow-emerald-600/20"
+                                                ><CheckCircle2 className="w-5 h-5" /></button>
+                                                <button onClick={() => setApprovingId(null)} className="p-4 bg-zinc-800 text-zinc-400 rounded-2xl"><X className="w-5 h-5" /></button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => setApprovingId(demande.id)}
+                                                    className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-600/10"
+                                                >Approuver</button>
+                                                <button 
+                                                    onClick={() => rejectDemande(demande.id).then(() => fetchRestos())}
+                                                    className="p-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-500 rounded-2xl border border-zinc-700"
+                                                ><XCircle className="w-5 h-5" /></button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-zinc-500 uppercase ml-2 tracking-widest">Plan</label>
-                            <select name="plan" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 px-4 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all">
-                                <option value="ESSAI">Essai Gratuit</option>
-                                <option value="STANDARD">Standard</option>
-                                <option value="PRO">Pro</option>
-                                <option value="PLATINUM">Platinum</option>
-                            </select>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black text-zinc-500 uppercase ml-2 tracking-widest">Ville</label>
-                            <select name="ville" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 px-4 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all">
-                                <option value="Lubumbashi">Lubumbashi</option>
-                                <option value="Kinshasa">Kinshasa</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button 
-                        type="submit"
-                        disabled={isCreating}
-                        className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-4 rounded-2xl mt-4 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2"
-                    >
-                        {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} 
-                        {isCreating ? "Déploiement en cours..." : "Créer & Déployer"}
-                    </button>
-                 </form>
-
-                 <div className="mt-8 pt-6 border-t border-zinc-800/50">
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase mb-4">Fonctions Automatisées</p>
-                    <ul className="space-y-2">
-                        <li className="flex items-center gap-2 text-[10px] text-zinc-400 font-medium">
-                            <Globe className="w-3 h-3 text-primary" /> Setup Menu d'Exemple
-                        </li>
-                        <li className="flex items-center gap-2 text-[10px] text-zinc-400 font-medium">
-                            <Plus className="w-3 h-3 text-primary" /> Génération d'ID Unique
-                        </li>
-                    </ul>
-                 </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
-      </div>
+      )}
+
+      {/* ─── TAB: BROADCAST ─── */}
+      {activeTab === 'broadcast' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700 max-w-2xl mx-auto">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-12 text-center">
+                <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-indigo-500/20 shadow-xl shadow-indigo-500/5">
+                    <Globe className="w-10 h-10 text-indigo-500" />
+                </div>
+                <h3 className="text-3xl font-black uppercase tracking-tighter text-white italic mb-2">Platform Broadcast</h3>
+                <p className="text-zinc-500 text-sm font-medium mb-10 leading-relaxed italic">
+                    Envoyez un message d'alerte, une annonce ou une mise à jour à l'ensemble de vos établissements en un clic.
+                </p>
+
+                <form onSubmit={handleBroadcast} className="text-left space-y-6">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Titre de l'annonce</label>
+                        <input 
+                            value={broadcastTitle}
+                            onChange={(e) => setBroadcastTitle(e.target.value)}
+                            placeholder="Ex: Mise à jour Système"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 px-6 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Message</label>
+                        <textarea 
+                            rows={4}
+                            value={broadcastMessage}
+                            onChange={(e) => setBroadcastMessage(e.target.value)}
+                            placeholder="Détaillez votre annonce ici..."
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 px-6 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Niveau d'Urgence</label>
+                            <select 
+                                value={broadcastType}
+                                onChange={(e) => setBroadcastType(e.target.value)}
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 px-6 text-xs text-white uppercase font-black tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none"
+                            >
+                                <option value="INFO">Information (Bleu)</option>
+                                <option value="SUCCESS">Succès / Nouveauté (Vert)</option>
+                                <option value="WARNING">Alerte (Jaune)</option>
+                                <option value="URGENT">Urgence (Rouge)</option>
+                            </select>
+                        </div>
+                        <div className="flex items-end">
+                            <button 
+                                disabled={broadcastLoading}
+                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 text-xs uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                                {broadcastLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                Envoyer à tous
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+      )}
+
+      {/* ─── TAB: SETTINGS ─── */}
+      {activeTab === 'settings' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700 max-w-2xl mx-auto">
+             <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-12 text-center">
+                <div className="w-20 h-20 bg-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-zinc-700">
+                    <ShieldCheck className="w-10 h-10 text-primary" />
+                </div>
+                <h3 className="text-3xl font-black uppercase tracking-tighter text-white italic mb-2">Platform Settings</h3>
+                <p className="text-zinc-500 text-sm font-medium mb-12">Configuration globale de l'écosystème SmartResto.</p>
+
+                <div className="grid grid-cols-1 gap-4 text-left">
+                     <button 
+                        onClick={() => setShowSettings(true)}
+                        className="flex items-center justify-between p-6 bg-zinc-950 border border-zinc-900 hover:border-primary/30 rounded-2xl group transition-all"
+                     >
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-zinc-900 rounded-xl text-zinc-500 group-hover:text-primary transition-colors"><Lock className="w-5 h-5" /></div>
+                            <div>
+                                <p className="text-xs font-black text-white uppercase italic">Sécurité de la Forge</p>
+                                <p className="text-[10px] text-zinc-600 font-bold uppercase">Modifier le code PIN Administrateur</p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-zinc-800 group-hover:text-white transition-all transform group-hover:translate-x-1" />
+                     </button>
+
+                     <button className="flex items-center justify-between p-6 bg-zinc-950 border border-zinc-900 opacity-50 cursor-not-allowed rounded-2xl">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-zinc-900 rounded-xl text-zinc-700"><DollarSign className="w-5 h-5" /></div>
+                            <div>
+                                <p className="text-xs font-black text-zinc-400 uppercase italic">Grille Tarifaire</p>
+                                <p className="text-[10px] text-zinc-800 font-bold uppercase">Modifier les prix des plans (Prochainement)</p>
+                            </div>
+                        </div>
+                        <Lock className="w-4 h-4 text-zinc-800" />
+                     </button>
+                </div>
+
+                <div className="mt-12 flex flex-col items-center">
+                    <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 text-zinc-600 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest">
+                        <ArrowLeft className="w-3 h-3" /> Retour au site public
+                    </button>
+                    <p className="mt-6 text-[10px] font-bold text-zinc-800 uppercase tracking-widest">SmartResto SaaS v1.2.0 • Build 2024</p>
+                </div>
+             </div>
+        </div>
+      )}
+
       {/* Edit Modal */}
       {editingResto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
