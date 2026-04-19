@@ -83,15 +83,54 @@ export async function checkSubscriptionAlerts(restaurantId: string) {
     const end = new Date(resto.subscriptionEnd);
     const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Si expiration dans moins de 7 jours
-    if (diffDays <= 7 && diffDays > 0) {
-      // Vérifier si une notification d'alerte existe déjà (pour ne pas spammer)
+    // Cas 1 : Déjà expiré
+    if (diffDays <= 0) {
+      const existing = await (prisma as any).notification.findFirst({
+        where: {
+          restaurantId,
+          type: "URGENT",
+          title: { contains: "Expiré" },
+          createdAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
+        }
+      });
+
+      if (!existing) {
+        await createNotification({
+          restaurantId,
+          title: "⚠️ Abonnement Expiré",
+          message: `Votre abonnement a expiré. Veuillez régulariser l'accès pour continuer à utiliser toutes les fonctionnalités de SmartResto.`,
+          type: "URGENT"
+        });
+      }
+      return;
+    }
+
+    // Cas 2 : Expiration imminente (Moins de 3 jours) -> URGENT
+    if (diffDays <= 3) {
+      const existing = await (prisma as any).notification.findFirst({
+        where: {
+          restaurantId,
+          type: "URGENT",
+          createdAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) }
+        }
+      });
+
+      if (!existing) {
+        await createNotification({
+          restaurantId,
+          title: "🚨 ACTION URGENTE : Abonnement",
+          message: `Votre abonnement expire dans ${diffDays} jours. Renouvelez maintenant pour éviter une coupure de service.`,
+          type: "URGENT"
+        });
+      }
+    } 
+    // Cas 3 : Expiration proche (Moins de 7 jours) -> WARNING
+    else if (diffDays <= 7) {
       const existing = await (prisma as any).notification.findFirst({
         where: {
           restaurantId,
           type: "WARNING",
-          title: { contains: "Abonnement" },
-          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Créée il y a moins de 24h
+          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
         }
       });
 

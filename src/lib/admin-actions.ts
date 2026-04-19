@@ -41,7 +41,7 @@ export async function createRestaurant(formData: FormData) {
     }
 
     const tempPassword = formData.get("adminPassword") as string || Math.random().toString(36).substr(2, 8);
-    const pinCode = formData.get("pinCode") as string || "0000";
+    const pinCode = formData.get("pinCode") as string || "000000";
     const ville = formData.get("ville") as string || "Lubumbashi";
 
     // Générer un slug unique
@@ -173,7 +173,7 @@ export async function updateRestaurant(id: string, formData: FormData) {
             updateData.adminPassword = await hashPassword(newPassword.trim());
         }
 
-        if (pinCode && pinCode.trim().length >= 4) {
+        if (pinCode && pinCode.trim().length >= 6) {
             updateData.pinCode = pinCode.trim();
         }
 

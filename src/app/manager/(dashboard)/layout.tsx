@@ -88,8 +88,18 @@ function ManagerLayoutContent({
     { label: "Tableau de Bord", href: "/manager/dashboard", icon: LayoutDashboard },
     { label: "Gestion du Menu", href: "/manager/menu", icon: Utensils },
     { label: "QR Codes Tables", href: "/manager/qr", icon: QrCode },
-    { label: "Gestion de Stock", href: "/manager/inventory", icon: Package, locked: !["PRO", "PLATINUM"].includes(currentPlan) },
-    ...(isMainAccount ? [{ label: "Multi-sites", href: "/manager/multi-site", icon: Globe, locked: currentPlan !== "PLATINUM" }] : []),
+    { 
+      label: "Gestion de Stock", 
+      href: "/manager/inventory", 
+      icon: Package, 
+      locked: !["PRO", "PLATINUM"].includes(currentPlan) 
+    },
+    ...(isMainAccount ? [{ 
+      label: "Multi-sites", 
+      href: "/manager/multi-site", 
+      icon: Globe, 
+      locked: currentPlan !== "PLATINUM" 
+    }] : []),
     ...(isMainAccount ? [{ label: "Paramètres", href: "/manager/settings", icon: Settings }] : []),
   ];
 

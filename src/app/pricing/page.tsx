@@ -79,7 +79,7 @@ const plans: PricingPlan[] = [
     name: "Standard",
     description: "Tout ce qu'il faut pour gérer votre restaurant efficacement.",
     icon: <Star className="w-7 h-7" />,
-    prices: { monthly: 50, semiannual: 260, annual: 480 },
+    prices: { monthly: 30, semiannual: 155, annual: 288 },
     features: [
       { text: "Menu digital illimité", included: true },
       { text: "QR Codes illimités", included: true },
@@ -99,7 +99,7 @@ const plans: PricingPlan[] = [
     name: "Pro",
     description: "La solution complète pour les restaurateurs ambitieux.",
     icon: <Crown className="w-7 h-7" />,
-    prices: { monthly: 65, semiannual: 340, annual: 620 },
+    prices: { monthly: 55, semiannual: 285, annual: 525 },
     features: [
       { text: "Tout du plan Standard", included: true },
       { text: "QR Codes personnalisés", included: true },
@@ -120,7 +120,7 @@ const plans: PricingPlan[] = [
     name: "Platinum",
     description: "Pour les groupes de restaurants et franchises.",
     icon: <Globe className="w-7 h-7" />,
-    prices: { monthly: 100, semiannual: 550, annual: 1000 },
+    prices: { monthly: 99, semiannual: 515, annual: 950 },
     features: [
       { text: "Tout du plan Pro", included: true },
       { text: "Dashboard Multi-Établissements", included: true },

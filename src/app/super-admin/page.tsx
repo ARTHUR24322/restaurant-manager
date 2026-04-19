@@ -118,6 +118,7 @@ export default function SuperAdminPage() {
     const [showPinStep, setShowPinStep] = useState(false);
     const [pin, setPin] = useState("");
     const [showSettings, setShowSettings] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'demandes' | 'broadcast' | 'settings'>('dashboard');
     
     const [broadcastTitle, setBroadcastTitle] = useState("");
@@ -187,17 +188,38 @@ export default function SuperAdminPage() {
         setLoading(false);
     };
 
+    const clientAction = async (formData: FormData) => {
+        setIsCreating(true);
+        try {
+            const res = await createRestaurant(formData);
+            if (res.success) {
+                toast.success("🚀 Restaurant Déployé !", {
+                    description: `ID: ${res.restoId} | Mot de passe: ${res.password}`,
+                    duration: 10000,
+                });
+                setShowCreateModal(false);
+                await fetchRestos();
+            } else {
+                toast.error("Erreur: " + res.error);
+            }
+        } catch (err) {
+            toast.error("Erreur serveur.");
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
     const handleDelete = async (id: string) => {
         if (confirmDeleteId !== id) {
             setConfirmDeleteId(id);
-            toast.warning("Re-cliquez pour confirmer la suppression.");
+            toast.warning("Re-cliquez pour supprimer.");
             setTimeout(() => setConfirmDeleteId(null), 5000);
             return;
         }
         setLoading(true);
         const res = await deleteRestaurant(id);
         if (res.success) {
-            toast.success("Établissement supprimé.");
+            toast.success("Supprimé.");
             await fetchRestos();
         } else {
             toast.error(res.error || "Erreur.");
@@ -209,7 +231,7 @@ export default function SuperAdminPage() {
     const handleBroadcast = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!broadcastTitle || !broadcastMessage) {
-            toast.error("Veuillez remplir tous les champs.");
+            toast.error("Champs requis.");
             return;
         }
         setBroadcastLoading(true);
@@ -220,11 +242,11 @@ export default function SuperAdminPage() {
         });
         setBroadcastLoading(false);
         if (res.success) {
-            toast.success(`Broadcast envoyé à ${res.count} restaurants !`);
+            toast.success("Broadcast envoyé !");
             setBroadcastTitle("");
             setBroadcastMessage("");
         } else {
-            toast.error(res.error || "Erreur d'envoi.");
+            toast.error("Erreur.");
         }
     };
 
@@ -238,65 +260,45 @@ export default function SuperAdminPage() {
             <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
                 <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 shadow-2xl">
                     <div className="flex flex-col items-center mb-8">
-                        <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/20">
-                            <ShieldCheck className="w-8 h-8 text-black" />
-                        </div>
-                        <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter">SmartResto SaaS</h1>
-                        <p className="text-zinc-500 text-xs font-bold uppercase">Propriétaire Plateforme</p>
+                        <ShieldCheck className="w-12 h-12 text-primary mb-4" />
+                        <h1 className="text-2xl font-black text-white italic uppercase">SmartResto SaaS</h1>
                     </div>
 
                     {!showPinStep ? (
                         <form onSubmit={handleLogin} className="space-y-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black text-zinc-500 uppercase ml-4">Email Admin</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                    <input
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 pl-12 text-sm text-white focus:ring-2 focus:ring-primary transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black text-zinc-500 uppercase ml-4">Mot de passe</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                                    <input
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 pl-12 text-sm text-white focus:ring-2 focus:ring-primary transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
-                            {error && <p className="text-red-500 text-[10px] font-bold text-center uppercase">{error}</p>}
-                            <button disabled={loading} className="w-full bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs">
-                                {loading ? "Connexion..." : "Entrer dans la Forge"}
+                            <input
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none"
+                                placeholder="Email"
+                            />
+                            <input
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none"
+                                placeholder="Mot de passe"
+                            />
+                            {error && <p className="text-red-500 text-[10px] uppercase text-center">{error}</p>}
+                            <button disabled={loading} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">
+                                {loading ? "..." : "Entrer"}
                             </button>
                         </form>
                     ) : (
                         <form onSubmit={handlePinSubmit} className="space-y-6">
-                            <div className="text-center space-y-2">
-                                <p className="text-xs text-zinc-400 font-medium">Double Authentification</p>
-                                <div className="flex justify-center">
-                                    <input
-                                        type="text"
-                                        maxLength={6}
-                                        required
-                                        autoFocus
-                                        value={pin}
-                                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                                        className="w-48 bg-zinc-800 border-2 border-zinc-700 rounded-2xl py-4 text-center text-3xl font-black tracking-[0.5em] text-primary transition-all outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <button disabled={loading || pin.length !== 6} className="w-full bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs">
-                                Valider l'Accès
-                            </button>
+                            <input
+                                type="text"
+                                maxLength={6}
+                                required
+                                value={pin}
+                                onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 text-center text-3xl font-black text-primary outline-none"
+                                placeholder="••••••"
+                            />
+                            <button className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Valider</button>
                         </form>
                     )}
                 </div>
@@ -306,21 +308,16 @@ export default function SuperAdminPage() {
 
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 space-y-8">
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-10">
+            <div className="flex justify-between items-end gap-10">
                 <div>
-                    <div className="flex items-center gap-3 mb-1">
-                        <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800">
-                            <ShieldCheck className="w-4 h-4 text-primary" />
-                        </div>
-                        <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest italic">SaaS Command Center</h2>
-                    </div>
+                    <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest italic">SaaS Command Center</h2>
                     <h1 className="text-5xl font-black italic tracking-tighter text-white">Bonjour, Arthur.</h1>
                 </div>
 
                 <nav className="flex items-center bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800/50">
                     {[
-                        { id: 'dashboard', label: 'Command Center', icon: <Activity className="w-4 h-4" /> },
-                        { id: 'restaurants', label: 'Restaurants', icon: <Building2 className="w-4 h-4" /> },
+                        { id: 'dashboard', label: 'Command', icon: <Activity className="w-4 h-4" /> },
+                        { id: 'restaurants', label: 'Établissements', icon: <Building2 className="w-4 h-4" /> },
                         { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
                         { id: 'settings', label: 'System', icon: <Settings className="w-4 h-4" /> },
@@ -342,42 +339,76 @@ export default function SuperAdminPage() {
 
             {activeTab === 'dashboard' && (
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+                    {/* Quick Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         {[
-                            { label: 'Revenu SaaS Mensuel', val: `$ ${analytics?.saasRevenue?.toFixed(2)}`, color: 'text-indigo-500', icon: <Building2 className="w-5 h-5" /> },
-                            { label: 'Volume d\'Affaires (GMV)', val: `$ ${analytics?.globalRevenue?.toFixed(2)}`, color: 'text-emerald-500', icon: <DollarSign className="w-5 h-5" /> },
-                            { label: 'Scans QR Totaux', val: analytics?.totalVisites || 0, color: 'text-primary', icon: <Activity className="w-5 h-5" /> },
-                            { label: 'Inscriptions', val: restaurants.length, color: 'text-white', icon: <Users className="w-5 h-5" /> },
+                            { label: 'Revenu SaaS', val: `$ ${analytics?.saasRevenue?.toFixed(2)}`, color: 'text-indigo-500' },
+                            { label: 'Volume (GMV)', val: `$ ${analytics?.globalRevenue?.toFixed(2)}`, color: 'text-emerald-500' },
+                            { label: 'Scans QR', val: analytics?.totalVisites || 0, color: 'text-primary' },
+                            { label: 'Restaurants', val: restaurants.length, color: 'text-white' },
                         ].map((stat, i) => (
-                            <div key={i} className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] group">
+                            <div key={i} className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem]">
                                 <p className="text-[10px] font-black text-zinc-500 uppercase mb-1">{stat.label}</p>
-                                <p className={cn("text-3xl font-black italic mb-4", stat.color)}>{stat.val}</p>
+                                <p className={cn("text-3xl font-black italic", stat.color)}>{stat.val}</p>
                             </div>
                         ))}
                     </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                        {/* Graphiques Section */}
                         <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 flex flex-col items-center">
-                                <h3 className="text-sm font-black uppercase text-zinc-500 mb-8">Répartition des Plans</h3>
+                            {/* Donut: Plans Distribution */}
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center">
+                                <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500 mb-8">Répartition des Plans</h3>
                                 <DonutChart data={analytics?.planDistribution || []} />
+                                <div className="grid grid-cols-2 gap-4 mt-8 w-full">
+                                    {(analytics?.planDistribution || []).map((d: any, i: number) => (
+                                        <div key={i} className="flex items-center gap-2 text-[10px] font-bold text-white uppercase">
+                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ["#818cf8", "#f472b6", "#fbbf24", "#34d399", "#a78bfa"][i % 5] }} />
+                                            {d.name} : <span className="text-zinc-500">{d.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 flex flex-col items-center">
-                                <h3 className="text-sm font-black uppercase text-zinc-500 mb-8">Expansion Géographique</h3>
+
+                            {/* Bars: City Distribution */}
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 flex flex-col items-center justify-between">
+                                <div className="w-full text-center">
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-500 mb-2">Expansion Géographique</h3>
+                                    <p className="text-[10px] font-bold text-indigo-500 uppercase mb-8">Restaurants par Ville</p>
+                                </div>
                                 <MiniBarChart data={analytics?.cityDistribution || []} />
                             </div>
                         </div>
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
-                            <h3 className="text-sm font-black uppercase mb-8 flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-indigo-500" /> Activité Récente
-                            </h3>
+
+                        {/* Flux d'activité existant */}
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 overflow-hidden">
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-indigo-500" /> Activité Récente
+                                </h3>
+                            </div>
                             <div className="space-y-4">
                                 {analytics?.subscriptionActivity?.map((log: any) => (
                                     <div key={log.id} className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-900">
-                                        <p className="text-[10px] font-black text-white uppercase">{log.restaurantNom}</p>
-                                        <p className="text-[9px] text-zinc-500">{log.type} - {log.newPlan}</p>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className="text-[10px] font-black text-white uppercase leading-none">{log.restaurantNom}</span>
+                                            <span className="text-[8px] font-bold text-zinc-600 uppercase">{new Date(log.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "text-[9px] font-black px-2 py-0.5 rounded-full uppercase",
+                                                log.type === 'UPGRADE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-800 text-zinc-400'
+                                            )}>{log.type}</span>
+                                            <span className="text-[10px] font-medium text-zinc-500 italic">{log.newPlan}</span>
+                                        </div>
                                     </div>
                                 ))}
+                                {(!analytics?.subscriptionActivity || analytics.subscriptionActivity.length === 0) && (
+                                     <div className="text-center py-10 opacity-50">
+                                         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Aucune activité récente</p>
+                                     </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -387,11 +418,11 @@ export default function SuperAdminPage() {
             {activeTab === 'restaurants' && (
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
                     <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
-                        <div className="flex justify-between mb-8">
+                        <div className="flex justify-between items-center mb-8">
                             <h3 className="text-lg font-black uppercase flex items-center gap-2">
-                                <Building2 className="w-5 h-5 text-primary" /> Établissements ({restaurants.length})
+                                <Building2 className="w-5 h-5 text-primary" /> {restaurants.length} Restaurants
                             </h3>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                                 <input
                                     type="text"
                                     placeholder="Rechercher..."
@@ -399,34 +430,27 @@ export default function SuperAdminPage() {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="bg-zinc-800 border-zinc-700 rounded-xl py-2 px-4 text-xs text-white"
                                 />
-                                <button onClick={fetchRestos} className="p-2 bg-zinc-800 rounded-xl"><RefreshCw className="w-4 h-4" /></button>
+                                <button onClick={() => setShowCreateModal(true)} className="bg-primary text-black p-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase pr-4">
+                                    <Plus className="w-4 h-4" /> Nouveau Restaurant
+                                </button>
                             </div>
                         </div>
+
                         <div className="space-y-4">
-                            {restaurants.filter(r => r.nom.toLowerCase().includes(searchQuery.toLowerCase())).map(resto => (
-                                <div key={resto.id} className="bg-zinc-800/30 p-5 rounded-3xl border border-zinc-800/50 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-zinc-700 rounded-2xl flex items-center justify-center border border-zinc-600">
-                                            {resto.logoUrl ? <img src={resto.logoUrl} className="w-full h-full object-cover rounded-2xl" /> : <Building2 className="w-6 h-6 text-zinc-500" />}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-black text-white uppercase">{resto.nom}</h4>
-                                            <p className="text-xs text-zinc-500">{resto.email} • {resto.plan}</p>
-                                        </div>
+                            {restaurants.filter(r => r.nom.toLowerCase().includes(searchQuery.toLowerCase())).map(r => (
+                                <div key={r.id} className="bg-zinc-800/30 p-5 rounded-3xl border border-zinc-800/50 flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-black text-white uppercase">{r.nom}</h4>
+                                        <p className="text-xs text-zinc-500">{r.email} • {r.ville} • <span className="text-primary font-bold">{r.plan}</span></p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => setEditingResto(resto)} className="p-2 bg-zinc-800 rounded-xl text-zinc-400 hover:text-primary"><Pencil className="w-4 h-4" /></button>
-                                        <button onClick={() => handleToggle(resto.id, resto.active)} className={cn("p-2 rounded-xl border", resto.active ? "text-emerald-500 border-emerald-500/20" : "text-red-500 border-red-500/20")}><Power className="w-4 h-4" /></button>
-                                        <button 
-                                            onClick={async () => {
-                                                const res = await impersonateRestaurant(resto.id);
-                                                if (res.success) window.open(`/manager/dashboard?resto_id=${resto.id}`, "_blank");
-                                            }}
-                                            className="p-2 bg-zinc-800 rounded-xl text-zinc-400"
-                                        >
-                                            <ExternalLink className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={() => handleDelete(resto.id)} className="p-2 bg-zinc-800 rounded-xl text-red-500/50 hover:text-red-500"><XCircle className="w-4 h-4" /></button>
+                                        <button onClick={() => setEditingResto(r)} className="p-2 bg-zinc-800 rounded-xl text-zinc-400 hover:text-primary"><Pencil className="w-4 h-4" /></button>
+                                        <button onClick={() => handleToggle(r.id, r.active)} className={cn("p-2 rounded-xl border", r.active ? "text-emerald-500 border-emerald-500/20" : "text-red-500 border-red-500/20")}><Power className="w-4 h-4" /></button>
+                                        <button onClick={async () => {
+                                            const res = await impersonateRestaurant(r.id);
+                                            if (res.success) window.open(`/manager/dashboard?resto_id=${r.id}`, "_blank");
+                                        }} className="p-2 bg-zinc-800 rounded-xl text-zinc-400"><ExternalLink className="w-4 h-4" /></button>
+                                        <button onClick={() => handleDelete(r.id)} className="p-2 bg-zinc-800 rounded-xl text-red-500/50 hover:text-red-500"><XCircle className="w-4 h-4" /></button>
                                     </div>
                                 </div>
                             ))}
@@ -435,91 +459,148 @@ export default function SuperAdminPage() {
                 </div>
             )}
 
-            {activeTab === 'demandes' && (
-                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10">
-                        <h3 className="text-2xl font-black uppercase mb-10 flex items-center gap-3"><Bell className="w-8 h-8 text-violet-500" /> Validations En Attente</h3>
-                        <div className="space-y-4">
-                            {demandes.filter(d => d.statut === "EN_ATTENTE").map(demande => (
-                                <div key={demande.id} className="bg-zinc-950/50 p-6 rounded-3xl border border-zinc-800">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <h4 className="text-lg font-black text-white uppercase">{demande.nomRestaurant}</h4>
-                                            <p className="text-[10px] text-zinc-500 uppercase font-bold">{demande.plan} • ${demande.montant}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button 
-                                                onClick={async () => {
-                                                    const pwd = prompt("Mot de passe gérant ?");
-                                                    if(pwd) { await approveDemande(demande.id, pwd); fetchRestos(); }
-                                                }}
-                                                className="bg-emerald-600 text-white font-black px-6 py-3 rounded-2xl text-[10px] uppercase"
-                                            >
-                                                Approuver
-                                            </button>
-                                            <button onClick={() => rejectDemande(demande.id).then(fetchRestos)} className="bg-zinc-800 text-red-500 p-3 rounded-2xl"><XCircle className="w-5 h-5" /></button>
-                                        </div>
-                                    </div>
+            {/* MODALE CREATION */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 relative">
+                        <button onClick={() => setShowCreateModal(false)} className="absolute top-8 right-8 text-zinc-500 hover:text-white"><X /></button>
+                        <h3 className="text-2xl font-black italic uppercase text-white mb-8">Déployer un Restaurant</h3>
+                        <form action={clientAction} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <input name="nom" required placeholder="Nom du Restaurant" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-1 focus:ring-primary" />
+                                <input name="telephone" required placeholder="Téléphone / WhatsApp" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-1 focus:ring-primary" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <input name="email" type="email" required placeholder="Email Propriétaire" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-1 focus:ring-primary" />
+                                <input name="ville" required placeholder="Ville" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-1 focus:ring-primary" />
+                            </div>
+                            <div className="space-y-3 p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Logo de l'établissement</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input name="logoUrl" placeholder="Lien URL du logo (optionnel)" className="w-full bg-zinc-900 border-zinc-700 rounded-xl py-3 px-4 text-xs text-white outline-none" />
+                                    <input name="logoFile" type="file" accept="image/*" className="w-full bg-zinc-900 border-zinc-700 rounded-xl py-2 px-4 text-[10px] text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-primary file:text-black hover:file:bg-primary/80" />
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {activeTab === 'broadcast' && (
-                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10">
-                        <h3 className="text-2xl font-black uppercase mb-8 flex items-center gap-3"><Globe className="w-8 h-8 text-primary" /> Broadcast Global</h3>
-                        <form onSubmit={handleBroadcast} className="space-y-6">
-                            <input
-                                type="text"
-                                value={broadcastTitle}
-                                onChange={(e) => setBroadcastTitle(e.target.value)}
-                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-2 focus:ring-primary"
-                                placeholder="Titre de la notification"
-                            />
-                            <textarea
-                                value={broadcastMessage}
-                                onChange={(e) => setBroadcastMessage(e.target.value)}
-                                rows={4}
-                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-2 focus:ring-primary resize-none"
-                                placeholder="Message aux managers..."
-                            />
-                            <button disabled={broadcastLoading} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs">
-                                {broadcastLoading ? "Envoi..." : "Déployer le Broadcast"}
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <select name="plan" required className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none">
+                                    <option value="FREE">ESSAI GRATUIT (14J)</option>
+                                    <option value="STANDARD">STANDARD</option>
+                                    <option value="PRO">PRO (Stock)</option>
+                                    <option value="PLATINUM">PLATINUM (Tout Inclus)</option>
+                                </select>
+                                <input name="password" type="password" required placeholder="Mot de Passe Initial" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
+                            </div>
+                            <button disabled={isCreating} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">
+                                {isCreating ? "Déploiement..." : "Lancer le Restaurant"}
                             </button>
                         </form>
                     </div>
                 </div>
             )}
 
-            {activeTab === 'settings' && (
-                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10">
-                        <h3 className="text-xl font-black uppercase mb-8 flex items-center gap-3"><Settings className="w-7 h-7 text-zinc-500" /> Configuration Système</h3>
-                        <button 
-                            onClick={() => setShowSettings(true)}
-                            className="w-full bg-zinc-800/50 p-6 rounded-3xl border border-zinc-700 flex justify-between items-center group"
-                        >
-                            <span className="font-black text-white uppercase">Modifier le Code PIN d'accès</span>
-                            <ChevronRight className="w-5 h-5 text-zinc-600 group-hover:text-primary" />
-                        </button>
+            {/* MODALE EDITION COMPLETE */}
+            {editingResto && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 relative">
+                        <button onClick={() => setEditingResto(null)} className="absolute top-8 right-8 text-zinc-500"><X /></button>
+                        <h3 className="text-2xl font-black italic uppercase text-white mb-8">Paramètres Établissement</h3>
+                        <form action={async (fd) => { await updateRestaurant(editingResto.id, fd); setEditingResto(null); fetchRestos(); toast.success("Mise à jour OK"); }} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Nom</label>
+                                    <input name="nom" defaultValue={editingResto.nom} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Ville</label>
+                                    <input name="ville" defaultValue={editingResto.ville} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Email</label>
+                                    <input name="email" defaultValue={editingResto.email} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Téléphone</label>
+                                    <input name="telephone" defaultValue={editingResto.telephone} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Logo de l'établissement</label>
+                                <div className="flex items-center gap-4 mb-2">
+                                    <div className="w-12 h-12 bg-zinc-900 rounded-xl overflow-hidden border border-zinc-700">
+                                        {editingResto.logoUrl ? <img src={editingResto.logoUrl} className="w-full h-full object-cover" /> : <Building2 className="w-full h-full p-2 text-zinc-600" />}
+                                    </div>
+                                    <p className="text-[9px] text-zinc-500 font-bold uppercase">Image actuelle</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input name="logoUrl" defaultValue={editingResto.logoUrl} placeholder="Lien URL du logo" className="w-full bg-zinc-900 border-zinc-700 rounded-xl py-3 px-4 text-xs text-white outline-none" />
+                                    <input name="logoFile" type="file" accept="image/*" className="w-full bg-zinc-900 border-zinc-700 rounded-xl py-2 px-4 text-[10px] text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-primary file:text-black hover:file:bg-primary/80" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Plan</label>
+                                    <select name="plan" defaultValue={editingResto.plan} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none">
+                                        <option value="FREE">ESSAI GRATUIT (14J)</option>
+                                        <option value="STANDARD">STANDARD</option>
+                                        <option value="PRO">PRO (Stock)</option>
+                                        <option value="PLATINUM">PLATINUM (Tout Inclus)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Abonnement</label>
+                                    <select name="active" defaultValue={editingResto.active ? "true" : "false"} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none">
+                                        <option value="true">ACTIF</option>
+                                        <option value="false">SUSPENDU</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Sauvegarder</button>
+                        </form>
                     </div>
                 </div>
             )}
 
-            {editingResto && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 relative">
-                        <button onClick={() => setEditingResto(null)} className="absolute top-8 right-8 text-zinc-500"><X /></button>
-                        <h3 className="text-2xl font-black italic uppercase text-white mb-8">Editer Restaurant</h3>
-                        <form action={async (fd) => { await updateRestaurant(editingResto.id, fd); setEditingResto(null); fetchRestos(); }} className="space-y-4">
-                            <input name="nom" defaultValue={editingResto.nom} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
-                            <input name="email" defaultValue={editingResto.email} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
-                            <button className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase text-xs">Enregistrer</button>
-                        </form>
+            {/* TAB DEMANDES, BROADCAST & SETTINGS (LOGIQUE RESTAURÉE) */}
+            {activeTab === 'demandes' && (
+                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
+                    <h3 className="text-2xl font-black uppercase flex items-center gap-3"><Bell className="w-8 h-8 text-violet-500" /> Validations</h3>
+                    <div className="space-y-4">
+                        {demandes.filter(d => d.statut === "EN_ATTENTE").map(demande => (
+                            <div key={demande.id} className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl flex justify-between items-center">
+                                <div>
+                                    <h4 className="font-black text-white uppercase">{demande.nomRestaurant}</h4>
+                                    <p className="text-xs text-zinc-500">{demande.nomProprietaire} • {demande.plan} • ${demande.montant}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={async () => { const p = prompt("PWD ?"); if(p) { await approveDemande(demande.id, p); fetchRestos(); }}} className="bg-emerald-600 text-white font-black px-4 py-2 rounded-xl text-[10px] uppercase">Approuver</button>
+                                    <button onClick={() => rejectDemande(demande.id).then(fetchRestos)} className="bg-red-600/10 text-red-500 p-2 rounded-xl"><XCircle /></button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
+                </div>
+            )}
+
+            {activeTab === 'broadcast' && (
+                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
+                    <h3 className="text-2xl font-black uppercase mb-8 flex items-center gap-3"><Globe className="w-8 h-8 text-primary" /> Broadcast Global</h3>
+                    <form onSubmit={handleBroadcast} className="space-y-6">
+                        <input value={broadcastTitle} onChange={e => setBroadcastTitle(e.target.value)} placeholder="Titre" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
+                        <textarea value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} rows={4} placeholder="Message..." className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white resize-none" />
+                        <button disabled={broadcastLoading} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">{broadcastLoading ? "..." : "Envoyer"}</button>
+                    </form>
+                </div>
+            )}
+
+            {activeTab === 'settings' && (
+                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
+                    <h3 className="text-2xl font-black uppercase mb-8">Configuration PIN</h3>
+                    <button onClick={() => setShowSettings(true)} className="w-full bg-zinc-800 p-6 rounded-3xl border border-zinc-700 text-white font-black uppercase flex justify-between items-center">
+                        Changer le PIN Admin <ChevronRight />
+                    </button>
                 </div>
             )}
 
@@ -527,22 +608,11 @@ export default function SuperAdminPage() {
                 <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
                     <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 relative">
                         <button onClick={() => setShowSettings(false)} className="absolute top-8 right-8 text-zinc-500"><X /></button>
-                        <h3 className="text-xl font-black uppercase text-center text-white mb-8">Nouveau Code PIN</h3>
-                        <div className="space-y-6">
-                            <input type="password" value={oldPin} onChange={e => setOldPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 text-center text-xl text-white" placeholder="Ancien PIN" />
-                            <input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 text-center text-xl text-primary" placeholder="Nouveau PIN" />
-                            <div className="flex gap-3">
-                                <button onClick={() => setShowSettings(false)} className="flex-1 bg-zinc-800 text-zinc-400 py-4 rounded-2xl font-black uppercase text-xs">Annuler</button>
-                                <button 
-                                    onClick={async () => {
-                                        const res = await updateAdminPin(oldPin, newPin);
-                                        if(res.success) { setShowSettings(false); setOldPin(""); setNewPin(""); toast.success("PIN Modifié"); }
-                                    }}
-                                    className="flex-1 bg-primary text-black py-4 rounded-2xl font-black uppercase text-xs"
-                                >
-                                    Actualiser
-                                </button>
-                            </div>
+                        <h3 className="text-xl font-black uppercase text-center text-white mb-8">Sécurité</h3>
+                        <div className="space-y-4">
+                            <input type="password" value={oldPin} onChange={e => setOldPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-center text-white" placeholder="Ancien PIN" />
+                            <input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-center text-primary" placeholder="Nouveau PIN" />
+                            <button onClick={async () => { const r = await updateAdminPin(oldPin, newPin); if(r.success) { setShowSettings(false); setOldPin(""); setNewPin(""); toast.success("PIN MAJ"); }}} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Confirm</button>
                         </div>
                     </div>
                 </div>

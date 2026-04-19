@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { authenticateManager } from "@/lib/auth-actions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export default function ManagerLoginPage() {
@@ -81,6 +82,11 @@ export default function ManagerLoginPage() {
                             className="w-full bg-zinc-800/50 border-zinc-700 rounded-2xl py-4 pl-12 text-sm text-white focus:ring-2 focus:ring-primary/50 transition-all outline-none placeholder:text-zinc-700"
                             placeholder="••••••••"
                         />
+                    </div>
+                    <div className="flex justify-end mt-2">
+                        <Link href="/manager/forgot-password" className="text-[10px] text-zinc-500 font-bold hover:text-primary transition-colors tracking-widest uppercase">
+                            Mot de passe oublié ?
+                        </Link>
                     </div>
                 </div>
 

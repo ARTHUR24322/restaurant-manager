@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { comparePassword } from "@/lib/auth";
+import { comparePassword, hashPassword } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/jwt";
 import { cookies } from "next/headers";
 
@@ -325,5 +325,58 @@ export async function switchSelectedRestaurant(newRestoId: string) {
   } catch (e) {
       console.error("[Auth-Actions] Switch Error:", e);
       return { success: false, error: "Erreur lors du changement d'établissement." };
+  }
+}
+
+/**
+ * Traite la demande de réinitialisation avec le code PIN du restaurant
+ */
+export async function resetPasswordWithPin(formData: FormData) {
+  try {
+    const email = formData.get("email") as string;
+    const pinCode = formData.get("pinCode") as string;
+    const newPassword = formData.get("newPassword") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (!email || !pinCode || !newPassword || !confirmPassword) {
+      return { success: false, error: "Tous les champs sont requis." };
+    }
+
+    if (newPassword !== confirmPassword) {
+      return { success: false, error: "Les mots de passe ne correspondent pas." };
+    }
+
+    if (newPassword.length < 6) {
+      return { success: false, error: "Le mot de passe doit contenir au moins 6 caractères." };
+    }
+
+    // Chercher le restaurant par email et vérifier le PIN
+    const restaurant = await prisma.restaurant.findFirst({
+      where: { email },
+    });
+
+    if (!restaurant) {
+      // Pour des raisons de sécurité, ne pas indiquer que l'email n'existe pas
+      return { success: false, error: "Informations invalides." };
+    }
+
+    if (restaurant.pinCode !== pinCode) {
+      return { success: false, error: "Code PIN d'établissement incorrect." };
+    }
+
+    // Hacher le nouveau mot de passe
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Mettre à jour le mot de passe
+    // S'il s'agit d'un compte multi-sites (mother avec même email), on synchronise tous les établissements avec le même email
+    await prisma.restaurant.updateMany({
+      where: { email: email },
+      data: { adminPassword: hashedPassword }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    return { success: false, error: "Une erreur est survenue lors de la réinitialisation." };
   }
 }
