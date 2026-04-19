@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Printer, Download, Plus, Minus, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { getRestaurantById } from "@/lib/admin-actions";
+import { getManagerSession } from "@/lib/manager-actions";
 import { useEffect } from "react";
 
 export default function QRGeneratorPage({ searchParams }: { searchParams: { resto_id?: string } }) {
@@ -21,10 +22,17 @@ export default function QRGeneratorPage({ searchParams }: { searchParams: { rest
   }, []);
 
   useEffect(() => {
-    getRestaurantById(restoId).then((r) => {
-      if (r) setRestaurant(r);
-    });
-  }, [restoId]);
+    async function fetchRestaurant() {
+      if (searchParams.resto_id) {
+        const r = await getRestaurantById(searchParams.resto_id);
+        if (r) setRestaurant(r);
+      } else {
+        const session = await getManagerSession();
+        if (session) setRestaurant(session);
+      }
+    }
+    fetchRestaurant();
+  }, [searchParams.resto_id]);
 
   const restaurantName = restaurant?.nom || "SmartResto";
 
@@ -204,7 +212,7 @@ export default function QRGeneratorPage({ searchParams }: { searchParams: { rest
                 id={`qr-svg-${num}`}
                 value={restaurant?.slug 
                   ? `${baseUrl}/${restaurant.slug}?table=${num}` 
-                  : `${baseUrl}?resto_id=${restoId}&table=${num}`
+                  : `${baseUrl}?resto_id=${restaurant?.id || restoId}&table=${num}`
                 } 
                 size={180}
                 level={"H"}
