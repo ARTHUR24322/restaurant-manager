@@ -105,8 +105,27 @@ export async function updateRestaurantPin(restaurantId: string, newPin: string) 
 }
 
 /**
- * Mise à jour du thème préféré (light, dark, system)
+ * Mise à jour du taux de change USD → CDF du restaurant
  */
+export async function updateRestaurantTauxChange(restaurantId: string, taux: number) {
+    try {
+        if (!taux || taux <= 0 || isNaN(taux)) {
+            return { success: false, error: "Le taux doit être un nombre positif." };
+        }
+
+        await (prisma as any).restaurant.update({
+            where: { id: restaurantId },
+            data: { tauxChange: taux }
+        });
+
+        revalidatePath("/manager/dashboard");
+        return { success: true };
+    } catch (e) {
+        console.error(e);
+        return { success: false, error: "Erreur lors de la sauvegarde du taux." };
+    }
+}
+
 export async function updateRestaurantTheme(restaurantId: string, theme: string) {
     try {
         await (prisma as any).restaurant.update({

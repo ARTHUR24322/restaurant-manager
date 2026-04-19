@@ -189,7 +189,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   }, [filter, restaurantId]);
 
   const handlePrint = (order: any) => {
-    printInvoice(order);
+    printInvoice(order, restoStatus?.nom || "SmartResto", restoStatus?.telephone || "");
   };
 
   const handleValidate = async (id: string) => {

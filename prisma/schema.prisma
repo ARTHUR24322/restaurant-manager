@@ -24,6 +24,7 @@ model Restaurant {
   monthlyPrice    Float      @default(0)
   subscriptionEnd DateTime?
   preferredTheme  String     @default("dark")
+  tauxChange      Float      @default(2800)
   createdAt       DateTime   @default(now())
   commandes       Commande[]
   plats           Plat[]

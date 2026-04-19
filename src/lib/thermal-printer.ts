@@ -119,7 +119,7 @@ function formatCurrency(amount: number): string {
 
 // ─── RECEIPT (Caisse) ────────────────────────────────────────────
 
-export function printReceipt(order: any, restaurantName: string = "SmartResto") {
+export function printReceipt(order: any, restaurantName: string = "SmartResto", telephone: string = "") {
   const taux = order.tauxChange || 2800;
   const itemsHtml = order.items?.map((item: any) => `
     <div class="item-row">
@@ -133,6 +133,7 @@ export function printReceipt(order: any, restaurantName: string = "SmartResto") 
   const html = `
     <div class="center" style="margin-bottom: 12px;">
       <div class="bold big upper">${restaurantName}</div>
+      ${telephone ? `<div class="tiny">Tél: ${telephone}</div>` : ""}
       <div class="small">Reçu - Table ${order.table || "—"}</div>
       <div class="small">${formatDate()}</div>
       <div class="small" style="margin-top: 4px;">Ticket #${orderIdSuffix}</div>
@@ -217,7 +218,7 @@ export function printKitchenTicket(order: any) {
 
 // ─── INVOICE (Dashboard / Facture) ───────────────────────────────
 
-export function printInvoice(order: any) {
+export function printInvoice(order: any, restaurantName: string = "SmartResto", telephone: string = "") {
   const tva = order.totalUsd * 0.16;
   const totalCdf = order.totalUsd * (order.tauxChange || 2800);
 
@@ -233,9 +234,9 @@ export function printInvoice(order: any) {
 
   const html = `
     <div class="center" style="border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
-      <div class="bold big upper" style="letter-spacing: -1px;">SmartResto</div>
-      <div class="tiny">RD Congo</div>
-      <div class="tiny">Tél: +243 000 000 000</div>
+      <div class="bold big upper" style="letter-spacing: -1px;">${restaurantName}</div>
+      ${telephone ? `<div class="tiny">Tél: ${telephone}</div>` : ""}
+      <div class="tiny">Propulsé par SmartResto</div>
     </div>
 
     <div style="margin-bottom: 8px;">

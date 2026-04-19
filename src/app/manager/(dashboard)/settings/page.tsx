@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Crown, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor } from "lucide-react";
+import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Crown, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from 'next/navigation';
-import { updateRestaurantPassword, updateRestaurantProfile, updateRestaurantPin, updateRestaurantTheme } from "@/lib/actions-settings";
+import { updateRestaurantPassword, updateRestaurantProfile, updateRestaurantPin, updateRestaurantTheme, updateRestaurantTauxChange } from "@/lib/actions-settings";
 import { getManagerSession } from "@/lib/manager-actions";
 import { submitSubscriptionRequest } from "@/lib/demande-actions";
 import { checkIsMainAccount } from "@/lib/admin-actions";
@@ -15,7 +15,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   
-  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance'>('security');
+  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance' | 'monnaie'>('security');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -26,6 +26,8 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const [pinLoading, setPinLoading] = useState(false);
   const [restaurant, setRestaurant] = useState<any>(null);
   const [requestLoading, setRequestLoading] = useState(false);
+  const [newTaux, setNewTaux] = useState<string>("");
+  const [tauxLoading, setTauxLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -46,6 +48,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
         const session = await getManagerSession();
         if (session) {
           setRestaurant(session);
+          if ((session as any).tauxChange) setNewTaux(String((session as any).tauxChange));
           // Sync du thème
           if ((session as any).preferredTheme && (session as any).preferredTheme !== theme) {
             setTheme((session as any).preferredTheme);
@@ -157,6 +160,15 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                   )}
                 >
                     <Sun className="w-4 h-4" /> Apparence
+                </button>
+                <button 
+                  onClick={() => setActiveTab('monnaie')}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
+                    activeTab === 'monnaie' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                    <DollarSign className="w-4 h-4" /> Taux de Change
                 </button>
             </div>
 
@@ -501,6 +513,106 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                               <p className="text-xs font-bold text-foreground uppercase italic tracking-wider">Astuce de confort</p>
                               <p className="text-[11px] text-muted-foreground leading-relaxed">
                                   Le mode sombre réduit la fatigue oculaire lors des services de nuit, tandis que le mode clair est recommandé pour une lecture optimale sous un éclairage fort en journée.
+                              </p>
+                          </div>
+                      </div>
+                  </div>
+                )}
+
+                {activeTab === 'monnaie' && (
+                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                      {/* Taux actuel */}
+                      <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-[2.5rem] p-8">
+                          <div className="flex items-center gap-4 mb-6">
+                              <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+                                  <TrendingUp className="w-6 h-6 text-emerald-400" />
+                              </div>
+                              <div>
+                                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Taux Actuel</p>
+                                  <p className="text-3xl font-black text-white">
+                                      1 USD = <span className="text-emerald-400">{restaurant?.tauxChange || newTaux || 2800} FC</span>
+                                  </p>
+                              </div>
+                          </div>
+
+                          {/* Aperçu rapide */}
+                          <div className="grid grid-cols-3 gap-3">
+                              {[1, 5, 10, 20, 50, 100].map(usd => (
+                                  <div key={usd} className="bg-zinc-900/80 rounded-2xl p-3 text-center border border-zinc-800">
+                                      <p className="text-[10px] font-black text-zinc-500 uppercase">{usd} USD</p>
+                                      <p className="text-sm font-black text-emerald-400">
+                                          {(usd * (restaurant?.tauxChange || parseFloat(newTaux) || 2800)).toLocaleString('fr-CD')} FC
+                                      </p>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+
+                      {/* Formulaire de mise à jour */}
+                      <div className="bg-card border border-border rounded-[2.5rem] p-8">
+                          <h3 className="text-lg font-black uppercase tracking-tighter mb-2 text-foreground flex items-center gap-2">
+                              <RefreshCw className="w-5 h-5 text-emerald-500" /> Mettre à jour le taux
+                          </h3>
+                          <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">
+                              Ce taux est utilisé automatiquement pour <span className="text-foreground font-bold">convertir les factures en Francs Congolais</span> (FC) lors de l'impression. Mettez-le à jour chaque matin selon le taux du jour.
+                          </p>
+
+                          <div className="space-y-4">
+                              <div className="space-y-1">
+                                  <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Nouveau taux (1 USD = ? FC)</label>
+                                  <div className="relative">
+                                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                      <input 
+                                          type="number"
+                                          min="1"
+                                          step="10"
+                                          value={newTaux}
+                                          onChange={(e) => setNewTaux(e.target.value)}
+                                          className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 pl-12 text-sm text-white focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all font-black tracking-wider"
+                                          placeholder="Ex: 2850"
+                                      />
+                                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-500">FC</span>
+                                  </div>
+                              </div>
+
+                              {newTaux && !isNaN(parseFloat(newTaux)) && (
+                                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3">
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                      <p className="text-sm font-bold text-emerald-400">
+                                          Aperçu : 10 USD = <span className="font-black">{(10 * parseFloat(newTaux)).toLocaleString('fr-CD')} FC</span>
+                                      </p>
+                                  </div>
+                              )}
+
+                              <button
+                                  disabled={tauxLoading || !newTaux || isNaN(parseFloat(newTaux))}
+                                  onClick={async () => {
+                                      if (!restaurantId || !newTaux) return;
+                                      setTauxLoading(true);
+                                      const res = await updateRestaurantTauxChange(restaurantId, parseFloat(newTaux));
+                                      setTauxLoading(false);
+                                      if (res.success) {
+                                          toast.success(`Taux mis à jour : 1 USD = ${newTaux} FC`);
+                                          setRestaurant((prev: any) => ({ ...prev, tauxChange: parseFloat(newTaux) }));
+                                      } else {
+                                          toast.error(res.error || "Erreur lors de la mise à jour.");
+                                      }
+                                  }}
+                                  className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white font-black py-4 rounded-2xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95"
+                              >
+                                  {tauxLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                                  {tauxLoading ? "Enregistrement..." : "Enregistrer le nouveau taux"}
+                              </button>
+                          </div>
+                      </div>
+
+                      {/* Info */}
+                      <div className="bg-amber-500/5 border border-amber-500/20 rounded-[2rem] p-6 flex items-start gap-4">
+                          <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                              <p className="text-xs font-bold text-foreground uppercase italic tracking-wider">Rappel quotidien</p>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                  Le taux USD/FC varie souvent. Pour des factures exactes, mettez-le à jour chaque matin avant d'ouvrir votre service. Le taux affiché sur les nouvelles commandes est celui sauvegardé au moment de la commande.
                               </p>
                           </div>
                       </div>

@@ -89,13 +89,14 @@ export async function createCommande(data: {
     const restaurantId = data.restaurantId;
     if (!restaurantId) throw new Error("Restaurant ID requis");
 
-    // 0. Récupérer le taux de change dynamique
+    // 0. Récupérer le taux de change du restaurant (mis à jour quotidiennement par le gérant)
     let exchangeRate = 2800;
     try {
-      const config = await (prisma as any).systemConfig.findUnique({
-        where: { key: "exchange_rate" }
+      const restoProfile = await (prisma as any).restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { tauxChange: true }
       });
-      if (config) exchangeRate = parseFloat(config.value);
+      if (restoProfile?.tauxChange) exchangeRate = restoProfile.tauxChange;
     } catch (e) {}
     
     // 1. Recalculer le total côté serveur pour éviter la manipulation (SÉCURITÉ)

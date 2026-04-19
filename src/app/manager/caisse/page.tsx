@@ -35,6 +35,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
   const [loading, setLoading] = useState(true);
   const [printingOrder, setPrintingOrder] = useState<any>(null);
   const [restaurantName, setRestaurantName] = useState("SmartResto");
+  const [restaurantTel, setRestaurantTel] = useState("");
   const { setTheme, theme } = useTheme();
   
   const fetchOrders = async (id: string) => {
@@ -65,6 +66,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
             return;
           }
           setRestaurantName(r.nom || "SmartResto");
+          setRestaurantTel((r as any).telephone || "");
           if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
             setTheme((r as any).preferredTheme);
           }
@@ -110,7 +112,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
   };
 
   const handlePrintReceipt = (order: any) => {
-    printReceipt(order, restaurantName);
+    printReceipt(order, restaurantName, restaurantTel);
   };
 
   return (
