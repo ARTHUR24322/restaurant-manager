@@ -6,6 +6,8 @@ import { recordVisit } from "@/lib/analytics-actions";
 
 import { ClientWelcomeScreen } from "@/components/client/ClientWelcomeScreen";
 
+import { getRestaurantById } from "@/lib/admin-actions";
+
 export const dynamic = "force-dynamic";
 
 export default async function ClientMenuPage({
@@ -14,6 +16,7 @@ export default async function ClientMenuPage({
   searchParams: { table?: string; name?: string; resto_id?: string };
 }) {
   const restaurantId = searchParams.resto_id || "resto-99-default";
+  const restaurant = await getRestaurantById(restaurantId);
   const plats = await getPlats(restaurantId);
   const table = searchParams.table || "Inconnue";
   const clientName = searchParams.name || "Client";
@@ -22,14 +25,18 @@ export default async function ClientMenuPage({
   recordVisit(restaurantId, table);
 
   return (
-    <ClientWelcomeScreen restaurantName="SmartResto" table={table}>
+    <ClientWelcomeScreen 
+        restaurantName={restaurant?.nom || "SmartResto"} 
+        table={table}
+        logoUrl={restaurant?.logoUrl || undefined}
+    >
       <div className="min-h-screen bg-background pb-32">
       {/* ... header remains same ... */}
       {/* Header Premium */}
       <header className="relative h-64 flex items-end p-6 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2070" 
+            src={restaurant?.logoUrl || "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2070"} 
             alt="Restaurant Header"
             className="w-full h-full object-cover brightness-[0.4] scale-105"
           />
@@ -43,7 +50,7 @@ export default async function ClientMenuPage({
                 Table {table}
               </span>
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-widest">
-                <Clock className="w-3 h-3" /> 15-20 min
+                <Clock className="w-3 h-3" /> {restaurant?.nom || "SmartResto"}
               </div>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight">
