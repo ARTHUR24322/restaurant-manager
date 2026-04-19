@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Restaurant {
+  id              String     @id @default(cuid())
+  nom             String
+  slug            String?    @unique
+  email           String
+  telephone       String?
+  ville           String     @default("Lubumbashi")
+  plan            String     @default("STANDARD")
+  logoUrl         String?
+  adminPassword   String
+  pinCode         String     @default("0000")
+  active          Boolean    @default(true)
+  billingCycle    String     @default("monthly")
+  monthlyPrice    Float      @default(0)
+  subscriptionEnd DateTime?
+  preferredTheme  String     @default("dark")
+  createdAt       DateTime   @default(now())
+  commandes       Commande[]
+  plats           Plat[]
+  visites         Visite[]
+  
+  // Stock Relations
+  articles        ArticleStock[]
+  emplacements    Emplacement[]
+  fournisseurs    Fournisseur[]
+  mouvements      MouvementStock[]
+  subscriptionLogs SubscriptionLog[]
+  notifications   Notification[]
+}
+
+model ArticleStock {
+  id           String           @id @default(cuid())
+  nom          String
+  reference    String?          @unique
+  codeBarres   String?          @unique
+  description  String?
+  categorie    String?          @default("GENERAL")
+  prixAchat    Float            @default(0)
+  prixVente    Float?
+  stockActuel  Float            @default(0)
+  stockMin     Float            @default(5)
+  stockMax     Float?
+  unite        String           @default("Unité") // Kg, L, Bouteille, etc.
+  
+  restaurantId String
+  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  emplacementId String?
+  emplacement   Emplacement?    @relation(fields: [emplacementId], references: [id], onDelete: SetNull)
+  
+  fournisseurId String?
+  fournisseur   Fournisseur?      @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
+  
+  mouvements    MouvementStock[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Emplacement {
+  id           String         @id @default(cuid())
+  nom          String
+  description  String?
+  
+  restaurantId String
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  articles     ArticleStock[]
+}
+
+model Fournisseur {
+  id           String         @id @default(cuid())
+  nom          String
+  contact      String?
+  telephone    String?
+  email        String?
+  adresse      String?
+  
+  restaurantId String
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  articles     ArticleStock[]
+}
+
+model MouvementStock {
+  id           String       @id @default(cuid())
+  type         String       // ENTREE, SORTIE, PERTE, RETOUR, AJUSTEMENT
+  quantite     Float
+  prixUnitaire Float?       // Prix lors du mouvement
+  note         String?
+  
+  articleId    String
+  article      ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  
+  restaurantId String
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime     @default(now())
+}
+
+
+model Plat {
+  id           String         @id @default(cuid())
+  nom          String
+  description  String?
+  prixUsd      Float
+  image        String
+  categorie    String
+  disponible   Boolean        @default(true)
+  restaurantId String
+  items        CommandeItem[]
+  options      Option[]
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model Option {
+  id     String @id @default(cuid())
+  nom    String
+  type   String
+  choix  String
+  platId String
+  plat   Plat   @relation(fields: [platId], references: [id], onDelete: Cascade)
+}
+
+model Commande {
+  id             String         @id @default(cuid())
+  table          String
+  client         String?
+  statut         String         @default("PENDING")
+  noteSpeciale   String?
+  tauxChange     Float
+  totalUsd       Float
+  paiementStatus String         @default("UNPAID")
+  transactionId  String?
+  restaurantId   String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  items          CommandeItem[]
+}
+
+model CommandeItem {
+  id         String   @id @default(cuid())
+  commandeId String
+  platId     String
+  quantite   Int      @default(1)
+  options    String
+  plat       Plat     @relation(fields: [platId], references: [id], onDelete: Cascade)
+  commande   Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+}
+
+model Visite {
+  id           String     @id @default(cuid())
+  restaurantId String
+  table        String
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
+
+model DemandeAbonnement {
+  id              String   @id @default(cuid())
+  nomRestaurant   String
+  nomProprietaire String
+  email           String
+  telephone       String
+  ville           String   @default("Lubumbashi")
+  plan            String
+  cycle           String
+  montant         Float
+  statut          String   @default("EN_ATTENTE")
+  createdAt       DateTime @default(now())
+}
+
+model SystemConfig {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+model SubscriptionLog {
+  id           String   @id @default(cuid())
+  restaurantId String
+  oldPlan      String?
+  newPlan      String
+  type         String   // UPGRADE, DOWNGRADE, RENEWAL, NEW
+  amount       Float    // Total amount paid for this period
+  monthlyPrice Float    // Calculated MRR
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  restaurantId String
+  title        String
+  message      String
+  type         String   @default("INFO") // INFO, WARNING, SUCCESS, URGENT
+  read         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+}
