@@ -9,9 +9,9 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
   let restaurantId = searchParams.resto_id;
   if (!restaurantId) {
     const session = await getManagerSession();
-    restaurantId = session?.id || "resto-99-default";
+    restaurantId = session?.id || "";
   }
-  const plats = (await getPlats(restaurantId)) as unknown as Plat[];
+  const plats = (restaurantId ? await getPlats(restaurantId) : []) as unknown as Plat[];
 
   return (
     <div className="p-8 max-w-6xl mx-auto">

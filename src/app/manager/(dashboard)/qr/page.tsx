@@ -9,7 +9,7 @@ import { getManagerSession } from "@/lib/manager-actions";
 import { useEffect } from "react";
 
 export default function QRGeneratorPage({ searchParams }: { searchParams: { resto_id?: string } }) {
-  const restoId = searchParams.resto_id || "resto-99-default";
+  const [restoId, setRestoId] = useState<string>(searchParams.resto_id || "");
   const [tableCount, setTableCount] = useState(10);
   const [baseUrl, setBaseUrl] = useState("");
   const [restaurant, setRestaurant] = useState<any>(null);
@@ -23,12 +23,19 @@ export default function QRGeneratorPage({ searchParams }: { searchParams: { rest
 
   useEffect(() => {
     async function fetchRestaurant() {
-      if (searchParams.resto_id) {
-        const r = await getRestaurantById(searchParams.resto_id);
+      let id = searchParams.resto_id;
+      if (!id) {
+        const session = await getManagerSession();
+        id = session?.id || "";
+        if (id) setRestoId(id);
+      }
+      
+      if (id) {
+        const r = await getRestaurantById(id);
         if (r) setRestaurant(r);
       } else {
-        const session = await getManagerSession();
-        if (session) setRestaurant(session);
+        // Rediriger vers login si aucune session n'est trouvée
+        toast.error("Session expirée. Veuillez vous reconnecter.");
       }
     }
     fetchRestaurant();

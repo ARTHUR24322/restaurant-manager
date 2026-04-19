@@ -15,9 +15,9 @@ export default async function ClientMenuPage({
 }: {
   searchParams: { table?: string; name?: string; resto_id?: string };
 }) {
-  const restaurantId = searchParams.resto_id || "resto-99-default";
-  const restaurant = await getRestaurantById(restaurantId);
-  const plats = await getPlats(restaurantId);
+  const restaurantId = searchParams.resto_id || "";
+  const restaurant = restaurantId ? await getRestaurantById(restaurantId) : null;
+  const plats = restaurantId ? await getPlats(restaurantId) : [];
   const table = searchParams.table || "Inconnue";
   const clientName = searchParams.name || "Client";
 
