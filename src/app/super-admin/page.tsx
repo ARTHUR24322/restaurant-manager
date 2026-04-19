@@ -125,6 +125,8 @@ export default function SuperAdminPage() {
     const [broadcastMessage, setBroadcastMessage] = useState("");
     const [broadcastType, setBroadcastType] = useState<any>("INFO");
     const [broadcastLoading, setBroadcastLoading] = useState(false);
+    const [broadcastTargetType, setBroadcastTargetType] = useState<"GLOBAL" | "SPECIFIC">("GLOBAL");
+    const [broadcastTargetId, setBroadcastTargetId] = useState("");
     const [oldPin, setOldPin] = useState("");
     const [newPin, setNewPin] = useState("");
 
@@ -234,19 +236,24 @@ export default function SuperAdminPage() {
             toast.error("Champs requis.");
             return;
         }
+        if (broadcastTargetType === "SPECIFIC" && !broadcastTargetId) {
+            toast.error("Sélectionnez un restaurant cible.");
+            return;
+        }
         setBroadcastLoading(true);
         const res = await sendBroadcastNotification({
             title: broadcastTitle,
             message: broadcastMessage,
-            type: broadcastType
+            type: broadcastType,
+            restaurantId: broadcastTargetType === "SPECIFIC" ? broadcastTargetId : undefined
         });
         setBroadcastLoading(false);
         if (res.success) {
-            toast.success("Broadcast envoyé !");
+            toast.success(broadcastTargetType === "GLOBAL" ? "Broadcast envoyé à tous !" : "Notification ciblée envoyée !");
             setBroadcastTitle("");
             setBroadcastMessage("");
         } else {
-            toast.error("Erreur.");
+            toast.error(res.error || "Erreur.");
         }
     };
 
@@ -586,11 +593,65 @@ export default function SuperAdminPage() {
 
             {activeTab === 'broadcast' && (
                 <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
-                    <h3 className="text-2xl font-black uppercase mb-8 flex items-center gap-3"><Globe className="w-8 h-8 text-primary" /> Broadcast Global</h3>
+                    <h3 className="text-2xl font-black uppercase mb-8 flex items-center gap-3">
+                        <Globe className="w-8 h-8 text-primary" /> 
+                        {broadcastTargetType === "GLOBAL" ? "Broadcast Global" : "Message Personnel"}
+                    </h3>
                     <form onSubmit={handleBroadcast} className="space-y-6">
-                        <input value={broadcastTitle} onChange={e => setBroadcastTitle(e.target.value)} placeholder="Titre" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
-                        <textarea value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} rows={4} placeholder="Message..." className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white resize-none" />
-                        <button disabled={broadcastLoading} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">{broadcastLoading ? "..." : "Envoyer"}</button>
+                        <div className="flex gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setBroadcastTargetType("GLOBAL")}
+                                className={cn(
+                                    "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                                    broadcastTargetType === "GLOBAL" ? "bg-primary/20 text-primary border-primary" : "bg-zinc-800/50 text-zinc-500 border-zinc-700"
+                                )}
+                            >
+                                Tous les Établissements
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBroadcastTargetType("SPECIFIC")}
+                                className={cn(
+                                    "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                                    broadcastTargetType === "SPECIFIC" ? "bg-violet-500/20 text-violet-400 border-violet-500" : "bg-zinc-800/50 text-zinc-500 border-zinc-700"
+                                )}
+                            >
+                                Établissement Spécifique
+                            </button>
+                        </div>
+
+                        {broadcastTargetType === "SPECIFIC" && (
+                            <select
+                                value={broadcastTargetId}
+                                onChange={(e) => setBroadcastTargetId(e.target.value)}
+                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none"
+                            >
+                                <option value="">-- Sélectionnez un restaurant --</option>
+                                {restaurants.map(r => (
+                                    <option key={r.id} value={r.id}>{r.nom} ({r.ville})</option>
+                                ))}
+                            </select>
+                        )}
+
+                        <input value={broadcastTitle} onChange={e => setBroadcastTitle(e.target.value)} placeholder="Titre" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-1 focus:ring-primary" />
+                        <textarea value={broadcastMessage} onChange={e => setBroadcastMessage(e.target.value)} rows={4} placeholder="Message..." className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white resize-none outline-none focus:ring-1 focus:ring-primary" />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                             <select
+                                value={broadcastType}
+                                onChange={(e) => setBroadcastType(e.target.value)}
+                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none"
+                            >
+                                <option value="INFO">INFORMATION</option>
+                                <option value="WARNING">AVERTISSEMENT</option>
+                                <option value="SUCCESS">SUCCÈS</option>
+                                <option value="URGENT">URGENT</option>
+                            </select>
+                            <button disabled={broadcastLoading} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">
+                                {broadcastLoading ? "..." : "Envoyer"}
+                            </button>
+                        </div>
                     </form>
                 </div>
             )}
