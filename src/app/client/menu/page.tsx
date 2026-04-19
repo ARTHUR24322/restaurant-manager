@@ -4,6 +4,8 @@ import { CartFloat } from "@/components/client/CartFloat";
 import ClientMenuContent from "./ClientMenuContent";
 import { recordVisit } from "@/lib/analytics-actions";
 
+import { ClientWelcomeScreen } from "@/components/client/ClientWelcomeScreen";
+
 export const dynamic = "force-dynamic";
 
 export default async function ClientMenuPage({
@@ -20,7 +22,8 @@ export default async function ClientMenuPage({
   recordVisit(restaurantId, table);
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <ClientWelcomeScreen restaurantName="SmartResto" table={table}>
+      <div className="min-h-screen bg-background pb-32">
       {/* ... header remains same ... */}
       {/* Header Premium */}
       <header className="relative h-64 flex items-end p-6 overflow-hidden">
@@ -80,5 +83,6 @@ export default async function ClientMenuPage({
       {/* Le panier flottant restera en bas de page */}
       <CartFloat restaurantId={restaurantId} />
     </div>
+    </ClientWelcomeScreen>
   );
 }

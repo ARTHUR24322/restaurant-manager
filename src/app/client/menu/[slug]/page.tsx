@@ -6,6 +6,8 @@ import ClientMenuContent from "../ClientMenuContent";
 import { recordVisit } from "@/lib/analytics-actions";
 import { notFound } from "next/navigation";
 
+import { ClientWelcomeScreen } from "@/components/client/ClientWelcomeScreen";
+
 export const dynamic = "force-dynamic";
 
 export default async function ClientMenuSlugPage({
@@ -31,6 +33,11 @@ export default async function ClientMenuSlugPage({
   recordVisit(restaurantId, table);
 
   return (
+    <ClientWelcomeScreen 
+        restaurantName={restaurant.nom} 
+        table={table}
+        logoUrl={restaurant.logoUrl || undefined}
+    >
     <div className="min-h-screen bg-background pb-32">
       {/* Header Premium */}
       <header className="relative h-64 flex items-end p-6 overflow-hidden">
@@ -85,5 +92,6 @@ export default async function ClientMenuSlugPage({
 
       <CartFloat restaurantId={restaurantId} />
     </div>
+    </ClientWelcomeScreen>
   );
 }
