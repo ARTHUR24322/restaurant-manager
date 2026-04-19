@@ -22,54 +22,61 @@ import { Loader2 } from "lucide-react";
 
 export default function CuisinePage({ searchParams }: { searchParams: { resto_id?: string } }) {
   const router = useRouter();
-  const restoId = searchParams.resto_id;
+  const [restoId, setRestoId] = useState<string>(searchParams.resto_id || "");
   const [orders, setOrders] = useState<any[]>([]);
-   const [loading, setLoading] = useState(true);
-    const [finishingId, setFinishingId] = useState<string | null>(null);
-    const { setTheme, theme } = useTheme();
+  const [loading, setLoading] = useState(true);
+  const [finishingId, setFinishingId] = useState<string | null>(null);
+  const { setTheme, theme } = useTheme();
 
-  const fetchProductionOrders = async () => {
-    const all = await getRecentCommandes(restoId);
-    // Filtrage pour la cuisine : SUBMITTED (Nouveau) et PREPARING (En cours)
+  const fetchProductionOrders = async (id: string) => {
+    const all = await getRecentCommandes(id);
     const production = all.filter((o: any) => o.statut === "SUBMITTED" || o.statut === "PREPARING");
     setOrders(production);
     setLoading(false);
   };
 
   useEffect(() => {
-    if (restoId) {
-      getRestaurantById(restoId).then(r => {
+    async function init() {
+      let id = searchParams.resto_id;
+      if (!id) {
+        const { getManagerSession } = await import("@/lib/manager-actions");
+        const session = await getManagerSession() as any;
+        id = session?.id || "";
+        if (id) setRestoId(id);
+      }
+      if (!id) return;
+
+      getRestaurantById(id).then(r => {
         if (r) {
           const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
-            if (!r.active || isExpired) {
-              router.push('/manager/subscription-expired');
-              return;
-            }
-            if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
-                setTheme((r as any).preferredTheme);
-            }
+          if (!r.active || isExpired) {
+            router.push('/manager/subscription-expired');
+            return;
           }
+          if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
+            setTheme((r as any).preferredTheme);
+          }
+        }
       });
+
+      fetchProductionOrders(id);
+
+      const eventSource = new EventSource(`/api/events?restaurantId=${id}`);
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "new-order" || data.type === "status-updated") {
+          fetchProductionOrders(id!);
+        }
+      };
+
+      const interval = setInterval(() => fetchProductionOrders(id!), 4000);
+      return () => {
+        eventSource.close();
+        clearInterval(interval);
+      };
     }
-
-    fetchProductionOrders();
-
-    // Connexion Temps Réel (SSE)
-    const eventSource = new EventSource(`/api/events?restaurantId=${restoId}`);
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("[SSE Kitchen] Event received:", data.type);
-      if (data.type === "new-order" || data.type === "status-updated") {
-        fetchProductionOrders();
-      }
-    };
-
-    const interval = setInterval(fetchProductionOrders, 4000); // Polling de secours plus rapide
-    return () => {
-      eventSource.close();
-      clearInterval(interval);
-    };
-  }, []);
+    init();
+  }, [searchParams.resto_id]);
 
   const handleFinish = async (id: string) => {
     setFinishingId(id);
@@ -77,7 +84,7 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
         const res = await updateOrderStatus(id, "READY");
         if (res.success) {
             toast.success("Ticket marqué comme prêt !");
-            fetchProductionOrders();
+            fetchProductionOrders(restoId);
         } else {
             toast.error("Erreur lors de la mise à jour");
         }
@@ -150,18 +157,23 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
                   <p className="font-bold text-zinc-200">{order.client}</p>
                </div>
                
-               {/* Simuler des items de commande si présent, sinon bloc démo */}
+               {/* Vrais plats de la commande */}
                <div className="bg-zinc-800/50 p-4 rounded-3xl border border-zinc-800/50">
                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">Ticket Cuisine</p>
                   <ul className="space-y-2">
-                     <li className="flex justify-between items-center text-sm">
-                        <span className="font-bold">1x Capitaine Grillé</span>
-                        <span className="text-[8px] bg-red-500/20 text-red-500 font-bold px-1.5 rounded uppercase">Piment +</span>
-                     </li>
-                     <li className="flex justify-between items-center text-sm">
-                        <span className="font-bold">1x Planteur Maison</span>
-                        <span className="text-[8px] bg-blue-500/20 text-blue-500 font-bold px-1.5 rounded uppercase">Frais</span>
-                     </li>
+                     {order.items?.length > 0 ? order.items.map((item: any, idx: number) => (
+                       <li key={idx} className="flex justify-between items-center text-sm">
+                          <div className="flex items-center gap-2">
+                             <span className="font-black text-emerald-400">{item.quantite}x</span>
+                             <span className="font-bold text-white italic">{item.plat?.nom || "Plat"}</span>
+                          </div>
+                          {item.plat?.prixUsd && (
+                            <span className="text-[9px] text-zinc-500 font-bold">${(item.plat.prixUsd * item.quantite).toFixed(2)}</span>
+                          )}
+                       </li>
+                     )) : (
+                       <li className="text-xs text-zinc-600 italic">Détails non disponibles</li>
+                     )}
                   </ul>
                </div>
 

@@ -12,16 +12,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function ManagerSettingsPage({ searchParams }: { searchParams: { resto_id?: string } }) {
-  const restaurantId = searchParams.resto_id || "resto-99-default";
   const router = useRouter();
+  const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   
   const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance'>('security');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -32,20 +28,33 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const [requestLoading, setRequestLoading] = useState(false);
 
   useEffect(() => {
-    const checkSecurity = async () => {
-        const isMain = await checkIsMainAccount(restaurantId);
+    setMounted(true);
+    // Si l'ID n'est pas dans l'URL, le récupérer depuis la session
+    async function init() {
+      let restoId = searchParams.resto_id;
+      if (!restoId) {
+        const session = await getManagerSession();
+        restoId = session?.id || "";
+        if (restoId) setRestaurantId(restoId);
+      }
+      if (restoId) {
+        const isMain = await checkIsMainAccount(restoId);
         if (!isMain) {
-            router.push(`/manager/dashboard?resto_id=${restaurantId}`);
+          router.push(`/manager/dashboard?resto_id=${restoId}`);
+          return;
         }
-    };
-    checkSecurity();
-    fetchSession();
-  }, [restaurantId]);
-
-  const fetchSession = async () => {
-    const data = await getManagerSession();
-    if (data) setRestaurant(data);
-  };
+        const session = await getManagerSession();
+        if (session) {
+          setRestaurant(session);
+          // Sync du thème
+          if ((session as any).preferredTheme && (session as any).preferredTheme !== theme) {
+            setTheme((session as any).preferredTheme);
+          }
+        }
+      }
+    }
+    init();
+  }, [searchParams.resto_id]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -30,70 +30,80 @@ import { useTheme } from "next-themes";
 
 export default function CaissePage({ searchParams }: { searchParams: { resto_id?: string } }) {
   const router = useRouter();
-  const restaurantId = searchParams.resto_id || "resto-99-default";
+  const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [printingOrder, setPrintingOrder] = useState<any>(null);
   const [restaurantName, setRestaurantName] = useState("SmartResto");
   const { setTheme, theme } = useTheme();
   
-  const fetchOrders = async () => {
-    const all = await getRecentCommandes(restaurantId);
-    // On ne montre à la caisse que ce qui est "SUBMITTED" (Attente validation) ou "READY" (Prêt pour paiement final/clôture)
+  const fetchOrders = async (id: string) => {
+    const all = await getRecentCommandes(id);
     const filtered = all.filter((o: any) => o.statut === "SUBMITTED" || o.statut === "READY");
     setOrders(filtered);
     setLoading(false);
   };
 
   useEffect(() => {
-    // Initial fetch of restaurant name
-    getRestaurantById(restaurantId).then(r => {
-      if (r) {
-        const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
-        if (!r.active || isExpired) {
-          router.push('/manager/subscription-expired');
-          return;
-        }
-        setRestaurantName(r.nom || "SmartResto");
-        if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
+    // Récupération de l'ID depuis la session si absent dans l'URL
+    async function init() {
+      let id = searchParams.resto_id;
+      if (!id) {
+        const { getManagerSession } = await import("@/lib/manager-actions");
+        const session = await getManagerSession() as any;
+        id = session?.id || "";
+        if (id) setRestaurantId(id);
+      }
+      if (!id) return;
+
+      // Charger le profil restaurant
+      getRestaurantById(id).then(r => {
+        if (r) {
+          const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
+          if (!r.active || isExpired) {
+            router.push('/manager/subscription-expired');
+            return;
+          }
+          setRestaurantName(r.nom || "SmartResto");
+          if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
             setTheme((r as any).preferredTheme);
+          }
         }
-      }
-    });
+      });
 
-    fetchOrders();
+      fetchOrders(id);
 
-    const eventSource = new EventSource(`/api/events?restaurantId=${restaurantId}`);
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "new-order" || data.type === "status-updated") {
-        if (!data.restaurantId || data.restaurantId === restaurantId) {
-            fetchOrders();
+      const eventSource = new EventSource(`/api/events?restaurantId=${id}`);
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "new-order" || data.type === "status-updated") {
+          if (!data.restaurantId || data.restaurantId === id) {
+            fetchOrders(id);
+          }
         }
-      }
-    };
+      };
 
-    const interval = setInterval(fetchOrders, 10000);
-    return () => {
-      eventSource.close();
-      clearInterval(interval);
-    };
-  }, [restaurantId]);
+      const interval = setInterval(() => fetchOrders(id!), 10000);
+      return () => {
+        eventSource.close();
+        clearInterval(interval);
+      };
+    }
+    init();
+  }, [searchParams.resto_id]);
 
   const handleValidate = async (id: string) => {
-    // SUBMITTED -> PREPARING (Envoi en cuisine)
     const res = await updateOrderStatus(id, "PREPARING");
     if (res.success) {
-      fetchOrders();
+      fetchOrders(restaurantId);
     }
   };
 
   const handleComplete = async (id: string, method: string) => {
-    // READY -> COMPLETED (Paiement et clôture)
     const res = await confirmOrderPayment(id, method);
     if (res.success) {
       toast.success("Commande encaissée avec succès !", { position: "top-center" });
-      fetchOrders();
+      fetchOrders(restaurantId);
     } else {
       toast.error("Erreur lors de l'encaissement.");
     }

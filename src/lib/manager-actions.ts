@@ -50,7 +50,7 @@ export async function getManagerSession() {
 
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: payload.restoId },
-      select: { id: true, nom: true, email: true, plan: true, active: true, subscriptionEnd: true }
+      select: { id: true, nom: true, email: true, plan: true, active: true, subscriptionEnd: true, preferredTheme: true }
     });
 
     return restaurant;
