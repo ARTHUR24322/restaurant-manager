@@ -361,9 +361,9 @@ export default function SuperAdminPage() {
                   </div>
                </form>
              )}
+          </div>
         </div>
-      </div>
-    );
+      );
   }
 
   return (
