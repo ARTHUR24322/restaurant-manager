@@ -27,6 +27,8 @@ import { getManagerAnalytics } from "@/lib/analytics-actions";
 import { printInvoice } from "@/lib/thermal-printer";
 import { MultiSiteWidget } from "@/components/manager/MultiSiteWidget";
 
+import { getManagerSession } from "@/lib/manager-actions";
+
 // --- Mock Data ---
 // --- Constants & Color Config ---
 const PAYMENT_METHOD_CONFIG: Record<string, { label: string, color: string, icon: any }> = {
@@ -117,7 +119,7 @@ const PieChartPlaceholder = ({ data }: any) => (
 // --- Main Page ---
 
 export default function DashboardPage({ searchParams }: { searchParams: { resto_id?: string } }) {
-  const restaurantId = searchParams.resto_id || "resto-99-default";
+  const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   const [orders, setOrders] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [filter, setFilter] = useState('day');
@@ -127,7 +129,22 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   const [restoStatus, setRestoStatus] = useState<any>(null);
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
 
+  useEffect(() => {
+    // Si l'ID est absent au montage (ex: clic depuis la sidebar sans le paramètre), le récuperer de la session !
+    async function loadSession() {
+      if (!searchParams.resto_id) {
+        const session = await getManagerSession();
+        if (session) {
+          setRestaurantId(session.id);
+        }
+      }
+    }
+    loadSession();
+  }, [searchParams.resto_id]);
+
   const fetchAllOrders = async (currentFilter: string) => {
+    if (!restaurantId) return;
+
     setIsRefreshing(true);
     
     // 1. Commandes Récentes (Live Feed) - Toujours les 20 dernières
@@ -150,6 +167,8 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   };
 
   useEffect(() => {
+    if (!restaurantId) return;
+
     fetchAllOrders(filter);
     
     const eventSource = new EventSource(`/api/events?restaurantId=${restaurantId}`);
@@ -167,7 +186,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
       eventSource.close();
       clearInterval(interval);
     };
-  }, [filter]); // Se déclenche quand le filtre change
+  }, [filter, restaurantId]);
 
   const handlePrint = (order: any) => {
     printInvoice(order);

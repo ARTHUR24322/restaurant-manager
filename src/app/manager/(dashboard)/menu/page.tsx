@@ -3,9 +3,14 @@ export const dynamic = "force-dynamic";
 import { getPlats, addPlat } from "@/lib/actions";
 import { Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import { type Plat } from "@/types";
+import { getManagerSession } from "@/lib/manager-actions";
 
 export default async function ManagerMenuPage({ searchParams }: { searchParams: { resto_id?: string } }) {
-  const restaurantId = searchParams.resto_id || "resto-99-default";
+  let restaurantId = searchParams.resto_id;
+  if (!restaurantId) {
+    const session = await getManagerSession();
+    restaurantId = session?.id || "resto-99-default";
+  }
   const plats = (await getPlats(restaurantId)) as unknown as Plat[];
 
   return (

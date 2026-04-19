@@ -36,10 +36,11 @@ import {
 } from "@/lib/inventory-actions";
 import { toast } from "sonner";
 import { useSearchParams } from 'next/navigation';
+import { getManagerSession } from "@/lib/manager-actions";
 
 export default function InventoryPage() {
   const searchParams = useSearchParams();
-  const restoId = searchParams.get("resto_id");
+  const [restoId, setRestoId] = useState<string | null>(searchParams.get("resto_id"));
   
   const [loading, setLoading] = useState(true);
   const [articles, setArticles] = useState<any[]>([]);
@@ -62,6 +63,16 @@ export default function InventoryPage() {
   // Paywall state
   const isLocked = plan !== "PRO" && plan !== "PLATINUM";
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadResto() {
+      if (!searchParams.get("resto_id")) {
+        const session = await getManagerSession();
+        if (session) setRestoId(session.id);
+      }
+    }
+    loadResto();
+  }, [searchParams]);
 
   useEffect(() => {
     if (restoId) {
