@@ -1,12 +1,27 @@
  node_modules
-.next
-out
-dist
+# dépendances
+node_modules/
 
+# Next.js
+.next/
+out/
+dist/
+
+# environnement (très important)
 .env
 .env.local
+.env.production
+.env.development
 
+# base de données locale Prisma / SQLite
 dev.db
+*.db
 
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# système
 .DS_Store
-node_modules
+Thumbs.db
