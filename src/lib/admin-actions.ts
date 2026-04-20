@@ -65,6 +65,15 @@ export async function createRestaurant(formData: FormData) {
     });
     const isChild = !!motherResto;
 
+    // Indexation du nom si c'est un enfant avec le même nom que la mère
+    let finalNom = nom;
+    if (isChild && motherResto.nom.toLowerCase() === nom.toLowerCase()) {
+        const count = await (prisma as any).restaurant.count({
+            where: { email }
+        });
+        finalNom = `${nom} ${count + 1}`;
+    }
+
     // RÈGLE STRICTE : Un email ne peut servir à plusieurs établissements que si c'est du PLATINUM
     if (isChild && motherResto.plan !== "PLATINUM") {
         return { success: false, error: "Cet email appartient déjà à un restaurant Standard/Pro. Le multi-site est réservé au plan PLATINUM." };
@@ -84,7 +93,7 @@ export async function createRestaurant(formData: FormData) {
     console.log("[SaaS-Server] Création du restaurant en DB...");
     const resto = await (prisma as any).restaurant.create({
       data: { 
-        nom, 
+        nom: finalNom, 
         slug: uniqueSlug,
         email, 
         telephone,

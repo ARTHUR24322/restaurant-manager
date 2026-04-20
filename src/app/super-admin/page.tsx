@@ -27,8 +27,11 @@ import {
     Search,
     RefreshCw,
     ChevronRight,
+    ChevronDown,
     ArrowLeft,
-    Send
+    Send,
+    Layers,
+    ChevronUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant } from "@/lib/admin-actions";
@@ -129,6 +132,33 @@ export default function SuperAdminPage() {
     const [broadcastTargetId, setBroadcastTargetId] = useState("");
     const [oldPin, setOldPin] = useState("");
     const [newPin, setNewPin] = useState("");
+    const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
+
+    // Groupement des restaurants par email pour identifier Mères & Filiales
+    const groupedRestaurants = React.useMemo(() => {
+        const groups: { [key: string]: { mother: any, children: any[] } } = {};
+        
+        // Trier par date de création pour que le premier soit toujours la mère
+        const sorted = [...restaurants].sort((a, b) => 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
+        sorted.forEach(r => {
+            if (!groups[r.email]) {
+                groups[r.email] = { mother: r, children: [] };
+            } else {
+                groups[r.email].children.push(r);
+            }
+        });
+        return Object.values(groups);
+    }, [restaurants]);
+
+    const toggleEmailExpansion = (email: string) => {
+        const next = new Set(expandedEmails);
+        if (next.has(email)) next.delete(email);
+        else next.add(email);
+        setExpandedEmails(next);
+    };
 
     useEffect(() => {
         const checkSession = async () => {
@@ -443,22 +473,85 @@ export default function SuperAdminPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            {restaurants.filter(r => r.nom.toLowerCase().includes(searchQuery.toLowerCase())).map(r => (
-                                <div key={r.id} className="bg-zinc-800/30 p-5 rounded-3xl border border-zinc-800/50 flex items-center justify-between">
-                                    <div>
-                                        <h4 className="font-black text-white uppercase">{r.nom}</h4>
-                                        <p className="text-xs text-zinc-500">{r.email} • {r.ville} • <span className="text-primary font-bold">{r.plan}</span></p>
+                        <div className="space-y-6">
+                            {groupedRestaurants
+                                .filter(group => 
+                                    group.mother.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                    group.children.some(c => c.nom.toLowerCase().includes(searchQuery.toLowerCase()))
+                                )
+                                .map(group => (
+                                <div key={group.mother.id} className="space-y-2">
+                                    {/* LIGNE MÈRE */}
+                                    <div className="bg-zinc-800/40 p-5 rounded-3xl border border-zinc-700/50 flex items-center justify-between hover:bg-zinc-800/60 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+                                                <Building2 className="w-6 h-6 text-primary" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-black text-white uppercase">{group.mother.nom}</h4>
+                                                    <span className="text-[8px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter">Établissement Mère</span>
+                                                </div>
+                                                <p className="text-xs text-zinc-500">{group.mother.email} • {group.mother.ville} • <span className="text-primary font-bold">{group.mother.plan}</span></p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-3">
+                                            {group.children.length > 0 && (
+                                                <button 
+                                                    onClick={() => toggleEmailExpansion(group.mother.email)}
+                                                    className={cn(
+                                                        "flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                                                        expandedEmails.has(group.mother.email) 
+                                                            ? "bg-zinc-700 border-zinc-600 text-white" 
+                                                            : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white"
+                                                    )}
+                                                >
+                                                    <Layers className="w-3 h-3" />
+                                                    {expandedEmails.has(group.mother.email) ? "Masquer Filiales" : `Filiales (${group.children.length})`}
+                                                    {expandedEmails.has(group.mother.email) ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                                </button>
+                                            )}
+                                            <div className="w-px h-8 bg-zinc-800 mx-2" />
+                                            <div className="flex items-center gap-1.5">
+                                                <button onClick={() => setEditingResto(group.mother)} className="p-2.5 bg-zinc-900 rounded-xl text-zinc-400 hover:text-primary border border-zinc-800 hover:border-primary/20 transition-all" title="Éditer"><Pencil className="w-4 h-4" /></button>
+                                                <button onClick={() => handleToggle(group.mother.id, group.mother.active)} className={cn("p-2.5 rounded-xl border transition-all", group.mother.active ? "text-emerald-500 border-emerald-500/20 bg-emerald-500/5" : "text-red-500 border-red-500/20 bg-red-500/5")} title={group.mother.active ? "Suspendre" : "Activer"}><Power className="w-4 h-4" /></button>
+                                                <button onClick={async () => {
+                                                    const res = await impersonateRestaurant(group.mother.id);
+                                                    if (res.success) window.open(`/manager/dashboard?resto_id=${group.mother.id}`, "_blank");
+                                                }} className="p-2.5 bg-zinc-900 rounded-xl text-zinc-400 border border-zinc-800 hover:text-white transition-all" title="Accéder au dashboard"><ExternalLink className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDelete(group.mother.id)} className="p-2.5 bg-zinc-900 rounded-xl text-red-500/30 hover:text-red-500 border border-zinc-800 hover:border-red-500/20 transition-all" title="Supprimer"><XCircle className="w-4 h-4" /></button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={() => setEditingResto(r)} className="p-2 bg-zinc-800 rounded-xl text-zinc-400 hover:text-primary"><Pencil className="w-4 h-4" /></button>
-                                        <button onClick={() => handleToggle(r.id, r.active)} className={cn("p-2 rounded-xl border", r.active ? "text-emerald-500 border-emerald-500/20" : "text-red-500 border-red-500/20")}><Power className="w-4 h-4" /></button>
-                                        <button onClick={async () => {
-                                            const res = await impersonateRestaurant(r.id);
-                                            if (res.success) window.open(`/manager/dashboard?resto_id=${r.id}`, "_blank");
-                                        }} className="p-2 bg-zinc-800 rounded-xl text-zinc-400"><ExternalLink className="w-4 h-4" /></button>
-                                        <button onClick={() => handleDelete(r.id)} className="p-2 bg-zinc-800 rounded-xl text-red-500/50 hover:text-red-500"><XCircle className="w-4 h-4" /></button>
-                                    </div>
+
+                                    {/* LISTE DES FILIALES (EXPANDABLE) */}
+                                    {expandedEmails.has(group.mother.email) && (
+                                        <div className="ml-12 space-y-2 border-l-2 border-zinc-800 pl-6 py-2 animate-in slide-in-from-top-2 duration-300">
+                                            {group.children.map(child => (
+                                                <div key={child.id} className="bg-zinc-900/40 p-4 rounded-2xl border border-white/[0.02] flex items-center justify-between hover:bg-zinc-900/60">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-700/50">
+                                                            <Building2 className="w-4 h-4 text-zinc-500" />
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="text-[11px] font-black text-zinc-300 uppercase">{child.nom}</h5>
+                                                            <p className="text-[9px] text-zinc-500">Filiale • {child.ville} • UID: {child.id.substring(0,8)}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 scale-90 origin-right">
+                                                        <button onClick={() => setEditingResto(child)} className="p-2 bg-zinc-800 rounded-lg text-zinc-500 hover:text-primary"><Pencil className="w-3.5 h-3.5" /></button>
+                                                        <button onClick={() => handleToggle(child.id, child.active)} className={cn("p-2 rounded-lg border", child.active ? "text-emerald-500 border-emerald-500/10" : "text-red-500 border-red-500/10")}><Power className="w-3.5 h-3.5" /></button>
+                                                        <button onClick={async () => {
+                                                            const res = await impersonateRestaurant(child.id);
+                                                            if (res.success) window.open(`/manager/dashboard?resto_id=${child.id}`, "_blank");
+                                                        }} className="p-2 bg-zinc-800 rounded-lg text-zinc-500"><ExternalLink className="w-3.5 h-3.5" /></button>
+                                                        <button onClick={() => handleDelete(child.id)} className="p-2 bg-zinc-800 rounded-lg text-red-500/30 hover:text-red-500"><XCircle className="w-3.5 h-3.5" /></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -582,7 +675,35 @@ export default function SuperAdminPage() {
                                     <p className="text-xs text-zinc-500">{demande.nomProprietaire} • {demande.plan} • ${demande.montant}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={async () => { const p = prompt("PWD ?"); if(p) { await approveDemande(demande.id, p); fetchRestos(); }}} className="bg-emerald-600 text-white font-black px-4 py-2 rounded-xl text-[10px] uppercase">Approuver</button>
+                                    <button onClick={async () => { 
+                                        const isMainExist = restaurants.some(r => r.email === demande.email);
+                                        const isSameResto = restaurants.some(r => r.email === demande.email && r.nom.toLowerCase() === demande.nomRestaurant.toLowerCase());
+                                        
+                                        let p = "";
+                                        // On ne demande un mot de passe QUE pour un nouveau compte principal
+                                        if (!isMainExist && !isSameResto) {
+                                            p = prompt("Définir le mot de passe pour ce nouveau compte :") || "";
+                                            if (!p) return;
+                                        }
+                                        
+                                        setApprovingId(demande.id);
+                                        try {
+                                            const res = await approveDemande(demande.id, p);
+                                            if (res.success) {
+                                                toast.success(res.isUpdate ? "Abonnement renouvelé !" : "Établissement créé !");
+                                                fetchRestos();
+                                            } else {
+                                                toast.error(res.error);
+                                            }
+                                        } finally {
+                                            setApprovingId(null);
+                                        }
+                                    }} 
+                                    disabled={approvingId === demande.id}
+                                    className="bg-emerald-600 text-white font-black px-4 py-2 rounded-xl text-[10px] uppercase flex items-center gap-2"
+                                    >
+                                        {approvingId === demande.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Approuver"}
+                                    </button>
                                     <button onClick={() => rejectDemande(demande.id).then(fetchRestos)} className="bg-red-600/10 text-red-500 p-2 rounded-xl"><XCircle /></button>
                                 </div>
                             </div>

@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getRecentCommandes, updateOrderStatus, confirmOrderPayment, getPlats, getRestaurantStatus } from "@/lib/actions";
 import { updateRestaurantTauxChange } from "@/lib/actions-settings";
+import { checkIsMainAccount } from "@/lib/admin-actions";
 import { getManagerAnalytics } from "@/lib/analytics-actions";
 import { printInvoice } from "@/lib/thermal-printer";
 import { MultiSiteWidget } from "@/components/manager/MultiSiteWidget";
@@ -136,6 +137,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   const [showTauxModal, setShowTauxModal] = useState(false);
   const [newTaux, setNewTaux] = useState<string>("");
   const [tauxLoading, setTauxLoading] = useState(false);
+  const [isMainAccount, setIsMainAccount] = useState(false);
 
   useEffect(() => {
     // Si l'ID est absent au montage (ex: clic depuis la sidebar sans le paramètre), le récuperer de la session !
@@ -146,9 +148,15 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
           setRestaurantId(session.id);
         }
       }
+      
+      // Cas du Multi-Site : Déterminer si c'est la mère
+      if (restaurantId) {
+        const isMain = await checkIsMainAccount(restaurantId);
+        setIsMainAccount(isMain);
+      }
     }
     loadSession();
-  }, [searchParams.resto_id]);
+  }, [searchParams.resto_id, restaurantId]);
 
   const fetchAllOrders = async (currentFilter: string) => {
     if (!restaurantId) return;
@@ -331,6 +339,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
         <MultiSiteWidget 
           proprietorEmail={restoStatus.email} 
           currentRestoId={restaurantId} 
+          isMainAccount={isMainAccount}
         />
       )}
 

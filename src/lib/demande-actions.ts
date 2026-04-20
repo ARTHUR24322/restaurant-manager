@@ -173,21 +173,32 @@ export async function approveDemande(id: string, adminPassword: string) {
       let counter = 1;
       
       while (true) {
-        // Migration queryRaw pour bypasser validation Client Prisma runtime
-        const conflicts: any = await prisma.$queryRaw`SELECT id FROM Restaurant WHERE slug = ${uniqueSlug} LIMIT 1`;
-        if (!conflicts || conflicts.length === 0) break;
+        const conflict = await (prisma as any).restaurant.findFirst({
+          where: { slug: uniqueSlug },
+          select: { id: true }
+        });
+        if (!conflict) break;
         uniqueSlug = `${baseSlug}-${counter}`;
         counter++;
       }
 
       // Créer le restaurant
+      // Indexation du nom si c'est un enfant avec le même nom que la mère
+      let finalNom = demande.nomRestaurant;
+      if (isChild && motherResto.nom.toLowerCase() === demande.nomRestaurant.toLowerCase()) {
+          const count = await (prisma as any).restaurant.count({
+              where: { email: demande.email }
+          });
+          finalNom = `${demande.nomRestaurant} ${count + 1}`;
+      }
+
       // Si c'est un enfant, on utilise un mot de passe verrouillé (accès via mère)
       const finalPassword = isChild ? "CHILD_PROT_" + Math.random().toString(36).substring(2, 10) : adminPassword;
       const hashedPassword = await hashPassword(finalPassword);
 
       resto = await (prisma as any).restaurant.create({
         data: {
-          nom: demande.nomRestaurant,
+          nom: finalNom,
           slug: uniqueSlug,
           email: demande.email,
           ville: demande.ville,

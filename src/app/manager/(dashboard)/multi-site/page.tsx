@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { getMultiSiteStats, updateChildPin } from "@/lib/multi-site-actions";
+import { getMultiSiteStats, updateChildPin, toggleChildStatus } from "@/lib/multi-site-actions";
 import { getRestaurantById, checkIsMainAccount } from "@/lib/admin-actions";
 import { 
   Globe, 
@@ -57,6 +57,19 @@ export default function MultiSitePage() {
         }
     } else {
         import("sonner").then(s => s.toast.error(res.error || "Erreur"));
+    }
+  };
+
+  const handleToggleStatus = async (id: string, active: boolean) => {
+    const res = await toggleChildStatus(id, active);
+    if (res.success) {
+        import("sonner").then(s => s.toast.success(active ? "Établissement activé" : "Établissement suspendu"));
+        if (restoProfile?.email) {
+            const data = await getMultiSiteStats(restoProfile.email);
+            setStats(data);
+        }
+    } else {
+        import("sonner").then(s => s.toast.error("Erreur lors de l'opération"));
     }
   };
 
@@ -336,13 +349,29 @@ export default function MultiSitePage() {
             )}
 
             <div className="pt-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    {resto.active ? (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    ) : (
-                        <span className="w-2 h-2 rounded-full bg-zinc-700" />
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        {resto.active ? (
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        ) : (
+                            <span className="w-2 h-2 rounded-full bg-zinc-700" />
+                        )}
+                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{resto.active ? "En ligne" : "Inactif"}</span>
+                    </div>
+
+                    {resto.id !== restoId && isMainEstablishment && (
+                        <button 
+                            onClick={() => handleToggleStatus(resto.id, !resto.active)}
+                            className={cn(
+                                "text-[9px] font-bold px-3 py-1.5 rounded-lg border transition-all uppercase tracking-tighter",
+                                resto.active 
+                                    ? "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-black" 
+                                    : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black"
+                            )}
+                        >
+                            {resto.active ? "Suspendre" : "Activer"}
+                        </button>
                     )}
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{resto.active ? "En ligne" : "Inactif"}</span>
                 </div>
                 <button 
                   onClick={() => {

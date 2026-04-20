@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react";
-import { getMultiSiteStats } from "@/lib/multi-site-actions";
+import { getMultiSiteStats, verifyEstablishmentPin } from "@/lib/multi-site-actions";
 import { 
   Building2, 
   MapPin, 
@@ -11,13 +11,21 @@ import {
   ChevronRight,
   TrendingUp,
   Globe,
-  Loader2
+  Loader2,
+  X,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PinInput } from "./PinInput";
+import { toast } from "sonner";
 
-export function MultiSiteWidget({ proprietorEmail, currentRestoId }: { proprietorEmail: string, currentRestoId: string }) {
+export function MultiSiteWidget({ proprietorEmail, currentRestoId, isMainAccount }: { proprietorEmail: string, currentRestoId: string, isMainAccount: boolean }) {
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [targetResto, setTargetResto] = useState<any>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinError, setPinError] = useState("");
+  const [verifyingPin, setVerifyingPin] = useState(false);
 
   useEffect(() => {
     async function loadStats() {
@@ -101,7 +109,15 @@ export function MultiSiteWidget({ proprietorEmail, currentRestoId }: { proprieto
             </div>
 
             <button 
-              onClick={() => window.open(`/manager/dashboard?resto_id=${resto.id}`, '_blank')}
+              onClick={() => {
+                if (isMainAccount) {
+                  window.open(`/manager/dashboard?resto_id=${resto.id}`, '_blank');
+                } else {
+                  setTargetResto(resto);
+                  setShowPinModal(true);
+                  setPinError("");
+                }
+              }}
               className="w-full md:w-auto px-5 py-2.5 bg-zinc-800 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 group-hover/item:shadow-lg group-hover/item:shadow-emerald-500/20"
             >
               Suivre <ExternalLink className="w-3 h-3" />
@@ -109,6 +125,52 @@ export function MultiSiteWidget({ proprietorEmail, currentRestoId }: { proprieto
           </div>
         ))}
       </div>
+
+      {/* PIN Modal for Children */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl relative">
+              <button 
+                onClick={() => setShowPinModal(false)}
+                className="absolute top-6 right-6 text-zinc-500 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex flex-col items-center mb-8">
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4">
+                  <Lock className="w-6 h-6 text-emerald-500" />
+                </div>
+                <h3 className="text-xl font-black text-white italic uppercase tracking-tight text-center">
+                  Suivre {targetResto?.nom}
+                </h3>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center mt-2">
+                  Code PIN requis pour cet établissement
+                </p>
+              </div>
+
+              <PinInput 
+                onCancel={() => setShowPinModal(false)}
+                error={pinError}
+                isLoading={verifyingPin}
+                onComplete={async (pin) => {
+                  setVerifyingPin(true);
+                  setPinError("");
+                  const res = await verifyEstablishmentPin(targetResto.id, pin);
+                  if (res.success) {
+                    toast.success(`Accès autorisé à ${targetResto.nom}`);
+                    window.open(`/manager/dashboard?resto_id=${targetResto.id}`, '_blank');
+                    setShowPinModal(false);
+                  } else {
+                    setPinError(res.error || "Code invalide");
+                    toast.error("Code PIN incorrect");
+                  }
+                  setVerifyingPin(false);
+                }}
+              />
+           </div>
+        </div>
+      )}
 
       <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
          <p className="text-[10px] text-muted-foreground font-medium italic">
