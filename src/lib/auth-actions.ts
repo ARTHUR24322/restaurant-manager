@@ -102,7 +102,7 @@ export async function authenticateManager(formData: FormData) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict", // Passé de lax à strict pour plus de sécurité
-      maxAge: 60 * 60 * 2, // 2 heures
+      maxAge: 60 * 60 * 1, // Réduit de 2h à 1h pour plus de sécurité (post-incident Vercel)
       path: "/",
     });
 
@@ -167,7 +167,12 @@ export async function verifySuperAdminPin(pin: string) {
       where: { key: "admin_pin" }
     });
 
-    const correctPin = config?.value || "123456";
+    const correctPin = config?.value;
+
+    if (!correctPin) {
+      console.error("ADMIN SECURITY ALERT: No Admin PIN set in database. Default 123456 has been DISABLED.");
+      return { success: false, error: "Sécurité : PIN administrateur non configuré. Contactez le développeur." };
+    }
 
     if (pin === correctPin) {
       // 3. PIN correct : Créer la session finale
@@ -180,7 +185,7 @@ export async function verifySuperAdminPin(pin: string) {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
-        maxAge: 60 * 60 * 4,
+        maxAge: 60 * 60 * 1, // Réduit de 4h à 1h
         path: "/",
       });
 
@@ -317,7 +322,7 @@ export async function switchSelectedRestaurant(newRestoId: string) {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "strict",
-          maxAge: 60 * 60 * 2, // 2 heures
+          maxAge: 60 * 60 * 1, // Réduit de 2h à 1h
           path: "/",
       });
 

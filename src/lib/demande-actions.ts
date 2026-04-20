@@ -258,6 +258,9 @@ export async function approveDemande(id: string, adminPassword: string) {
     return { success: true, restoId: resto.id, isUpdate: !!existingResto };
   } catch (error: any) {
     console.error("[Demande] Approbation error:", error);
+    if (error.code === 'P1001') {
+      return { success: false, error: "Base de données injoignable (P1001). Veuillez réessayer." };
+    }
     return { success: false, error: error.message || "Erreur serveur." };
   }
 }

@@ -31,8 +31,9 @@ export function MultiSiteWidget({ proprietorEmail, currentRestoId, isMainAccount
     async function loadStats() {
       setLoading(true);
       const data = await getMultiSiteStats(proprietorEmail);
+      const safeData = Array.isArray(data) ? data : [];
       // Filtrer le restaurant actuel pour ne montrer que les AUTRES
-      setStats(data.filter(r => r.id !== currentRestoId));
+      setStats(safeData.filter(r => r.id !== currentRestoId));
       setLoading(false);
     }
     loadStats();

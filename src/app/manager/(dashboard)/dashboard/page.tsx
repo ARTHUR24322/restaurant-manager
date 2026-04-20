@@ -174,7 +174,9 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
     }
 
     const platos = await getPlats(restaurantId);
-    setLowStockItems(platos.filter((p: any) => p.trackStock && (p.stockQuantity || 0) <= 5));
+    if (Array.isArray(platos)) {
+      setLowStockItems(platos.filter((p: any) => p.trackStock && (p.stockQuantity || 0) <= 5));
+    }
     
     const current = await getRestaurantStatus(restaurantId);
     setRestoStatus(current);

@@ -222,8 +222,11 @@ export async function updateRestaurant(id: string, formData: FormData) {
 
         revalidatePath("/super-admin");
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("[SaaS-Server] Erreur update:", error);
+        if (error.code === 'P1001') {
+            return { success: false, error: "Connexion à la base de données impossible (P1001). Veuillez réessayer dans quelques instants." };
+        }
         return { success: false, error: "Erreur lors de la mise à jour." };
     }
 }
@@ -280,8 +283,11 @@ export async function toggleSubscription(id: string, active: boolean) {
 
         revalidatePath("/super-admin");
         return { success: true };
-    } catch (e) {
+    } catch (e: any) {
         console.error("[SaaS-Server] Erreur toggle:", e);
+        if (e.code === 'P1001') {
+            return { success: false, error: "Connexion impossible (P1001)." };
+        }
         return { success: false };
     }
 }

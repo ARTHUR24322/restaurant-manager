@@ -65,6 +65,8 @@ model ArticleStock {
   mouvements    MouvementStock[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+
+  @@index([restaurantId])
 }
 
 model Emplacement {
@@ -76,6 +78,8 @@ model Emplacement {
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   
   articles     ArticleStock[]
+
+  @@index([restaurantId])
 }
 
 model Fournisseur {
@@ -90,6 +94,8 @@ model Fournisseur {
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   
   articles     ArticleStock[]
+
+  @@index([restaurantId])
 }
 
 model MouvementStock {
@@ -106,6 +112,8 @@ model MouvementStock {
   restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   
   createdAt    DateTime     @default(now())
+
+  @@index([restaurantId])
 }
 
 
@@ -121,6 +129,8 @@ model Plat {
   items        CommandeItem[]
   options      Option[]
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
 }
 
 model Option {
@@ -147,6 +157,8 @@ model Commande {
   updatedAt      DateTime       @updatedAt
   restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   items          CommandeItem[]
+
+  @@index([restaurantId])
 }
 
 model CommandeItem {
@@ -157,6 +169,9 @@ model CommandeItem {
   options    String
   plat       Plat     @relation(fields: [platId], references: [id], onDelete: Cascade)
   commande   Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+
+  @@index([commandeId])
+  @@index([platId])
 }
 
 model Visite {
@@ -165,6 +180,8 @@ model Visite {
   table        String
   createdAt    DateTime   @default(now())
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
 }
 
 model DemandeAbonnement {
@@ -197,6 +214,8 @@ model SubscriptionLog {
   monthlyPrice Float    // Calculated MRR
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
+
+  @@index([restaurantId])
 }
 
 model Notification {
@@ -209,4 +228,6 @@ model Notification {
   createdAt    DateTime @default(now())
   
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
 }

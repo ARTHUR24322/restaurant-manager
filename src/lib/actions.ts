@@ -1,9 +1,10 @@
 "use server";
 
 import { prisma } from "./prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { broadcastEvent } from "@/lib/sse";
 import { ensureManager } from "./auth-actions";
+import { getCachedPlats, getCachedRestaurant } from "./cache";
 
 // Utilitaire de diffusion Temps Réel (SSE)
 function broadcastToAll(type: string, data: any = {}) {
@@ -12,11 +13,7 @@ function broadcastToAll(type: string, data: any = {}) {
 
 export async function getRestaurantStatus(restaurantId: string) {
   try {
-    const resto = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-      select: { id: true, nom: true, active: true, plan: true, email: true }
-    });
-    return resto;
+    return await getCachedRestaurant(restaurantId);
   } catch (error) {
     console.error("Error fetching restaurant status:", error);
     return null;
@@ -26,14 +23,7 @@ export async function getRestaurantStatus(restaurantId: string) {
 export async function getPlats(restaurantId?: string) {
   try {
     if (!restaurantId) return [];
-    const plats = await prisma.plat.findMany({
-      where: { restaurantId },
-      orderBy: { categorie: "asc" },
-      include: {
-        options: true
-      }
-    });
-    return plats;
+    return await getCachedPlats(restaurantId);
   } catch (error) {
     console.error("Error fetching plats:", error);
     return [];
@@ -83,6 +73,7 @@ export async function addPlat(formData: FormData) {
 
     revalidatePath("/manager/menu");
     revalidatePath("/client/menu");
+    revalidateTag(`menu-${restaurantId}`);
   } catch (error) {
     console.error("Error adding plat:", error);
     throw error;
@@ -103,6 +94,7 @@ export async function deletePlat(formData: FormData) {
 
     revalidatePath("/manager/menu");
     revalidatePath("/client/menu");
+    revalidateTag(`menu-${restaurantId}`);
   } catch (error) {
     console.error("Error deleting plat:", error);
     throw error;
