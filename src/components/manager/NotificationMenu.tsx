@@ -21,9 +21,16 @@ export function NotificationMenu({ restaurantId }: { restaurantId: string }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchNotifs = async () => {
-    const data = await getNotifications(restaurantId) as Notification[];
-    setNotifications(data);
-    setUnreadCount(data.filter((n: Notification) => !n.read).length);
+    try {
+      const data = await getNotifications(restaurantId);
+      const safeData = Array.isArray(data) ? data : [];
+      setNotifications(safeData);
+      setUnreadCount(safeData.filter((n: any) => !n.read).length);
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+      setNotifications([]);
+      setUnreadCount(0);
+    }
   };
 
   useEffect(() => {

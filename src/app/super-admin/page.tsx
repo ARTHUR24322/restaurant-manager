@@ -31,7 +31,8 @@ import {
     ArrowLeft,
     Send,
     Layers,
-    ChevronUp
+    ChevronUp,
+    KeyRound
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant } from "@/lib/admin-actions";
@@ -588,7 +589,7 @@ export default function SuperAdminPage() {
                                     <option value="PRO">PRO (Stock)</option>
                                     <option value="PLATINUM">PLATINUM (Tout Inclus)</option>
                                 </select>
-                                <input name="password" type="password" required placeholder="Mot de Passe Initial" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
+                                <input name="adminPassword" type="password" required placeholder="Mot de Passe Initial" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white" />
                             </div>
                             <button disabled={isCreating} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">
                                 {isCreating ? "Déploiement..." : "Lancer le Restaurant"}
@@ -655,6 +656,17 @@ export default function SuperAdminPage() {
                                         <option value="true">ACTIF</option>
                                         <option value="false">SUSPENDU</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Nouveau Mot de Passe (Optionnel)</label>
+                                    <input name="newPassword" type="password" placeholder="Laisser vide pour ne pas changer" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Nouveau Code PIN (Optionnel)</label>
+                                    <input name="pinCode" placeholder="6 chiffres" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none" />
                                 </div>
                             </div>
                             <button className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Sauvegarder</button>
