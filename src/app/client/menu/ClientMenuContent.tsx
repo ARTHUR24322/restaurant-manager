@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import { type Plat, type CartItem } from "@/types";
 import { useCartStore } from "@/store/cartStore";
-import { Plus, Info, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame } from "lucide-react";
+import { 
+  Plus, Info, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame,
+  Beef, Wine, Beer, GlassWater, IceCream, CupSoda, Cherry
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlateOptionsModal } from "@/components/client/PlateOptionsModal";
 import { getRecentCommandes } from "@/lib/actions";
@@ -82,11 +85,29 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     };
   }, []);
 
+  const categoryMap: Record<string, { label: string, icon: any }> = {
+    "ALL": { label: "Tout le Menu", icon: Utensils },
+    "ENTREE": { label: "Entrées", icon: Soup },
+    "PLAT": { label: "Plats", icon: Beef },
+    "DESSERT": { label: "Dessert", icon: IceCream },
+    "JUS": { label: "Jus", icon: Cherry },
+    "VIN": { label: "Vins", icon: Wine },
+    "BIERE": { label: "Bières", icon: Beer },
+    "SODA": { label: "Sodas", icon: CupSoda },
+    "EAU": { label: "Eaux", icon: GlassWater },
+    "CAFE": { label: "Cafés", icon: Coffee },
+    "COCKTAIL": { label: "Cocktails", icon: GlassWater }
+  };
+
+  // Extraire les catégories uniques présentes dans les plats
+  const availableCategories = Array.from(new Set(initialPlats.map(p => p.categorie)));
+  
   const categories = [
-    { id: "ALL", label: "Tout le Menu", icon: Utensils },
-    { id: "ENTREE", label: "Entrées", icon: Soup },
-    { id: "PLAT", label: "Plats", icon: Coffee },
-    { id: "BOISSON", label: "Boissons", icon: Utensils },
+    { id: "ALL", ...categoryMap["ALL"] },
+    ...availableCategories.map(cat => ({
+      id: cat,
+      ...(categoryMap[cat] || { label: cat, icon: Utensils })
+    }))
   ];
 
   const filteredPlats = activeCategory === "ALL" 

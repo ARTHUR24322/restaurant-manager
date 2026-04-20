@@ -1,4 +1,4 @@
-export type Categorie = "ENTREE" | "PLAT" | "BOISSON";
+export type Categorie = "ENTREE" | "PLAT" | "DESSERT" | "JUS" | "VIN" | "BIERE" | "SODA" | "EAU" | "CAFE" | "COCKTAIL";
 
 // SUBMITTED (Attente Caisse) -> PREPARING (En Cuisine) -> READY (Prêt à servir) -> COMPLETED (Payé/Clôturé)
 export type CommandeStatut = "SUBMITTED" | "PREPARING" | "READY" | "COMPLETED";

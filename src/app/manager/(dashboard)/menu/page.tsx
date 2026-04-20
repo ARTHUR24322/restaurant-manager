@@ -69,8 +69,15 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                     className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none appearance-none text-foreground"
                   >
                     <option value="ENTREE">Entrée</option>
-                    <option value="PLAT">Plat</option>
-                    <option value="BOISSON">Boisson</option>
+                    <option value="PLAT">Plat De Résistance</option>
+                    <option value="DESSERT">Dessert / Sucré</option>
+                    <option value="JUS">Jus Naturels</option>
+                    <option value="VIN">Vins & Domaines</option>
+                    <option value="BIERE">Bières</option>
+                    <option value="SODA">Sodas</option>
+                    <option value="EAU">Eaux</option>
+                    <option value="CAFE">Cafés & Thés</option>
+                    <option value="COCKTAIL">Cocktails</option>
                   </select>
                 </div>
               </div>
