@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { getPlats, addPlat } from "@/lib/actions";
+import { getPlats, addPlat, deletePlat } from "@/lib/actions";
 import { Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import { type Plat } from "@/types";
 import { getManagerSession } from "@/lib/manager-actions";
@@ -86,6 +86,15 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Options (séparées par des virgules)</label>
+                <input 
+                  name="options" 
+                  placeholder="Ex: Pimenté, Moyen, Pas pimenté" 
+                  className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none text-sm text-foreground" 
+                />
+              </div>
+
               <button 
                 type="submit" 
                 className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl mt-2 hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20"
@@ -139,9 +148,13 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                         ${plat.prixUsd.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <form action={deletePlat}>
+                           <input type="hidden" name="restaurantId" value={restaurantId} />
+                           <input type="hidden" name="platId" value={plat.id} />
+                           <button type="submit" className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                             <Trash2 className="w-4 h-4" />
+                           </button>
+                        </form>
                       </td>
                     </tr>
                   ))

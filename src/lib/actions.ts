@@ -58,6 +58,11 @@ export async function addPlat(formData: FormData) {
       throw new Error("Nom et Prix sont obligatoires");
     }
 
+    const optionsRaw = formData.get("options") as string;
+    const optionsList = optionsRaw 
+      ? optionsRaw.split(",").map(opt => opt.trim()).filter(opt => opt !== "") 
+      : [];
+
     await prisma.plat.create({
       data: {
         nom,
@@ -65,7 +70,14 @@ export async function addPlat(formData: FormData) {
         prixUsd,
         categorie,
         image,
-        restaurantId
+        restaurantId,
+        options: {
+          create: optionsList.map(opt => ({
+            nom: opt,
+            type: "CHECKBOX",
+            choix: JSON.stringify([opt])
+          }))
+        }
       },
     });
 
@@ -73,6 +85,26 @@ export async function addPlat(formData: FormData) {
     revalidatePath("/client/menu");
   } catch (error) {
     console.error("Error adding plat:", error);
+    throw error;
+  }
+}
+
+export async function deletePlat(formData: FormData) {
+  try {
+    const restaurantId = formData.get("restaurantId") as string;
+    const platId = formData.get("platId") as string;
+    if (!restaurantId || !platId) throw new Error("IDs requis");
+
+    await ensureManager(restaurantId);
+
+    await prisma.plat.delete({
+      where: { id: platId }
+    });
+
+    revalidatePath("/manager/menu");
+    revalidatePath("/client/menu");
+  } catch (error) {
+    console.error("Error deleting plat:", error);
     throw error;
   }
 }

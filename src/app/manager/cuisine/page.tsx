@@ -161,17 +161,38 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
                <div className="bg-zinc-800/50 p-4 rounded-3xl border border-zinc-800/50">
                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">Ticket Cuisine</p>
                   <ul className="space-y-2">
-                     {order.items?.length > 0 ? order.items.map((item: any, idx: number) => (
-                       <li key={idx} className="flex justify-between items-center text-sm">
-                          <div className="flex items-center gap-2">
-                             <span className="font-black text-emerald-400">{item.quantite}x</span>
-                             <span className="font-bold text-white italic">{item.plat?.nom || "Plat"}</span>
-                          </div>
-                          {item.plat?.prixUsd && (
-                            <span className="text-[9px] text-zinc-500 font-bold">${(item.plat.prixUsd * item.quantite).toFixed(2)}</span>
-                          )}
-                       </li>
-                     )) : (
+                     {order.items?.length > 0 ? order.items.map((item: any, idx: number) => {
+                        let selectedOpts = [];
+                        try {
+                          if (item.options) {
+                            const parsed = JSON.parse(item.options);
+                            selectedOpts = parsed.detail || [];
+                          }
+                        } catch (e) {}
+
+                        return (
+                          <li key={idx} className="flex flex-col gap-1 border-b border-zinc-800/20 pb-2 last:border-0 last:pb-0">
+                             <div className="flex justify-between items-center text-sm">
+                                <div className="flex items-center gap-2">
+                                   <span className="font-black text-emerald-400">{item.quantite}x</span>
+                                   <span className="font-bold text-white italic">{item.plat?.nom || "Plat"}</span>
+                                </div>
+                                {item.plat?.prixUsd && (
+                                  <span className="text-[9px] text-zinc-500 font-bold">${(item.plat.prixUsd * item.quantite).toFixed(2)}</span>
+                                )}
+                             </div>
+                             {selectedOpts.length > 0 && (
+                               <div className="flex flex-wrap gap-1">
+                                 {selectedOpts.map((opt: string, i: number) => (
+                                   <span key={i} className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-black uppercase">
+                                     {opt}
+                                   </span>
+                                 ))}
+                               </div>
+                             )}
+                          </li>
+                        );
+                     }) : (
                        <li className="text-xs text-zinc-600 italic">Détails non disponibles</li>
                      )}
                   </ul>

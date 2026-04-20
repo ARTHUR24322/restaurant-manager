@@ -183,13 +183,27 @@ export function printReceipt(order: any, restaurantName: string = "SmartResto", 
 // ─── KITCHEN TICKET (Cuisine) ────────────────────────────────────
 
 export function printKitchenTicket(order: any) {
-  const itemsHtml = order.items?.map((item: any) => `
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-      <span class="bold" style="font-size: 18px; min-width: 30px;">${item.quantite}x</span>
-      <span class="bold upper" style="font-size: 15px;">${item.plat?.nom || "Article"}</span>
-    </div>
-    ${item.selectedOptions?.detail?.length > 0 ? `<div class="tiny" style="margin-left: 38px; margin-bottom: 4px; font-style: italic;">- ${item.selectedOptions.detail.join(", ")}</div>` : ""}
-  `).join("") || `<div class="bold big center">Dégustation Royale</div>`;
+  const itemsHtml = order.items?.map((item: any) => {
+    let opts = [];
+    if (item.selectedOptions?.detail) {
+      opts = item.selectedOptions.detail;
+    } else if (item.options) {
+      try {
+        const parsed = JSON.parse(item.options);
+        opts = parsed.detail || [];
+      } catch (e) {}
+    }
+    
+    const optsHtml = opts.length > 0 ? `<div class="tiny" style="margin-left: 38px; margin-bottom: 4px; font-style: italic;">- ${opts.join(", ")}</div>` : "";
+
+    return `
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+        <span class="bold" style="font-size: 18px; min-width: 30px;">${item.quantite}x</span>
+        <span class="bold upper" style="font-size: 15px;">${item.plat?.nom || "Article"}</span>
+      </div>
+      ${optsHtml}
+    `;
+  }).join("") || `<div class="bold big center">Dégustation Royale</div>`;
 
   const html = `
     <div class="center bold upper small" style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; letter-spacing: 2px;">
@@ -238,13 +252,27 @@ export function printInvoice(order: any, restaurantName: string = "SmartResto", 
   const tva = order.totalUsd * 0.16;
   const totalCdf = order.totalUsd * (order.tauxChange || 2800);
 
-  const itemsHtml = order.items?.map((item: any) => `
-    <div class="item-row">
-      <div class="item-name">${item.quantite}x ${item.plat?.nom || "Article"}</div>
-      <div class="right">${formatCurrency((item.plat?.prixUsd || 0) * item.quantite)}</div>
-    </div>
-    ${item.selectedOptions?.detail?.length > 0 ? `<div class="tiny" style="margin-left: 4px; font-style: italic; margin-bottom: 4px;">- ${item.selectedOptions.detail.join(", ")}</div>` : ""}
-  `).join("") || `<div class="item-row"><div>Dégustation (Global)</div><div>${formatCurrency(order.totalUsd)}</div></div>`;
+  const itemsHtml = order.items?.map((item: any) => {
+    let opts = [];
+    if (item.selectedOptions?.detail) {
+      opts = item.selectedOptions.detail;
+    } else if (item.options) {
+      try {
+        const parsed = JSON.parse(item.options);
+        opts = parsed.detail || [];
+      } catch (e) {}
+    }
+    
+    const optsHtml = opts.length > 0 ? `<div class="tiny" style="margin-left: 4px; font-style: italic; margin-bottom: 4px;">- ${opts.join(", ")}</div>` : "";
+
+    return `
+      <div class="item-row">
+        <div class="item-name">${item.quantite}x ${item.plat?.nom || "Article"}</div>
+        <div class="right">${formatCurrency((item.plat?.prixUsd || 0) * item.quantite)}</div>
+      </div>
+      ${optsHtml}
+    `;
+  }).join("") || `<div class="item-row"><div>Dégustation (Global)</div><div>${formatCurrency(order.totalUsd)}</div></div>`;
 
   const orderIdSuffix = order.id ? order.id.slice(-6).toUpperCase() : "INV-0000";
 
