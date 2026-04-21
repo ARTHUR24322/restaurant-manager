@@ -310,7 +310,7 @@ function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: B
   return (
     <div
       className={`
-        relative group flex flex-col rounded-[2rem] border overflow-hidden transition-all duration-500
+        relative group flex flex-col rounded-[2rem] border overflow-hidden transition-all duration-200
         ${plan.popular
           ? "border-violet-500/40 bg-gradient-to-b from-violet-600/10 via-zinc-900/80 to-zinc-950 scale-[1.02] shadow-2xl shadow-violet-500/10 hover:shadow-violet-500/20"
           : "border-white/[0.06] bg-gradient-to-b " + plan.gradient + " hover:border-white/10 hover:shadow-xl"
@@ -619,7 +619,7 @@ function SubscriptionModal({
             </button>
           </form>
         ) : (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-200">
             <div className="bg-zinc-800/30 border border-zinc-700/30 rounded-3xl p-8 text-center">
               <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Total à régler</p>
               <div className="flex items-center justify-center gap-1 mb-2">

@@ -68,7 +68,7 @@ function DonutChart({ data }: { data: { name: string, value: number }[] }) {
                             strokeWidth="4"
                             strokeDasharray={strokeDasharray}
                             strokeDashoffset={-offset}
-                            className="transition-all duration-1000 ease-out hover:opacity-80 cursor-pointer"
+                            className="transition-all duration-300 ease-out hover:opacity-80 cursor-pointer"
                         />
                     );
                 })}
@@ -89,7 +89,7 @@ function MiniBarChart({ data }: { data: { name: string, value: number }[] }) {
                 <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
                     <div className="relative w-full flex items-end justify-center h-full">
                         <div
-                            className="w-full bg-indigo-500/20 group-hover:bg-indigo-500/40 rounded-t-lg transition-all duration-700 ease-out border-b-2 border-indigo-500"
+                            className="w-full bg-indigo-500/20 group-hover:bg-indigo-500/40 rounded-t-lg transition-all duration-300 ease-out border-b-2 border-indigo-500"
                             style={{ height: `${(item.value / max) * 100}%` }}
                         >
                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-zinc-800 px-2 py-0.5 rounded text-[8px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -121,7 +121,6 @@ export default function SuperAdminPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [showAll, setShowAll] = useState(false);
     const [expandedMother, setExpandedMother] = useState<string | null>(null);
-    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
     const [showPinStep, setShowPinStep] = useState(false);
     const [pin, setPin] = useState("");
     const [showSettings, setShowSettings] = useState(false);
@@ -278,23 +277,24 @@ export default function SuperAdminPage() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirmDeleteId !== id) {
-            setConfirmDeleteId(id);
-            toast.warning("Re-cliquez pour supprimer.");
-            setTimeout(() => setConfirmDeleteId(null), 5000);
-            return;
-        }
-        setLoading(true);
-        const res = await deleteRestaurant(id);
-        if (res.success) {
-            toast.success("Supprimé.");
-            await fetchRestos();
-        } else {
-            toast.error(res.error || "Erreur.");
-        }
-        setConfirmDeleteId(null);
-        setLoading(false);
+    const handleDelete = async (id: string, nom: string) => {
+        setModalConfig({
+            show: true,
+            title: "Suppression Définitive",
+            message: `Voulez-vous vraiment supprimer ${nom.toUpperCase()} ? Cette action est irréversible et supprimera toutes les données associées.`,
+            type: "confirm",
+            onConfirm: async () => {
+                setLoading(true);
+                const res = await deleteRestaurant(id);
+                if (res.success) {
+                    toast.success("Établissement supprimé avec succès.");
+                    await fetchRestos();
+                } else {
+                    toast.error(res.error || "Erreur lors de la suppression.");
+                }
+                setLoading(false);
+            }
+        });
     };
 
     const handleBroadcast = async (e: React.FormEvent) => {
@@ -431,7 +431,7 @@ export default function SuperAdminPage() {
             </div>
 
             {activeTab === 'dashboard' && (
-                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         {[
@@ -509,7 +509,7 @@ export default function SuperAdminPage() {
             )}
 
             {activeTab === 'restaurants' && (
-                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
                     <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
                         <div className="flex justify-between items-center mb-8">
                             <h3 className="text-lg font-black uppercase flex items-center gap-2">
@@ -576,7 +576,7 @@ export default function SuperAdminPage() {
                                                     const res = await impersonateRestaurant(group.mother.id);
                                                     if (res.success) window.open(`/manager/dashboard?resto_id=${group.mother.id}`, "_blank");
                                                 }} className="p-2.5 bg-zinc-900 rounded-xl text-zinc-400 border border-zinc-800 hover:text-white transition-all" title="Accéder au dashboard"><ExternalLink className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDelete(group.mother.id)} className="p-2.5 bg-zinc-900 rounded-xl text-red-500/30 hover:text-red-500 border border-zinc-800 hover:border-red-500/20 transition-all" title="Supprimer"><XCircle className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDelete(group.mother.id, group.mother.nom)} className="p-2.5 bg-zinc-900 rounded-xl text-red-500/30 hover:text-red-500 border border-zinc-800 hover:border-red-500/20 transition-all" title="Supprimer"><XCircle className="w-4 h-4" /></button>
                                             </div>
                                         </div>
                                     </div>
@@ -602,7 +602,7 @@ export default function SuperAdminPage() {
                                                             const res = await impersonateRestaurant(child.id);
                                                             if (res.success) window.open(`/manager/dashboard?resto_id=${child.id}`, "_blank");
                                                         }} className="p-2 bg-zinc-800 rounded-lg text-zinc-500"><ExternalLink className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => handleDelete(child.id)} className="p-2 bg-zinc-800 rounded-lg text-red-500/30 hover:text-red-500"><XCircle className="w-3.5 h-3.5" /></button>
+                                                        <button onClick={() => handleDelete(child.id, child.nom)} className="p-2 bg-zinc-800 rounded-lg text-red-500/30 hover:text-red-500"><XCircle className="w-3.5 h-3.5" /></button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -721,7 +721,7 @@ export default function SuperAdminPage() {
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Nouveau Code PIN (Optionnel)</label>
-                                    <input name="pinCode" placeholder="6 chiffres" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none" />
+                                    <input name="pinCode" placeholder="6 chiffres (ex: 000000)" maxLength={6} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none" />
                                 </div>
                             </div>
                             <button className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Sauvegarder</button>
@@ -732,7 +732,7 @@ export default function SuperAdminPage() {
 
             {/* TAB DEMANDES, BROADCAST & SETTINGS (LOGIQUE RESTAURÉE) */}
             {activeTab === 'demandes' && (
-                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
+                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
                     <h3 className="text-2xl font-black uppercase flex items-center gap-3"><Bell className="w-8 h-8 text-violet-500" /> Validations</h3>
                     <div className="space-y-4">
                         {demandes.filter(d => d.statut === "EN_ATTENTE").map(demande => (
@@ -778,7 +778,7 @@ export default function SuperAdminPage() {
             )}
 
             {activeTab === 'recuperation' && (
-                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
+                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
                     <h3 className="text-2xl font-black uppercase flex items-center gap-3"><KeyRound className="w-8 h-8 text-amber-500" /> Récupération de Mots de Passe</h3>
                     <div className="space-y-4">
                         {recoveryRequests.length === 0 ? (
@@ -868,7 +868,7 @@ export default function SuperAdminPage() {
             )}
 
             {activeTab === 'broadcast' && (
-                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
+                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-300 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
                     <h3 className="text-2xl font-black uppercase mb-8 flex items-center gap-3">
                         <Globe className="w-8 h-8 text-primary" /> 
                         {broadcastTargetType === "GLOBAL" ? "Broadcast Global" : "Message Personnel"}
@@ -933,7 +933,7 @@ export default function SuperAdminPage() {
             )}
 
             {activeTab === 'settings' && (
-                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
+                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-300 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
                     <h3 className="text-2xl font-black uppercase mb-8">Configuration PIN</h3>
                     <button onClick={() => setShowSettings(true)} className="w-full bg-zinc-800 p-6 rounded-3xl border border-zinc-700 text-white font-black uppercase flex justify-between items-center">
                         Changer le PIN Admin <ChevronRight />

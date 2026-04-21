@@ -301,7 +301,7 @@ function ManagerLayoutContent({
 
                 if (percent >= 90 || daysRemaining <= 7) {
                     return (
-                        <div className="mx-8 mt-4 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-500 print:hidden">
+                        <div className="mx-8 mt-4 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-200 print:hidden">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center animate-pulse text-black">
                                     <Bell className="w-5 h-5" />

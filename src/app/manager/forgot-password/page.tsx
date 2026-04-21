@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
         </Link>
 
         {/* Logo / Header */}
-        <div className="flex flex-col items-center mb-10 animate-in fade-in slide-in-from-bottom-5 duration-700">
+        <div className="flex flex-col items-center mb-10 animate-in fade-in slide-in-from-bottom-5 duration-300">
            <div className="w-16 h-16 bg-primary/20 rounded-[1.5rem] flex items-center justify-center mb-6 shadow-2xl shadow-primary/20">
               <KeyRound className="w-8 h-8 text-primary" />
            </div>
@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Card Form */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-500 delay-150">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 shadow-2xl shadow-black/50 animate-in zoom-in-95 duration-200 delay-150">
              
              {success ? (
                  <div className="flex flex-col items-center justify-center py-6 animate-in zoom-in-95 duration-300">
@@ -189,7 +189,7 @@ export default function ForgotPasswordPage() {
                             </div>
                         </form>
                     ) : (
-                        <div className="animate-in slide-in-from-right-4 duration-500 space-y-6">
+                        <div className="animate-in slide-in-from-right-4 duration-200 space-y-6">
                             <div className="flex flex-col items-center justify-center mb-4">
                                 <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
                                     <Phone className="w-8 h-8" />

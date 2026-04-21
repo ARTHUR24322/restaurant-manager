@@ -43,76 +43,67 @@ export async function getGlobalAnalytics() {
       }
     });
 
-    // Classement des restaurants
-    const allVisits = await prisma.visite.findMany({
-      include: {
-        restaurant: {
-          select: { nom: true, logoUrl: true }
-        }
-      }
+    // Classement des restaurants (Limit 10)
+    const visitStats = await prisma.visite.groupBy({
+      by: ['restaurantId'],
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: 10
     });
 
-    const stats: Record<string, { id: string, nom: string; logoUrl: string | null; scans: number }> = {};
-    
-    allVisits.forEach((v: any) => {
-      if (!stats[v.restaurantId]) {
-        stats[v.restaurantId] = {
-          id: v.restaurantId,
-          nom: v.restaurant.nom,
-          logoUrl: v.restaurant.logoUrl,
-          scans: 0
-        };
-      }
-      stats[v.restaurantId].scans += 1;
-    });
-
-    const topRestaurants = Object.values(stats)
-      .sort((a, b) => b.scans - a.scans);
+    const topRestaurants = await Promise.all(visitStats.map(async (v) => {
+      const r = await prisma.restaurant.findUnique({
+        where: { id: v.restaurantId },
+        select: { nom: true, logoUrl: true }
+      });
+      return {
+        id: v.restaurantId,
+        nom: r?.nom || "Inconnu",
+        logoUrl: r?.logoUrl || null,
+        scans: v._count.id
+      };
+    }));
 
     // Calcul du revenu global sur toute la plateforme (GMV)
-    const completedOrders = await prisma.commande.findMany({
-      where: { statut: "COMPLETED" },
-      select: { totalUsd: true }
+    const aggOrders = await prisma.commande.aggregate({
+      _sum: { totalUsd: true },
+      where: { statut: "COMPLETED" }
     });
-    const globalRevenue = completedOrders.reduce((sum, order) => sum + (order.totalUsd || 0), 0);
+    const globalRevenue = aggOrders._sum.totalUsd || 0;
 
     // Calcul du revenu SaaS (MRR) - Dynamique
-    const activeRestos = await prisma.restaurant.findMany({
-      where: { active: true },
-      select: { monthlyPrice: true }
+    const aggSaaS = await prisma.restaurant.aggregate({
+      _sum: { monthlyPrice: true },
+      where: { active: true }
     });
+    const saasRevenue = aggSaaS._sum.monthlyPrice || 0;
 
-    const saasRevenue = activeRestos.reduce((sum: number, r: any) => sum + (r.monthlyPrice || 0), 0);
-
-    // Répartition par Plan (pour Donut Chart)
-    const allRestos = await prisma.restaurant.findMany({
-      select: { plan: true, ville: true }
+    // Group by pour les statistiques Plan & Villes
+    const planGroup = await prisma.restaurant.groupBy({
+        by: ['plan'],
+        _count: { id: true },
     });
+    const planDistribution = planGroup.map(g => ({ name: g.plan, value: g._count.id }));
 
-    const planStats: Record<string, number> = {};
-    const cityStats: Record<string, number> = {};
-
-    allRestos.forEach((r: any) => {
-      planStats[r.plan] = (planStats[r.plan] || 0) + 1;
-      cityStats[r.ville] = (cityStats[r.ville] || 0) + 1;
+    const cityGroup = await prisma.restaurant.groupBy({
+        by: ['ville'],
+        _count: { id: true }
     });
-
-    const planDistribution = Object.entries(planStats).map(([name, value]) => ({ name, value }));
-    const cityDistribution = Object.entries(cityStats).map(([name, value]) => ({ name, value }));
+    const cityDistribution = cityGroup.map(g => ({ name: g.ville, value: g._count.id }));
 
     // Récupérer les 10 derniers logs d'abonnement pour le flux d'activité
     const recentLogs = await prisma.subscriptionLog.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
+      include: {
+          restaurant: { select: { nom: true } }
+      }
     });
 
-    // Enrichir les logs avec les noms des restaurants
-    const logsWithRestos = await Promise.all(recentLogs.map(async (log: any) => {
-        const resto = await prisma.restaurant.findUnique({
-            where: { id: log.restaurantId },
-            select: { nom: true }
-        });
-        return { ...log, restaurantNom: resto?.nom || "Inconnu" };
+    // Enrichir les logs
+    const logsWithRestos = recentLogs.map((log: any) => ({
+        ...log,
+        restaurantNom: log.restaurant?.nom || "Inconnu"
     }));
 
     return {

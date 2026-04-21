@@ -15,10 +15,10 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
   const [pin, setPin] = useState('');
 
   const handleNumberClick = (num: string) => {
-    if (pin.length < 4 && !isLoading) {
+    if (pin.length < 6 && !isLoading) {
       const newPin = pin + num;
       setPin(newPin);
-      if (newPin.length === 4) {
+      if (newPin.length === 6) {
         onComplete(newPin);
       }
     }
@@ -46,19 +46,19 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
   }, [pin, isLoading]);
 
   return (
-    <div className="flex flex-col items-center gap-8 animate-in zoom-in-95 duration-300">
+    <div className="flex flex-col items-center gap-8 animate-in zoom-in-95 duration-150">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">Accès Sécurisé</h2>
-        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Saisissez votre code PIN à 4 chiffres</p>
+        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Saisissez votre code PIN à 6 chiffres</p>
       </div>
 
       {/* Pin Display */}
       <div className="flex gap-4">
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <div 
             key={i}
             className={cn(
-              "w-14 h-14 rounded-2xl border-2 flex items-center justify-center transition-all duration-300",
+              "w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-150",
               pin.length > i 
                 ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(var(--primary-rgb),0.2)]" 
                 : "border-zinc-800 bg-zinc-900",
@@ -66,7 +66,7 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
             )}
           >
             {pin.length > i && (
-              <div className="w-3 h-3 rounded-full bg-white animate-in fade-in zoom-in duration-200" />
+              <div className="w-2.5 h-2.5 rounded-full bg-white animate-in fade-in zoom-in duration-75" />
             )}
           </div>
         ))}

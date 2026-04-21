@@ -272,7 +272,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                         </form>
                     </div>
 
-                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-[2rem] p-6 animate-in slide-in-from-bottom-4 duration-500 delay-100">
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-[2rem] p-6 animate-in slide-in-from-bottom-4 duration-200 delay-100">
                         <p className="text-[10px] text-amber-500/80 font-black uppercase tracking-widest mb-1 italic">Note importante</p>
                         <p className="text-xs text-amber-500/60 leading-relaxed">
                             Le changement du mot de passe déconnectera tout autre gérant ayant accès à ce dashboard. Assurez-vous de communiquer le nouveau mot de passe à votre équipe de confiance.

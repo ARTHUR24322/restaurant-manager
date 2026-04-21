@@ -38,27 +38,61 @@ export function ClientWelcomeScreen({ restaurantName, table, logoUrl, children }
         const oneHour = 60 * 60 * 1000;
 
         if (now - timestamp > oneHour) {
-          // SESSION EXPIRÉE
+          // SESSION EXPIRÉE DÈS LE CHARGEMENT
           localStorage.removeItem(sessionKey);
           setSessionExpired(true);
           setIsSubmitted(false);
-          // Supprimer le nom de l'URL pour forcer le retour à l'accueil
           if (queryName) {
             const current = new URLSearchParams(Array.from(searchParams.entries()));
             current.delete("name");
-            const search = current.toString();
-            // Utiliser window.location car router.replace peut garder le cache
-            window.location.href = `${window.location.pathname}?${search}`;
+            window.history.replaceState({}, '', `${pathname}?${current.toString()}`);
           }
         } else {
-            // Session valide
+            // Session valide, on lance le Timer d'expulsion
             if (queryName) setIsSubmitted(true);
+            
+            const timeLeft = oneHour - (now - timestamp);
+            const timeoutId = setTimeout(() => {
+                // EXPULSION EN DIRECT
+                localStorage.removeItem(sessionKey);
+                setSessionExpired(true);
+                setIsSubmitted(false);
+                
+                const current = new URLSearchParams(window.location.search);
+                current.delete("name");
+                window.history.replaceState({}, '', `${window.location.pathname}?${current.toString()}`);
+            }, timeLeft);
+
+            return () => clearTimeout(timeoutId);
         }
       } catch (e) {
         localStorage.removeItem(sessionKey);
       }
     }
-  }, [restoId, table, queryName, pathname, router, searchParams]);
+  }, [restoId, table, queryName, pathname, searchParams]);
+
+  // ÉCRAN DE SÉCURITÉ : EXPULSION APRÈS 1 HEURE
+  if (sessionExpired) {
+      return (
+          <div className="fixed inset-0 z-[200] bg-zinc-950 flex flex-col items-center justify-center p-6 text-center">
+              <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-red-500/10 blur-[150px] rounded-full" />
+              <div className="relative z-10 max-w-sm animate-in zoom-in-95 duration-500">
+                  <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-red-500/20 animate-pulse">
+                      <span className="text-3xl">⏳</span>
+                  </div>
+                  <h1 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-4">Temps Écoulé</h1>
+                  <p className="text-zinc-400 font-medium mb-8">
+                      Pour des raisons de sécurité, votre session de commande (1 heure) a été automatiquement fermée.
+                  </p>
+                  <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[2rem] shadow-xl">
+                      <p className="text-sm font-bold text-zinc-300">
+                          Veuillez <span className="text-emerald-500 font-black">scanner à nouveau</span> le QR code physique présent sur votre table pour réactiver la carte et commander.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      );
+  }
 
   // Si on a un nom dans l'URL, ou on a déja soumis le formulaire avec succès dans cette vue
   if ((queryName || isSubmitted) && !sessionExpired) {
@@ -97,7 +131,7 @@ export function ClientWelcomeScreen({ restaurantName, table, logoUrl, children }
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[150px] rounded-full" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[150px] rounded-full" />
 
-      <div className="relative z-10 w-full max-w-md animate-in zoom-in-95 duration-700 fade-in flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-md animate-in zoom-in-95 duration-300 fade-in flex flex-col items-center">
         
         {/* Logo or Icon */}
         <div className="mb-8 relative">

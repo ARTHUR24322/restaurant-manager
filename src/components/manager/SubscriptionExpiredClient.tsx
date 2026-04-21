@@ -29,7 +29,7 @@ export function SubscriptionExpiredClient({ restoName }: SubscriptionExpiredClie
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-red-500/10 blur-[150px] rounded-full" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-red-500/10 blur-[150px] rounded-full" />
 
-      <div className="relative z-10 w-full max-w-2xl text-center space-y-8 animate-in zoom-in-95 duration-500">
+      <div className="relative z-10 w-full max-w-2xl text-center space-y-8 animate-in zoom-in-95 duration-200">
         
         {/* Header Icon */}
         <div className="flex justify-center">

@@ -166,7 +166,7 @@ export default function InventoryPage() {
       </div>
 
       {activeTab === 'articles' && (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-[2rem] flex items-center gap-5">
@@ -340,7 +340,7 @@ export default function InventoryPage() {
       )}
 
       {activeTab === 'suppliers' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-200">
              <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {suppliers.map(sup => (
@@ -388,7 +388,7 @@ export default function InventoryPage() {
       )}
 
       {activeTab === 'locations' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-200">
              <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {locations.map(loc => (
@@ -686,10 +686,10 @@ export default function InventoryPage() {
                 <button onClick={() => setIsPaywallOpen(false)} className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors z-20">
                     <X className="w-5 h-5" />
                 </button>
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/10 blur-[100px] rounded-full pointer-events-none group-hover:bg-primary/20 transition-all duration-700" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/10 blur-[100px] rounded-full pointer-events-none group-hover:bg-primary/20 transition-all duration-300" />
                 
                 <div className="relative z-10 space-y-8">
-                    <div className="w-24 h-24 bg-zinc-800 rounded-[2.5rem] flex items-center justify-center mx-auto border border-zinc-700 shadow-xl group-hover:scale-110 transition-transform duration-500">
+                    <div className="w-24 h-24 bg-zinc-800 rounded-[2.5rem] flex items-center justify-center mx-auto border border-zinc-700 shadow-xl group-hover:scale-110 transition-transform duration-200">
                         <Package className="w-12 h-12 text-zinc-600" />
                         <div className="absolute -top-2 -right-2 bg-primary text-black p-2 rounded-xl shadow-lg">
                             <ArrowUpRight className="w-4 h-4" />

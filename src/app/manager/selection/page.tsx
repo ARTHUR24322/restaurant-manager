@@ -144,7 +144,7 @@ function SelectionPageInner() {
 
       {/* Role Cards */}
       {!showPinModal ? (
-        <div className="relative z-10 w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-10 duration-700">
+        <div className="relative z-10 w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-10 duration-300">
           <RoleCard 
             title="Réception & Caisse"
             subtitle="Validation & Encaissement"
@@ -213,17 +213,17 @@ function RoleCard({ title, subtitle, icon, color, onClick, isLocked }: RoleCardP
     <button 
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col items-start p-8 rounded-[2.5rem] border bg-gradient-to-br transition-all duration-500 transform hover:-translate-y-2 hover:shadow-2xl text-left overflow-hidden",
+        "group relative flex flex-col items-start p-8 rounded-[2.5rem] border bg-gradient-to-br transition-all duration-200 transform hover:-translate-y-2 hover:shadow-2xl text-left overflow-hidden",
         colorMap[color]
       )}
     >
       {/* Background Decorative Pattern */}
-      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
+      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-300">
         {icon}
       </div>
 
       <div className={cn(
-        "w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-xl",
+        "w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3 shadow-xl",
         color === 'indigo' ? 'bg-indigo-500 text-white' : 
         color === 'emerald' ? 'bg-emerald-500 text-white' : 
         'bg-primary text-black'

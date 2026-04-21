@@ -18,7 +18,7 @@ model Restaurant {
   plan            String     @default("STANDARD")
   logoUrl         String?
   adminPassword   String
-  pinCode         String     @default("000000")
+  pinCode         String     @default("0000")
   active          Boolean    @default(true)
   billingCycle    String     @default("monthly")
   monthlyPrice    Float      @default(0)

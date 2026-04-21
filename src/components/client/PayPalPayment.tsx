@@ -36,7 +36,7 @@ export default function PayPalPayment({
             components: "buttons",
             enableFunding: "card"
         }}>
-            <div className="w-full space-y-4 animate-in fade-in duration-700">
+            <div className="w-full space-y-4 animate-in fade-in duration-300">
                 <div className="flex items-center justify-center gap-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
                     <span className="h-px flex-1 bg-zinc-800" />
                     <div className="flex items-center gap-1.5">

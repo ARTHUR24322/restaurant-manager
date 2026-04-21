@@ -139,7 +139,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
   return (
     <>
       {isExpired && (
-        <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
             <Clock className="w-10 h-10 text-primary animate-pulse" />
           </div>
@@ -171,7 +171,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
 
       {/* Bandeau de Statut Temps Réel */}
       {activeOrder && (
-        <div className="mb-8 animate-in slide-in-from-top-4 duration-500">
+        <div className="mb-8 animate-in slide-in-from-top-4 duration-200">
             <div className={cn(
              "p-4 rounded-3xl border flex items-center justify-between shadow-lg",
              activeOrder.statut === "SUBMITTED" && "bg-blue-500/10 border-blue-500/20 text-blue-600",
@@ -238,7 +238,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                    src={plat.image} 
                    alt={plat.nom}
                    className={cn(
-                     "w-full h-full object-cover transition-transform duration-500",
+                     "w-full h-full object-cover transition-transform duration-200",
                      !isOutOfStock && "group-hover:scale-110"
                    )}
                  />

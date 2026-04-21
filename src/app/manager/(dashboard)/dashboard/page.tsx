@@ -243,12 +243,12 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   // Les calculs de charts locaux sont supprimés car fournis par le serveur
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-700 relative">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-300 relative">
       
       {/* SaaS Guard Overlay (Subscription Suspension) */}
       {restoStatus && restoStatus.active === false && (
         <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center p-6 text-center">
-            <div className="max-w-md bg-card border-2 border-destructive/20 p-12 rounded-[3rem] shadow-2xl shadow-destructive/10 animate-in zoom-in-95 duration-500">
+            <div className="max-w-md bg-card border-2 border-destructive/20 p-12 rounded-[3rem] shadow-2xl shadow-destructive/10 animate-in zoom-in-95 duration-200">
                 <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-8">
                     <Power className="w-10 h-10 text-destructive animate-pulse" />
                 </div>
@@ -277,7 +277,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
              onClick={() => setShowTauxModal(true)}
              className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-2xl hover:bg-emerald-500/20 transition-all group"
            >
-              <div className="p-1.5 bg-emerald-500/20 rounded-lg group-hover:rotate-180 transition-transform duration-500">
+              <div className="p-1.5 bg-emerald-500/20 rounded-lg group-hover:rotate-180 transition-transform duration-200">
                 <RefreshCw className="w-4 h-4 text-emerald-500" />
               </div>
               <div className="text-left">
@@ -347,7 +347,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
 
       {/* Stock Alerts (New Section) */}
       {lowStockItems.length > 0 && (
-        <div className="bg-red-500/10 border-2 border-red-500/20 p-6 rounded-[2rem] animate-in slide-in-from-right-4 duration-500">
+        <div className="bg-red-500/10 border-2 border-red-500/20 p-6 rounded-[2rem] animate-in slide-in-from-right-4 duration-200">
            <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20">
                  <Package className="w-5 h-5 text-white" />

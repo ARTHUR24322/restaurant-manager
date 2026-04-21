@@ -22,7 +22,7 @@ export function OrderSuccess({ isOpen, onClose, orderId }: OrderSuccessProps) {
       />
 
       {/* Modal Content */}
-      <div className="relative bg-card border border-border shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center space-y-6 transform animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+      <div className="relative bg-card border border-border shadow-2xl rounded-3xl p-8 max-w-sm w-full text-center space-y-6 transform animate-in zoom-in-95 slide-in-from-bottom-10 duration-200">
         
         {/* Success Icon Container */}
         <div className="relative mx-auto w-24 h-24 flex items-center justify-center">

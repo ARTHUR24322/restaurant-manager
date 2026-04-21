@@ -100,42 +100,100 @@ export async function authenticateManager(formData: FormData) {
     });
 
     if (!restaurant) {
-      return { success: false, error: "Identifiants invalides." }; // Generic error to prevent email enumeration
+      return { success: false, error: "Identifiants invalides." };
     }
 
     if (!restaurant.active) {
       return { success: false, error: "Compte inactif. Veuillez contacter le support." };
     }
 
-    // Sécurité : On compare TOUJOURS avec bcrypt. Les mots de passe en clair ne sont plus autorisés.
     const isValid = await comparePassword(password, restaurant.adminPassword);
 
     if (!isValid) {
       return { success: false, error: "Identifiants invalides." };
     }
 
-    // Créer la session
-    const session = await encrypt({
+    // Étape 1 réussie : Créer un jeton temporaire en attente du PIN (valide 5 min)
+    const preAuthToken = await encrypt({
       restoId: restaurant.id,
       email: restaurant.email,
-      role: "MANAGER",
-      version: restaurant.sessionVersion // Ajouter la version actuelle
+      role: "PRE_AUTH_MANAGER",
+      version: restaurant.sessionVersion,
     });
 
-    cookies().set("session", session, {
+    cookies().set("manager_pre_auth", preAuthToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict", // Passé de lax à strict pour plus de sécurité
-      maxAge: 60 * 60 * 1, // Réduit de 2h à 1h pour plus de sécurité (post-incident Vercel)
+      sameSite: "strict",
+      maxAge: 60 * 5, // 5 minutes
       path: "/",
     });
 
-    return { success: true, restoId: restaurant.id };
+    return { success: true, requiresPin: true, restoId: restaurant.id };
   } catch (error) {
     console.error("Login Error:", error);
     return { success: false, error: "Une erreur est survenue lors de la connexion." };
   }
 }
+
+/**
+ * Vérifie le code PIN et crée la session finale
+ */
+export async function verifyManagerPin(pin: string) {
+  try {
+    const preAuthCookie = cookies().get("manager_pre_auth")?.value;
+    if (!preAuthCookie) {
+      return { success: false, error: "Session expirée. Veuillez vous reconnecter." };
+    }
+
+    const payload = await decrypt(preAuthCookie);
+    if (!payload || payload.role !== "PRE_AUTH_MANAGER") {
+      cookies().delete("manager_pre_auth");
+      return { success: false, error: "Session invalide. Veuillez vous reconnecter." };
+    }
+
+    // Récupérer le PIN actuel depuis la base de données
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: payload.restoId as string },
+      select: { pinCode: true, sessionVersion: true, active: true }
+    });
+
+    if (!restaurant || !restaurant.active) {
+      return { success: false, error: "Compte introuvable ou inactif." };
+    }
+
+    // Le PIN par défaut est "000000"
+    const validPin = restaurant.pinCode || "000000";
+    if (pin !== validPin) {
+      return { success: false, error: "Code PIN incorrect. Réessayez." };
+    }
+
+    // PIN correct : créer la session finale
+    const session = await encrypt({
+      restoId: payload.restoId,
+      email: payload.email,
+      role: "MANAGER",
+      version: restaurant.sessionVersion,
+    });
+
+    cookies().set("session", session, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 1, // 1 heure
+      path: "/",
+    });
+
+    // Supprimer le jeton temporaire
+    cookies().delete("manager_pre_auth");
+
+    return { success: true, restoId: payload.restoId };
+  } catch (error) {
+    console.error("PIN Verification Error:", error);
+    return { success: false, error: "Une erreur est survenue." };
+  }
+}
+
 
 export async function authenticateSuperAdmin(formData: FormData) {
   try {
