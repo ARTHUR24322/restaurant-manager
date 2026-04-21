@@ -81,7 +81,7 @@ export default async function ClientMenuPage({
       </main>
 
       {/* Le panier flottant restera en bas de page */}
-      <CartFloat restaurantId={restaurantId} />
+      <CartFloat restaurantId={restaurantId} exchangeRate={restaurant?.tauxChange || 2800} />
     </div>
     </ClientWelcomeScreen>
   );

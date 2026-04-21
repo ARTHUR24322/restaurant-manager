@@ -10,7 +10,7 @@ import { OrderSuccess } from "./OrderSuccess";
 import { toast } from "sonner";
 
 // Composant flottant pour le client affichant le total en live
-export function CartFloat({ restaurantId }: { restaurantId?: string }) {
+export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?: string, exchangeRate?: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -23,8 +23,6 @@ export function CartFloat({ restaurantId }: { restaurantId?: string }) {
   const { items, getTotalUsd, removeItem, updateQuantity, clearCart } = useCartStore();
 
   const totalUsd = getTotalUsd();
-  // TODO: Prendre le vrai taux du jour de la DB. Ex: 1 USD = 2800 CDF
-  const exchangeRate = 2800;
   const totalCdf = totalUsd * exchangeRate;
 
   const handleConfirmOrder = async () => {
