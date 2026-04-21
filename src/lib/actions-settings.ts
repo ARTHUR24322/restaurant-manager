@@ -103,9 +103,9 @@ export async function updateRestaurantPin(restaurantId: string, newPin: string) 
 
         revalidatePath("/manager/dashboard");
         return { success: true };
-    } catch (e) {
-        console.error(e);
-        return { success: false, error: "Erreur lors de la mise à jour du code PIN." };
+    } catch (e: any) {
+        console.error("PIN UPDATE ERROR =>", e?.message || e);
+        return { success: false, error: `Erreur interne: ${e?.message || 'Erreur inconnue'}` };
     }
 }
 
