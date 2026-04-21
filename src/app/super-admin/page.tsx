@@ -138,6 +138,13 @@ export default function SuperAdminPage() {
         placeholder?: string;
     }>({ show: false, title: "", message: "", type: "confirm", onConfirm: () => {} });
     const [modalValue, setModalValue] = useState("");
+
+    // --- ETAT POUR MODALE MOT DE PASSE D'APPROBATION ---
+    const [approveModalOpen, setApproveModalOpen] = useState(false);
+    const [approveModalDemande, setApproveModalDemande] = useState<any>(null);
+    const [approveModalPassword, setApproveModalPassword] = useState("");
+    const [approveModalShowPwd, setApproveModalShowPwd] = useState(false);
+    const [approveModalLoading, setApproveModalLoading] = useState(false);
     
     const [broadcastTitle, setBroadcastTitle] = useState("");
     const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -735,28 +742,26 @@ export default function SuperAdminPage() {
                                     <p className="text-xs text-zinc-500">{demande.nomProprietaire} • {demande.plan} • ${demande.montant}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={async () => { 
+                                    <button onClick={() => { 
                                         const isMainExist = restaurants.some(r => r.email === demande.email);
                                         const isSameResto = restaurants.some(r => r.email === demande.email && r.nom.toLowerCase() === demande.nomRestaurant.toLowerCase());
                                         
-                                        let p = "";
-                                        // On ne demande un mot de passe QUE pour un nouveau compte principal
                                         if (!isMainExist && !isSameResto) {
-                                            p = prompt("Définir le mot de passe pour ce nouveau compte :") || "";
-                                            if (!p) return;
-                                        }
-                                        
-                                        setApprovingId(demande.id);
-                                        try {
-                                            const res = await approveDemande(demande.id, p);
-                                            if (res.success) {
-                                                toast.success(res.isUpdate ? "Abonnement renouvelé !" : "Établissement créé !");
-                                                fetchRestos();
-                                            } else {
-                                                toast.error(res.error);
-                                            }
-                                        } finally {
-                                            setApprovingId(null);
+                                            // Nouveau compte : ouvrir la modale premium
+                                            setApproveModalDemande(demande);
+                                            setApproveModalPassword("");
+                                            setApproveModalOpen(true);
+                                        } else {
+                                            // Renouvellement : approuver directement sans mot de passe
+                                            setApprovingId(demande.id);
+                                            approveDemande(demande.id, "").then(res => {
+                                                if (res.success) {
+                                                    toast.success(res.isUpdate ? "Abonnement renouvelé !" : "Établissement créé !");
+                                                    fetchRestos();
+                                                } else {
+                                                    toast.error(res.error);
+                                                }
+                                            }).finally(() => setApprovingId(null));
                                         }
                                     }} 
                                     disabled={approvingId === demande.id}
@@ -993,6 +998,103 @@ export default function SuperAdminPage() {
                     </div>
                 </div>
             )}
+
+            {/* =====================================================
+                MODALE PREMIUM : DÉFINIR MOT DE PASSE (APPROBATION)
+            ===================================================== */}
+            {approveModalOpen && approveModalDemande && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[600] flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-zinc-900 border border-zinc-700 rounded-[2.5rem] p-10 shadow-2xl shadow-primary/10 animate-in zoom-in-95 duration-300">
+                        <div className="flex flex-col items-center text-center">
+                            {/* Icone animée */}
+                            <div className="relative mb-8">
+                                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+                                <div className="relative w-20 h-20 bg-primary/10 border border-primary/30 rounded-full flex items-center justify-center">
+                                    <Lock className="w-10 h-10 text-primary" />
+                                </div>
+                            </div>
+
+                            <h3 className="text-2xl font-black italic uppercase text-white mb-1">Nouveau Compte</h3>
+                            <p className="text-zinc-400 text-sm font-medium mb-1">
+                                <span className="font-black text-white">{approveModalDemande.nomRestaurant}</span>
+                            </p>
+                            <p className="text-zinc-500 text-xs mb-8">Définissez le mot de passe initial de cet établissement.</p>
+
+                            {/* Input mot de passe */}
+                            <div className="w-full relative mb-6">
+                                <input
+                                    autoFocus
+                                    type={approveModalShowPwd ? "text" : "password"}
+                                    value={approveModalPassword}
+                                    onChange={(e) => setApproveModalPassword(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && approveModalPassword.trim().length >= 6) {
+                                            document.getElementById('approve-confirm-btn')?.click();
+                                        }
+                                    }}
+                                    placeholder="Mot de passe (min. 6 caractères)"
+                                    className="w-full bg-zinc-800 border border-zinc-700 focus:border-primary rounded-2xl py-4 pl-6 pr-14 text-white font-bold outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-zinc-600 placeholder:font-normal"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setApproveModalShowPwd(!approveModalShowPwd)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-primary transition-colors"
+                                >
+                                    {approveModalShowPwd ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Indicateur de sécurité */}
+                            {approveModalPassword.length > 0 && approveModalPassword.length < 6 && (
+                                <p className="text-xs text-red-400 font-bold mb-4 w-full text-left pl-1">⚠ Minimum 6 caractères requis.</p>
+                            )}
+
+                            {/* Boutons */}
+                            <div className="flex gap-3 w-full mt-2">
+                                <button
+                                    onClick={() => { setApproveModalOpen(false); setApproveModalDemande(null); setApproveModalPassword(""); }}
+                                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    id="approve-confirm-btn"
+                                    disabled={approveModalPassword.trim().length < 6 || approveModalLoading}
+                                    onClick={async () => {
+                                        if (approveModalPassword.trim().length < 6) return;
+                                        setApproveModalLoading(true);
+                                        setApprovingId(approveModalDemande.id);
+                                        try {
+                                            const res = await approveDemande(approveModalDemande.id, approveModalPassword.trim());
+                                            if (res.success) {
+                                                toast.success("Établissement créé avec succès !");
+                                                setApproveModalOpen(false);
+                                                setApproveModalDemande(null);
+                                                setApproveModalPassword("");
+                                                fetchRestos();
+                                            } else {
+                                                toast.error(res.error || "Erreur lors de la création.");
+                                            }
+                                        } finally {
+                                            setApproveModalLoading(false);
+                                            setApprovingId(null);
+                                        }
+                                    }}
+                                    className="flex-1 bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {approveModalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                    {approveModalLoading ? "Création..." : "Approuver"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
