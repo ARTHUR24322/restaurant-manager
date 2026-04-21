@@ -53,13 +53,21 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     const interval = setInterval(fetchMyOrder, 10000); // Polling de secours
 
     // Gestion de Session de 1 heure (Sécurité)
-    const SESSION_DURATION_MS = 1 * 60 * 60 * 1000;
+    const SESSION_DURATION_MS = 1 * 60 * 60 * 1000; // 1 heure
+    const RESET_AFTER_MS = 6 * 60 * 60 * 1000; // Si le scan a lieu 6 heures plus tard, on considère que c'est une nouvelle visite
     const sessionKey = `smartresto_session_${restaurantId}_${tableNumber}`;
-    let startTime = sessionStorage.getItem(sessionKey);
     
-    if (!startTime) {
-      startTime = Date.now().toString();
-      sessionStorage.setItem(sessionKey, startTime);
+    let startTime = localStorage.getItem(sessionKey);
+    
+    if (startTime) {
+       const elapsedSinceStart = Date.now() - parseInt(startTime);
+       if (elapsedSinceStart > RESET_AFTER_MS) {
+           startTime = Date.now().toString();
+           localStorage.setItem(sessionKey, startTime);
+       }
+    } else {
+       startTime = Date.now().toString();
+       localStorage.setItem(sessionKey, startTime);
     }
 
     const checkSession = () => {
