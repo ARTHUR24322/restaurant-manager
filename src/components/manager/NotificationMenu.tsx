@@ -45,11 +45,9 @@ export function NotificationMenu({ restaurantId }: { restaurantId: string }) {
   };
 
   const handleClearAll = async () => {
-    if (confirm("Supprimer toutes les notifications ?")) {
-      await clearAllNotifications(restaurantId);
-      fetchNotifs();
-      toast.success("Notifications effacées");
-    }
+    await clearAllNotifications(restaurantId);
+    fetchNotifs();
+    toast.success("Notifications effacées");
   };
 
   const getTypeIcon = (type: string) => {

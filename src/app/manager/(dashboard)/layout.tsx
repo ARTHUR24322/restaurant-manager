@@ -283,35 +283,45 @@ function ManagerLayoutContent({
 
         {/* Subscription Alert Banner */}
         {(() => {
-            if (!restoProfile) return null;
-            const now = new Date();
-            const start = new Date(restoProfile.createdAt);
-            const end = new Date(restoProfile.subscriptionEnd);
-            const total = end.getTime() - start.getTime();
-            const elapsed = now.getTime() - start.getTime();
-            const percent = (elapsed / total) * 100;
-            const daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+            if (!restoProfile || !restoProfile.subscriptionEnd) return null;
+            
+            try {
+                const now = new Date();
+                const start = new Date(restoProfile.createdAt || now);
+                const end = new Date(restoProfile.subscriptionEnd);
+                
+                if (isNaN(end.getTime())) return null;
 
-            if (percent >= 90) {
-                return (
-                    <div className="mx-8 mt-4 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-500 print:hidden">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                                <Bell className="w-5 h-5 text-black" />
+                const total = end.getTime() - start.getTime();
+                if (total <= 0) return null;
+
+                const elapsed = now.getTime() - start.getTime();
+                const percent = (elapsed / total) * 100;
+                const daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
+                if (percent >= 90 || daysRemaining <= 7) {
+                    return (
+                        <div className="mx-8 mt-4 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-500 print:hidden">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center animate-pulse text-black">
+                                    <Bell className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black text-white uppercase tracking-tighter">Action Requise : Réabonnement</h4>
+                                    <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight">
+                                        Votre abonnement {daysRemaining === 0 ? "expire aujourd'hui" : `expire dans ${daysRemaining} ${daysRemaining > 1 ? 'jours' : 'jour'}`}. 
+                                        Évitez toute interruption de service.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h4 className="text-sm font-black text-white uppercase tracking-tighter">Action Requise : Réabonnement</h4>
-                                <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight">
-                                    Votre abonnement expire dans {daysRemaining} {daysRemaining > 1 ? 'jours' : 'jour'}. 
-                                    Évitez toute interruption de service.
-                                </p>
-                            </div>
+                            <button className="bg-red-500 hover:bg-red-600 text-black text-[10px] font-black uppercase px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-red-500/20 active:scale-95">
+                                Se réabonner maintenant
+                            </button>
                         </div>
-                        <button className="bg-red-500 hover:bg-red-600 text-black text-[10px] font-black uppercase px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-red-500/20 active:scale-95">
-                            Se réabonner maintenant
-                        </button>
-                    </div>
-                );
+                    );
+                }
+            } catch (e) {
+                console.error("Error calculating subscription data", e);
             }
             return null;
         })()}
@@ -320,19 +330,7 @@ function ManagerLayoutContent({
           {children}
         </div>
 
-        <style jsx global>{`
-          @media print {
-            aside, header, nav, [role="alert"] { display: none !important; }
-            body, html, main, .flex, .flex-1, div { 
-              overflow: visible !important; 
-              height: auto !important; 
-              min-height: 0 !important;
-              background: white !important;
-              color: black !important;
-              position: static !important;
-            }
-          }
-        `}</style>
+
       </main>
     </div>
   );

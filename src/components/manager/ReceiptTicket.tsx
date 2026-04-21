@@ -49,22 +49,7 @@ export function ReceiptTicket({ order, restaurantName = "SmartResto" }: { order:
         <p className="opacity-75">À très bientôt.</p>
         <p className="text-[10px] mt-4 opacity-50">Software: SmartResto SaaS</p>
       </div>
-      
-      {/* Style local pour s'assurer que c'est propre à l'impression 80mm */}
-      <style jsx global>{`
-        @media print {
-          @page {
-            margin: 0;
-            size: 80mm auto;
-          }
-          body {
-            background: white;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
+
     </div>
   );
 }

@@ -92,4 +92,8 @@
     background: white;
     color: black;
   }
+
+  /* Hide manager dashboard sidebar and header during printing */
+  aside, nav, header { display: none !important; }
+  main { overflow: visible !important; height: auto !important; }
 }
