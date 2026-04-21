@@ -251,53 +251,71 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
               key={plat.id} 
               onClick={() => !isOutOfStock && handleOpenOptions(plat)}
               className={cn(
-                "group relative bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-[2.5rem] overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer",
-                isOutOfStock ? "opacity-70 grayscale-[0.3] cursor-not-allowed" : "hover:-translate-y-2 hover:bg-zinc-900/80"
+                "group relative bg-zinc-900 border border-zinc-800/80 rounded-[2rem] overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(var(--primary),0.15)] hover:border-primary/30 transition-all duration-500 cursor-pointer flex flex-col",
+                isOutOfStock ? "opacity-70 grayscale-[0.6] cursor-not-allowed" : "hover:-translate-y-1.5"
               )}
             >
-              {/* Image Container avec effet de flottement */}
-              <div className="relative h-56 p-2 overflow-hidden">
-                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent z-10" />
+              {/* Image Container Edge-to-Edge */}
+              <div className="relative h-64 overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-transparent z-10 opacity-90" />
                  <img 
                    src={plat.image} 
                    alt={plat.nom}
                    className={cn(
-                     "w-full h-full object-cover rounded-[2rem] transition-transform duration-700 ease-out",
-                     !isOutOfStock && "group-hover:scale-110"
+                     "w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.33,1,0.68,1)]",
+                     !isOutOfStock && "group-hover:scale-105"
                    )}
                  />
                  
                  {/* Badge Epuisé */}
                  {isOutOfStock && (
-                    <div className="absolute inset-0 z-20 bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-[2rem] m-2">
-                        <span className="bg-red-500 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full shadow-xl">
-                           Bientôt de retour
+                    <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                        <span className="bg-red-500/90 text-white text-[10px] font-black uppercase tracking-[0.2em] px-5 py-2.5 rounded-full shadow-2xl border border-red-400/20">
+                           Épuisé pour le moment
                         </span>
                     </div>
                  )}
 
-                 {/* Bulle de Prix Glassmorphism */}
-                 <div className="absolute bottom-6 right-6 z-20 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-lg group-hover:bg-primary group-hover:text-black transition-colors duration-300">
-                    <span className="font-black text-lg">${plat.prixUsd.toFixed(2)}</span>
+                 {/* Tags (Top Left) - Optional */}
+                 <div className="absolute top-5 left-5 z-20 flex gap-2">
+                     {/* On pourrait mettre "Populaire" ou d'autres badges ici si on avait un champ */}
+                     <span className="bg-black/50 backdrop-blur-md text-white text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest border border-white/10">
+                        {plat.categorie}
+                     </span>
                  </div>
               </div>
   
-              {/* Infos */}
-              <div className="px-6 py-5 pb-6">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-xl font-black tracking-tight text-white/90 group-hover:text-primary transition-colors">{plat.nom}</h3>
-                </div>
-                <p className="text-sm text-zinc-500 mb-6 line-clamp-2 leading-relaxed">
-                  {plat.description || "Une spécialité de la maison préparée avec soin."}
-                </p>
-  
-                {/* Bouton d'action subtil */}
-                {!isOutOfStock && (
-                  <div className="flex items-center justify-between mt-4 text-xs font-black uppercase tracking-widest text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">
-                      <span>Commander</span>
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Plus className="w-4 h-4" />
+              {/* Infos & Content */}
+              <div className="p-6 relative flex flex-col grow bg-gradient-to-b from-zinc-900 to-zinc-950">
+                {/* Floating Add Button / Price (Sublime) */}
+                <div className="absolute -top-8 right-6 z-30">
+                    {!isOutOfStock ? (
+                      <div className="bg-primary text-black h-16 min-w-[4.5rem] px-4 rounded-2xl flex flex-col items-center justify-center shadow-[0_10px_20px_-10px_rgba(var(--primary),0.5)] group-hover:shadow-[0_10px_30px_-5px_rgba(var(--primary),0.6)] group-hover:-translate-y-1 transition-all duration-300">
+                          <span className="font-black text-lg">${plat.prixUsd.toFixed(2)}</span>
+                          <span className="text-[8px] font-black uppercase tracking-widest opacity-60 mt-0.5">Ajouter</span>
                       </div>
+                    ) : (
+                      <div className="bg-zinc-800 text-zinc-500 h-16 min-w-[4.5rem] px-4 rounded-2xl flex items-center justify-center border border-zinc-700">
+                          <span className="font-black text-lg">${plat.prixUsd.toFixed(2)}</span>
+                      </div>
+                    )}
+                </div>
+
+                {/* Text Content */}
+                <div className="pr-20 mb-2">
+                  <h3 className="text-xl font-black tracking-tight text-white group-hover:text-primary transition-colors line-clamp-1">{plat.nom}</h3>
+                </div>
+                
+                <p className="text-sm text-zinc-400 line-clamp-2 leading-relaxed flex-grow">
+                  {plat.description || "Laissez-vous tenter par cette spécialité préparée avec soin par notre chef."}
+                </p>
+                
+                {/* Ligne Subtile d'Action */}
+                {!isOutOfStock && (
+                  <div className="mt-6 flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-primary transition-colors duration-300">
+                    <div className="w-10 h-[2px] bg-zinc-800 group-hover:bg-primary transition-colors rounded-full" />
+                    <span>Commander</span>
+                    <Plus className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 transform" />
                   </div>
                 )}
               </div>
