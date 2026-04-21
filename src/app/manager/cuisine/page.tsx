@@ -35,7 +35,8 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
 
   const fetchProductionOrders = async (id: string) => {
     const all = await getRecentCommandes(id);
-    const production = all.filter((o: any) => o.statut === "SUBMITTED" || o.statut === "PREPARING");
+    // On ne récupère QUE "PREPARING" pour que ça n'apparaisse pas avant la validation du Caissier ("SUBMITTED")
+    const production = all.filter((o: any) => o.statut === "PREPARING");
     setOrders(production);
     setLoading(false);
   };
