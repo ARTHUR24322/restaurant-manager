@@ -84,20 +84,34 @@ function DonutChart({ data }: { data: { name: string, value: number }[] }) {
 function MiniBarChart({ data }: { data: { name: string, value: number }[] }) {
     const max = Math.max(...data.map(d => d.value), 1);
     return (
-        <div className="flex items-end gap-2 h-32 w-full pt-4">
+        <div className="flex items-end gap-4 h-48 w-full pt-8 pb-2">
             {data.map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
+                <div key={idx} className="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer">
                     <div className="relative w-full flex items-end justify-center h-full">
+                        {/* Bar avec Gradient */}
                         <div
-                            className="w-full bg-indigo-500/20 group-hover:bg-indigo-500/40 rounded-t-lg transition-all duration-300 ease-out border-b-2 border-indigo-500"
-                            style={{ height: `${(item.value / max) * 100}%` }}
+                            className={cn(
+                                "w-full max-w-[48px] rounded-t-xl transition-all duration-500 relative",
+                                item.value > 0 
+                                    ? "bg-gradient-to-t from-indigo-900/50 via-indigo-600 to-indigo-400 shadow-[0_0_15px_-3px_rgba(99,102,241,0.4)] group-hover:shadow-[0_0_25px_-3px_rgba(99,102,241,0.6)] group-hover:brightness-125" 
+                                    : "bg-zinc-800/50"
+                            )}
+                            style={{ height: `${item.value > 0 ? Math.max((item.value / max) * 100, 10) : 2}%` }}
                         >
-                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-zinc-800 px-2 py-0.5 rounded text-[8px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* Bulle flottante valeur */}
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white text-black px-3 py-1 rounded-xl text-xs font-black shadow-xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 pointer-events-none z-10">
                                 {item.value}
+                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45" />
                             </div>
                         </div>
                     </div>
-                    <span className="text-[8px] font-black text-zinc-500 uppercase truncate w-full text-center">{item.name}</span>
+                    {/* Label dynamique */}
+                    <span className={cn(
+                        "text-[10px] font-black uppercase truncate w-full text-center mt-4 transition-colors duration-300",
+                        item.value > 0 ? "text-indigo-400/80 group-hover:text-indigo-400" : "text-zinc-600"
+                    )}>
+                        {item.name}
+                    </span>
                 </div>
             ))}
         </div>

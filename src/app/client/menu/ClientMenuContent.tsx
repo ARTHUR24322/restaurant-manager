@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { type Plat, type CartItem } from "@/types";
 import { useCartStore } from "@/store/cartStore";
 import { 
-  Plus, Info, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame,
+  Plus, Info, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame, Search, ChevronRight,
   Beef, Wine, Beer, GlassWater, IceCream, CupSoda, Cherry
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
   const [activeOrder, setActiveOrder] = useState<any>(null);
   const [isExpired, setIsExpired] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   
   const { addItem } = useCartStore();
 
@@ -110,9 +111,12 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     }))
   ];
 
-  const filteredPlats = activeCategory === "ALL" 
-    ? initialPlats 
-    : initialPlats.filter(p => p.categorie === activeCategory);
+  const filteredPlats = initialPlats.filter(p => {
+    const matchCategory = activeCategory === "ALL" || p.categorie === activeCategory;
+    const matchSearch = p.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                       (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchCategory && matchSearch;
+  });
 
   const handleOpenOptions = (plat: Plat) => {
     setSelectedPlat(plat);
@@ -201,92 +205,101 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
         </div>
       )}
 
-      {/* Sélecteur de catégories Horizontal */}
-      <div className="flex gap-2 mb-10 overflow-x-auto pb-4 scrollbar-none no-scrollbar">
+      {/* Barre de Recherche Flottante */}
+      <div className="sticky top-6 z-40 mb-8 transition-transform">
+        <div className="relative w-full shadow-2xl shadow-black/20 rounded-full group">
+          <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative bg-zinc-900/80 backdrop-blur-2xl border border-white/10 rounded-full flex items-center">
+             <Search className="absolute left-5 w-5 h-5 text-zinc-400 group-focus-within:text-primary transition-colors" />
+             <input 
+               type="text" 
+               placeholder="Rechercher un plat, une boisson..."
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+               className="w-full bg-transparent pl-14 pr-6 py-4.5 h-14 text-sm font-medium focus:outline-none text-white placeholder:text-zinc-500"
+             />
+          </div>
+        </div>
+      </div>
+
+      {/* Sélecteur de catégories Horizontal (Pills) */}
+      <div className="flex gap-3 mb-10 overflow-x-auto pb-6 pt-2 scrollbar-none no-scrollbar snap-x -mx-6 px-6">
         {categories.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
             className={cn(
-              "flex items-center gap-2 px-5 py-3 rounded-2xl whitespace-nowrap transition-all border shrink-0",
+              "flex items-center gap-2.5 px-6 py-3.5 rounded-full whitespace-nowrap transition-all duration-300 snap-center shrink-0 border",
               activeCategory === cat.id 
-                ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105" 
-                : "bg-card text-muted-foreground border-border hover:bg-secondary/50"
+                ? "bg-primary text-black border-primary font-black shadow-lg shadow-primary/20 scale-105" 
+                : "bg-zinc-900/50 text-zinc-400 border-white/5 font-bold hover:bg-zinc-800 hover:text-white"
             )}
           >
-            <cat.icon className="w-4 h-4" />
-            <span className="font-bold text-sm tracking-tight">{cat.label}</span>
+            <cat.icon className={cn("w-4 h-4", activeCategory === cat.id && "animate-pulse")} />
+            <span className="tracking-wide text-xs uppercase">{cat.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Grille de Plats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Grille de Plats Moderne */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {filteredPlats.map((plat) => {
           const isOutOfStock = plat.trackStock && (plat.stockQuantity || 0) <= 0;
 
           return (
             <div 
               key={plat.id} 
+              onClick={() => !isOutOfStock && handleOpenOptions(plat)}
               className={cn(
-                "group relative bg-card border border-border/50 rounded-3xl overflow-hidden hover:shadow-xl transition-all",
-                isOutOfStock ? "opacity-75 grayscale-[0.5]" : "hover:scale-[1.02]"
+                "group relative bg-zinc-900/40 backdrop-blur-sm border border-white/5 rounded-[2.5rem] overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer",
+                isOutOfStock ? "opacity-70 grayscale-[0.3] cursor-not-allowed" : "hover:-translate-y-2 hover:bg-zinc-900/80"
               )}
             >
-              <div className="relative h-48 overflow-hidden">
+              {/* Image Container avec effet de flottement */}
+              <div className="relative h-56 p-2 overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent z-10" />
                  <img 
                    src={plat.image} 
                    alt={plat.nom}
                    className={cn(
-                     "w-full h-full object-cover transition-transform duration-200",
+                     "w-full h-full object-cover rounded-[2rem] transition-transform duration-700 ease-out",
                      !isOutOfStock && "group-hover:scale-110"
                    )}
                  />
                  
+                 {/* Badge Epuisé */}
                  {isOutOfStock && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="absolute inset-0 z-20 bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-[2rem] m-2">
                         <span className="bg-red-500 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full shadow-xl">
-                           Épuisé
+                           Bientôt de retour
                         </span>
                     </div>
                  )}
 
-                 <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-border shadow-lg">
-                    <span className="text-primary font-black text-lg">${plat.prixUsd.toFixed(2)}</span>
+                 {/* Bulle de Prix Glassmorphism */}
+                 <div className="absolute bottom-6 right-6 z-20 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-lg group-hover:bg-primary group-hover:text-black transition-colors duration-300">
+                    <span className="font-black text-lg">${plat.prixUsd.toFixed(2)}</span>
                  </div>
               </div>
   
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-xl font-bold tracking-tight">{plat.nom}</h3>
-                  <button className="p-2 text-muted-foreground hover:text-primary transition-colors">
-                    <Info className="w-4 h-4" />
-                  </button>
+              {/* Infos */}
+              <div className="px-6 py-5 pb-6">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-xl font-black tracking-tight text-white/90 group-hover:text-primary transition-colors">{plat.nom}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6 line-clamp-2 min-h-[2.5rem]">
+                <p className="text-sm text-zinc-500 mb-6 line-clamp-2 leading-relaxed">
                   {plat.description || "Une spécialité de la maison préparée avec soin."}
                 </p>
   
-                <button 
-                  disabled={isOutOfStock}
-                  onClick={() => handleOpenOptions(plat)}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-3 font-bold py-3.5 rounded-2xl transition-all",
-                    isOutOfStock 
-                      ? "bg-secondary text-muted-foreground cursor-not-allowed opacity-50" 
-                      : "bg-secondary hover:bg-primary hover:text-primary-foreground text-foreground active:scale-[0.98]"
-                  )}
-                >
-                  {isOutOfStock ? (
-                      <Clock className="w-5 h-5" />
-                  ) : (
-                      <Plus className="w-5 h-5" />
-                  )}
-                  {isOutOfStock 
-                    ? "Bientôt de retour" 
-                    : (plat.options && plat.options.length > 0 ? "Personnaliser" : "Ajouter au Panier")
-                  }
-                </button>
+                {/* Bouton d'action subtil */}
+                {!isOutOfStock && (
+                  <div className="flex items-center justify-between mt-4 text-xs font-black uppercase tracking-widest text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">
+                      <span>Commander</span>
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Plus className="w-4 h-4" />
+                      </div>
+                  </div>
+                )}
               </div>
             </div>
           );
