@@ -18,10 +18,11 @@ import {
   Menu,
   Globe,
   X,
-  Lock
+  Lock,
+  ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { logoutManager } from "@/lib/auth-actions";
+import { logoutManager, logoutManagerGlobal } from "@/lib/auth-actions";
 import { getRestaurantById, checkIsMainAccount } from "@/lib/admin-actions";
 import { checkSubscriptionAlerts } from "@/lib/notification-actions";
 import { NotificationMenu } from "@/components/manager/NotificationMenu";
@@ -38,6 +39,8 @@ function ManagerLayoutContent({
   const [restoProfile, setRestoProfile] = useState<any>(null);
   const [isMainAccount, setIsMainAccount] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<() => Promise<void>>(() => async () => {});
   const restoId = searchParams.get("resto_id");
   const { setTheme, theme } = useTheme();
 
@@ -46,6 +49,19 @@ function ManagerLayoutContent({
         if (!restoId) {
             router.push("/manager/login");
         } else {
+            // OPTIMISATION : Utiliser le cache de session pour éviter les appels DB à chaque clic
+            const cachedProfile = sessionStorage.getItem(`resto_profile_${restoId}`);
+            const cachedIsMain = sessionStorage.getItem(`resto_ismain_${restoId}`);
+            
+            if (cachedProfile && cachedIsMain) {
+              setRestoProfile(JSON.parse(cachedProfile));
+              setIsMainAccount(cachedIsMain === "true");
+              setAuthorized(true);
+              // On vérifie quand même les alertes en arrière-plan
+              checkSubscriptionAlerts(restoId);
+              return;
+            }
+
             const profile = await getRestaurantById(restoId);
             const isExpired = profile?.subscriptionEnd ? new Date(profile.subscriptionEnd) < new Date() : false;
             
@@ -54,23 +70,38 @@ function ManagerLayoutContent({
                 return;
             }
 
-            // Vérifier si c'est le compte principal pour restreindre l'accès à certains menus
+            // Vérifier si c'est le compte principal
             const isMain = await checkIsMainAccount(restoId);
-            setIsMainAccount(isMain);
+            
+            // Mettre en cache
+            sessionStorage.setItem(`resto_profile_${restoId}`, JSON.stringify(profile));
+            sessionStorage.setItem(`resto_ismain_${restoId}`, isMain ? "true" : "false");
 
+            setIsMainAccount(isMain);
             setRestoProfile(profile);
             setAuthorized(true);
 
-            // Synchroniser le thème de l'établissement
+            // Synchroniser le thème
             if (profile.preferredTheme && profile.preferredTheme !== theme) {
               setTheme(profile.preferredTheme);
             }
 
-            // Vérifier les alertes d'abonnement en arrière-plan
             checkSubscriptionAlerts(restoId);
         }
     }
     checkAuth();
+
+    // --- DETECTION RETOUR ARRIERE (BFCache) ---
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        // La page a été chargée depuis le cache du navigateur (bouton retour)
+        // On force un rechargement pour déclencher la vérification Middleware/Session
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, [restoId, router]);
 
   if (!authorized) {
@@ -169,19 +200,66 @@ function ManagerLayoutContent({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
           <button
             onClick={async () => {
               await logoutManager();
-              router.push("/manager/login");
+              window.location.href = "/manager/login";
             }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-destructive/10 text-destructive transition-all font-medium active:scale-95"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-all font-medium active:scale-95 text-sm"
           >
             <LogOut className="w-5 h-5" />
-            Déconnexion
+            Déconnexion simple
+          </button>
+          
+          <button
+            onClick={() => {
+              setPendingAction(() => async () => {
+                const res = await logoutManagerGlobal(restoId || "");
+                if (res?.success) window.location.href = "/manager/login";
+              });
+              setShowConfirmModal(true);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-destructive/10 text-destructive transition-all font-black uppercase text-[10px] tracking-widest active:scale-95 border border-destructive/20"
+          >
+            <ShieldCheck className="w-5 h-5" />
+            Déconnexion Globale
           </button>
         </div>
       </aside>
+
+      {/* --- MODALE DE CONFIRMATION CUSTOM --- */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[500] flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 shadow-2xl shadow-primary/5 animate-in zoom-in-95 duration-200">
+             <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-6">
+                    <ShieldCheck className="w-8 h-8 text-destructive" />
+                </div>
+                <h3 className="text-xl font-black italic uppercase text-white mb-2">Déconnexion Globale</h3>
+                <p className="text-zinc-500 text-sm font-medium mb-8 leading-relaxed">Voulez-vous vraiment déconnecter TOUS les appareils de cet établissement ?</p>
+                
+                <div className="flex gap-3 w-full">
+                    <button 
+                        onClick={() => setShowConfirmModal(false)}
+                        className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all"
+                    >
+                        Annuler
+                    </button>
+                    <button 
+                        onClick={async () => {
+                            await pendingAction();
+                            setShowConfirmModal(false);
+                        }}
+                        className="flex-1 bg-destructive hover:bg-destructive/90 text-white font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-destructive/10"
+                    >
+                        Confirmer
+                    </button>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">

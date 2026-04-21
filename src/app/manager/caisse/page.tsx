@@ -57,21 +57,37 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
       }
       if (!id) return;
 
-      // Charger le profil restaurant
-      getRestaurantById(id).then(r => {
-        if (r) {
-          const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
-          if (!r.active || isExpired) {
-            router.push('/manager/subscription-expired');
-            return;
-          }
-          setRestaurantName(r.nom || "SmartResto");
-          setRestaurantTel((r as any).telephone || "");
-          if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
-            setTheme((r as any).preferredTheme);
-          }
+      // OPTIMISATION : Utiliser le cache de session
+      const cached = sessionStorage.getItem(`resto_profile_${id}`);
+      if (cached) {
+        const r = JSON.parse(cached);
+        const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
+        if (!r.active || isExpired) {
+          router.push('/manager/subscription-expired');
+          return;
         }
-      });
+        setRestaurantName(r.nom || "SmartResto");
+        setRestaurantTel((r as any).telephone || "");
+        if (r.preferredTheme && r.preferredTheme !== theme) {
+          setTheme(r.preferredTheme);
+        }
+      } else {
+        getRestaurantById(id).then(r => {
+          if (r) {
+            sessionStorage.setItem(`resto_profile_${id}`, JSON.stringify(r));
+            const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
+            if (!r.active || isExpired) {
+              router.push('/manager/subscription-expired');
+              return;
+            }
+            setRestaurantName(r.nom || "SmartResto");
+            setRestaurantTel((r as any).telephone || "");
+            if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
+              setTheme((r as any).preferredTheme);
+            }
+          }
+        });
+      }
 
       fetchOrders(id);
 

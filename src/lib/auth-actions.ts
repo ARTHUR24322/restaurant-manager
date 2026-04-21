@@ -22,6 +22,17 @@ export async function ensureSuperAdmin() {
   if (!payload || payload.role !== "SUPER_ADMIN") {
     throw new Error("Accès refusé : Privilèges administrateur insuffisants");
   }
+
+  // Vérification de la version globale SuperAdmin
+  const config = await prisma.systemConfig.findUnique({
+    where: { key: "admin_session_version" }
+  });
+  const currentVersion = config ? parseInt(config.value) : 1;
+  if (payload.version !== currentVersion) {
+    cookies().delete("admin_session");
+    throw new Error("Session administrateur expirée (déconnexion globale)");
+  }
+
   return payload;
 }
 
@@ -41,6 +52,18 @@ export async function ensureManager(targetRestoId?: string) {
   const payload = await decrypt(session);
   if (!payload || (payload.role !== "MANAGER" && payload.role !== "SUPER_ADMIN")) {
     throw new Error("Accès refusé : Privilèges insuffisants");
+  }
+
+  // Vérification de la version de session (Déconnexion Globale)
+  if (payload.role === "MANAGER") {
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: payload.restoId },
+      select: { sessionVersion: true }
+    });
+    if (!restaurant || restaurant.sessionVersion !== payload.version) {
+      cookies().delete("session");
+      throw new Error("Session expirée (déconnectée par un autre appareil)");
+    }
   }
   
   // Sécurité renforcée : On vérifie que le manager accède bien à SON restaurant
@@ -95,7 +118,8 @@ export async function authenticateManager(formData: FormData) {
     const session = await encrypt({
       restoId: restaurant.id,
       email: restaurant.email,
-      role: "MANAGER"
+      role: "MANAGER",
+      version: restaurant.sessionVersion // Ajouter la version actuelle
     });
 
     cookies().set("session", session, {
@@ -128,6 +152,7 @@ export async function authenticateSuperAdmin(formData: FormData) {
 
     if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
       // Étape 1 réussie : Créer un jeton temporaire (valide 5 min)
+      // On inclut une "version" fixe ou une clé pour le Super Admin aussi
       const preAuthToken = await encrypt({
         email,
         role: "PRE_AUTH_ADMIN",
@@ -176,9 +201,15 @@ export async function verifySuperAdminPin(pin: string) {
 
     if (pin === correctPin) {
       // 3. PIN correct : Créer la session finale
+      const adminVersionConfig = await prisma.systemConfig.findUnique({
+        where: { key: "admin_session_version" }
+      });
+      const currentAdminVersion = adminVersionConfig ? parseInt(adminVersionConfig.value) : 1;
+
       const session = await encrypt({
         email: payload.email,
         role: "SUPER_ADMIN",
+        version: currentAdminVersion
       });
 
       cookies().set("admin_session", session, {
@@ -237,6 +268,52 @@ export async function updateAdminPin(oldPin: string, newPin: string) {
 
 export async function logoutManager() {
   cookies().delete("session");
+}
+
+/**
+ * Déconnexion GLOBALE (Invalide tous les appareils d'un manager)
+ */
+export async function logoutManagerGlobal(restoId: string) {
+  try {
+    await ensureManager(restoId);
+    
+    // On incrémente la version de session en base de données
+    await prisma.restaurant.update({
+      where: { id: restoId },
+      data: { sessionVersion: { increment: 1 } }
+    });
+
+    cookies().delete("session");
+    return { success: true };
+  } catch (error) {
+    console.error("[Logout-Global] Error:", error);
+    return { success: false };
+  }
+}
+
+/**
+ * Déconnexion GLOBALE Super-Admin
+ */
+export async function logoutSuperAdminGlobal() {
+  try {
+    await ensureSuperAdmin();
+
+    const config = await prisma.systemConfig.findUnique({
+      where: { key: "admin_session_version" }
+    });
+    const nextVersion = config ? parseInt(config.value) + 1 : 2;
+
+    await prisma.systemConfig.upsert({
+      where: { key: "admin_session_version" },
+      update: { value: nextVersion.toString() },
+      create: { key: "admin_session_version", value: "2" }
+    });
+
+    cookies().delete("admin_session");
+    return { success: true };
+  } catch (error) {
+    return { success: false };
+  }
 }
 
 /**

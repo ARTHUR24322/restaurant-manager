@@ -25,6 +25,7 @@ model Restaurant {
   subscriptionEnd DateTime?
   preferredTheme  String     @default("dark")
   tauxChange      Float      @default(2800)
+  sessionVersion  Int        @default(1)
   createdAt       DateTime   @default(now())
   commandes       Commande[]
   plats           Plat[]
@@ -230,4 +231,12 @@ model Notification {
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
+}
+model RecoveryRequest {
+  id            String   @id @default(cuid())
+  nomRestaurant String
+  email         String
+  telephone     String
+  statut        String   @default("EN_ATTENTE") // EN_ATTENTE, TRAITE, REJETE
+  createdAt     DateTime @default(now())
 }

@@ -53,27 +53,47 @@ export async function middleware(request: NextRequest) {
     const session = request.cookies.get('session')?.value;
     const adminSession = request.cookies.get('admin_session')?.value;
 
-    const payload = session ? await decrypt(session) : null;
-    const adminPayload = adminSession ? await decrypt(adminSession) : null;
+    // --- OPTIMISATION : On déchiffre seulement ce qui est nécessaire ---
+    let payload = null;
+    let adminPayload = null;
+
+    if (adminSession) adminPayload = await decrypt(adminSession);
+    if (!adminPayload && session) payload = await decrypt(session);
+
+    // --- FORCER LA DÉSACTIVATION DU CACHE SUR TOUTES LES ROUTES PRIVÉES ---
+    const headers = new Headers(request.headers);
+    const response = NextResponse.next({
+      request: {
+        headers: headers,
+      },
+    });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
 
     if (!payload && !adminPayload && !pathname.endsWith('/login')) {
       // Rediriger vers le login approprié
       if (pathname.startsWith('/super-admin')) {
-        return NextResponse.next();
+        return response;
       }
-      return NextResponse.redirect(new URL('/manager/login', request.url));
+      const redirectRes = NextResponse.redirect(new URL('/manager/login', request.url));
+      redirectRes.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      return redirectRes;
     }
 
     // Protection par rôle
     if (pathname.startsWith('/super-admin')) {
        if (!adminPayload || adminPayload.role !== 'SUPER_ADMIN') {
-         return NextResponse.next(); // La page gère l'affichage du login
+         return response; // La page gère l'affichage du login
        }
     } else if (payload) {
        if (pathname.startsWith('/manager') && payload.role !== 'MANAGER' && !pathname.endsWith('/login')) {
-          return NextResponse.redirect(new URL('/manager/login', request.url));
+          const managerRedirect = NextResponse.redirect(new URL('/manager/login', request.url));
+          managerRedirect.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+          return managerRedirect;
        }
     }
+    return response;
   }
 
   return NextResponse.next();

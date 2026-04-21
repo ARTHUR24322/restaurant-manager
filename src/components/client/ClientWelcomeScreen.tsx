@@ -19,11 +19,49 @@ export function ClientWelcomeScreen({ restaurantName, table, logoUrl, children }
   
   // Si le nom est déjà dans l'URL ou on a une confirmation sessionStorage, on affiche le menu normal (children)
   const queryName = searchParams.get("name");
+  const restoId = searchParams.get("resto_id");
   const [name, setName] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // --- LOGIQUE D'EXPIRATION (1 HEURE) ---
+  React.useEffect(() => {
+    if (!restoId) return;
+
+    const sessionKey = `smartresto_session_${restoId}_${table}`;
+    const savedSession = localStorage.getItem(sessionKey);
+
+    if (savedSession) {
+      try {
+        const { timestamp } = JSON.parse(savedSession);
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000;
+
+        if (now - timestamp > oneHour) {
+          // SESSION EXPIRÉE
+          localStorage.removeItem(sessionKey);
+          setSessionExpired(true);
+          setIsSubmitted(false);
+          // Supprimer le nom de l'URL pour forcer le retour à l'accueil
+          if (queryName) {
+            const current = new URLSearchParams(Array.from(searchParams.entries()));
+            current.delete("name");
+            const search = current.toString();
+            // Utiliser window.location car router.replace peut garder le cache
+            window.location.href = `${window.location.pathname}?${search}`;
+          }
+        } else {
+            // Session valide
+            if (queryName) setIsSubmitted(true);
+        }
+      } catch (e) {
+        localStorage.removeItem(sessionKey);
+      }
+    }
+  }, [restoId, table, queryName, pathname, router, searchParams]);
 
   // Si on a un nom dans l'URL, ou on a déja soumis le formulaire avec succès dans cette vue
-  if (queryName || isSubmitted) {
+  if ((queryName || isSubmitted) && !sessionExpired) {
     return <>{children}</>;
   }
 
@@ -31,12 +69,21 @@ export function ClientWelcomeScreen({ restaurantName, table, logoUrl, children }
     e.preventDefault();
     if (!name.trim()) return;
 
+    // Enregistrer la session localement (1 heure de validité)
+    if (restoId) {
+      localStorage.setItem(`smartresto_session_${restoId}_${table}`, JSON.stringify({
+        name: name.trim(),
+        timestamp: Date.now()
+      }));
+    }
+
     // Créer une nouvelle URL avec les mêmes paramètres + le nom
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     current.set("name", name.trim());
     
     // On met à jour l'état local pour disparaître visuellement tout de suite
     setIsSubmitted(true);
+    setSessionExpired(false);
 
     // On redirige vers la même page mais avec le paramètre ?name=...
     const search = current.toString();

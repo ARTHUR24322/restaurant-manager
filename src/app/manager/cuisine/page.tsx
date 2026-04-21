@@ -46,18 +46,33 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
       }
       if (!id) return;
 
-      getRestaurantById(id).then(r => {
-        if (r) {
-          const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
-          if (!r.active || isExpired) {
-            router.push('/manager/subscription-expired');
-            return;
-          }
-          if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
-            setTheme((r as any).preferredTheme);
-          }
+      // OPTIMISATION : Utiliser le cache de session
+      const cached = sessionStorage.getItem(`resto_profile_${id}`);
+      if (cached) {
+        const r = JSON.parse(cached);
+        const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
+        if (!r.active || isExpired) {
+          router.push('/manager/subscription-expired');
+          return;
         }
-      });
+        if (r.preferredTheme && r.preferredTheme !== theme) {
+          setTheme(r.preferredTheme);
+        }
+      } else {
+        getRestaurantById(id).then(r => {
+          if (r) {
+            sessionStorage.setItem(`resto_profile_${id}`, JSON.stringify(r));
+            const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
+            if (!r.active || isExpired) {
+              router.push('/manager/subscription-expired');
+              return;
+            }
+            if ((r as any).preferredTheme && (r as any).preferredTheme !== theme) {
+              setTheme((r as any).preferredTheme);
+            }
+          }
+        });
+      }
 
       fetchProductionOrders(id);
 

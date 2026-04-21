@@ -32,15 +32,17 @@ import {
     Send,
     Layers,
     ChevronUp,
-    KeyRound
+    KeyRound,
+    AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant } from "@/lib/admin-actions";
-import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin } from "@/lib/auth-actions";
+import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
 import { getAllDemandes, approveDemande, rejectDemande } from "@/lib/demande-actions";
 import { toast } from "sonner";
 import { sendBroadcastNotification } from "@/lib/admin-broadcast";
+import { getAllRecoveryRequests, resolveRecoveryRequest } from "@/lib/recovery-actions";
 
 // --- COMPOSANTS DE VISUALISATION (SVG) ---
 
@@ -113,6 +115,7 @@ export default function SuperAdminPage() {
     const [editingResto, setEditingResto] = useState<any>(null);
     const [analytics, setAnalytics] = useState<any>(null);
     const [demandes, setDemandes] = useState<any[]>([]);
+    const [recoveryRequests, setRecoveryRequests] = useState<any[]>([]);
     const [approvingId, setApprovingId] = useState<string | null>(null);
     const [approvePassword, setApprovePassword] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
@@ -123,7 +126,18 @@ export default function SuperAdminPage() {
     const [pin, setPin] = useState("");
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'demandes' | 'broadcast' | 'settings'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'demandes' | 'recuperation' | 'broadcast' | 'settings'>('dashboard');
+
+    // --- ETATS POUR MODALE PERSONNALISEE ---
+    const [modalConfig, setModalConfig] = useState<{
+        show: boolean;
+        title: string;
+        message: string;
+        type: 'confirm' | 'input';
+        onConfirm: (val?: string) => void;
+        placeholder?: string;
+    }>({ show: false, title: "", message: "", type: "confirm", onConfirm: () => {} });
+    const [modalValue, setModalValue] = useState("");
     
     const [broadcastTitle, setBroadcastTitle] = useState("");
     const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -167,9 +181,22 @@ export default function SuperAdminPage() {
             if (res.success) {
                 setIsLogged(true);
                 fetchRestos();
+            } else if (window.location.pathname.startsWith('/super-admin') && isLogged) {
+                // Si on était connecté mais qu'on ne l'est plus, on force un reload complet
+                window.location.href = "/";
             }
         };
         checkSession();
+
+        // --- DETECTION RETOUR ARRIERE (BFCache) ---
+        const handlePageShow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        };
+
+        window.addEventListener('pageshow', handlePageShow);
+        return () => window.removeEventListener('pageshow', handlePageShow);
     }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -214,6 +241,8 @@ export default function SuperAdminPage() {
             if (stats.success) setAnalytics(stats);
             const demandesData = await getAllDemandes();
             setDemandes(Array.isArray(demandesData) ? demandesData : []);
+            const recoveryData = await getAllRecoveryRequests();
+            setRecoveryRequests(Array.isArray(recoveryData) ? recoveryData : []);
         } catch (e) {
             console.error(e);
             setRestaurants([]);
@@ -347,9 +376,27 @@ export default function SuperAdminPage() {
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 space-y-8">
             <div className="flex justify-between items-end gap-10">
-                <div>
-                    <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest italic">SaaS Command Center</h2>
-                    <h1 className="text-5xl font-black italic tracking-tighter text-white">Bonjour, Arthur.</h1>
+                <div className="flex items-start gap-10">
+                    <div>
+                        <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest italic">SaaS Command Center</h2>
+                        <h1 className="text-5xl font-black italic tracking-tighter text-white">Bonjour, Arthur.</h1>
+                    </div>
+                    <button 
+                        onClick={() => setModalConfig({
+                            show: true,
+                            title: "Sécurité Plateforme",
+                            message: "Voulez-vous déconnecter TOUS les accès administrateur sur tous les appareils ?",
+                            type: "confirm",
+                            onConfirm: async () => {
+                                const r = await logoutSuperAdminGlobal();
+                                if (r.success) window.location.reload();
+                            }
+                        })}
+                        className="mt-6 flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-black transition-all font-black uppercase text-[10px] tracking-widest active:scale-95"
+                    >
+                        <Power className="w-4 h-4" />
+                        Déconnexion Globale
+                    </button>
                 </div>
 
                 <nav className="flex items-center bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800/50">
@@ -357,6 +404,7 @@ export default function SuperAdminPage() {
                         { id: 'dashboard', label: 'Command', icon: <Activity className="w-4 h-4" /> },
                         { id: 'restaurants', label: 'Établissements', icon: <Building2 className="w-4 h-4" /> },
                         { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
+                        { id: 'recuperation', label: 'Récupération', icon: <KeyRound className="w-4 h-4" />, count: recoveryRequests.filter(r => r.statut === "EN_ATTENTE").length },
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
                         { id: 'settings', label: 'System', icon: <Settings className="w-4 h-4" /> },
                     ].map((tab) => (
@@ -724,6 +772,96 @@ export default function SuperAdminPage() {
                 </div>
             )}
 
+            {activeTab === 'recuperation' && (
+                <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-700">
+                    <h3 className="text-2xl font-black uppercase flex items-center gap-3"><KeyRound className="w-8 h-8 text-amber-500" /> Récupération de Mots de Passe</h3>
+                    <div className="space-y-4">
+                        {recoveryRequests.length === 0 ? (
+                            <div className="bg-zinc-900 border border-zinc-800 p-10 rounded-3xl text-center">
+                                <p className="text-zinc-500 font-bold uppercase text-xs">Aucune demande en attente</p>
+                            </div>
+                        ) : (
+                            recoveryRequests.map(request => (
+                                <div key={request.id} className={cn(
+                                    "bg-zinc-900 border p-6 rounded-3xl flex justify-between items-center transition-all",
+                                    request.statut === "EN_ATTENTE" ? "border-zinc-800" : "border-zinc-800/30 opacity-60"
+                                )}>
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn(
+                                            "w-12 h-12 rounded-2xl flex items-center justify-center border",
+                                            request.statut === "EN_ATTENTE" ? "bg-amber-500/10 border-amber-500/20 text-amber-500" : "bg-zinc-800 border-zinc-700 text-zinc-500"
+                                        )}>
+                                            <Phone className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-white uppercase">{request.nomRestaurant}</h4>
+                                            <p className="text-xs text-zinc-500">
+                                                {request.email} • {request.telephone}
+                                            </p>
+                                            <p className="text-[9px] text-zinc-600 mt-1 uppercase font-bold tracking-widest">Reçu le {new Date(request.createdAt).toLocaleDateString('fr-FR')}</p>
+                                        </div>
+                                    </div>
+
+                                    {request.statut === "EN_ATTENTE" ? (
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => setModalConfig({
+                                                    show: true,
+                                                    title: "Récupération Accès",
+                                                    message: `Définir un nouveau mot de passe pour ${request.nomRestaurant}.`,
+                                                    type: "input",
+                                                    placeholder: "Nouveau mot de passe",
+                                                    onConfirm: async (val) => {
+                                                        if (!val || val.length < 4) return;
+                                                        setApprovingId(request.id);
+                                                        const res = await resolveRecoveryRequest(request.id, val, "APPROVE");
+                                                        if (res.success) {
+                                                            toast.success(res.message);
+                                                            fetchRestos();
+                                                        } else {
+                                                            toast.error(res.error);
+                                                        }
+                                                        setApprovingId(null);
+                                                    }
+                                                })}
+                                                disabled={approvingId === request.id}
+                                                className="bg-primary text-black font-black px-6 py-2.5 rounded-xl text-[10px] uppercase flex items-center gap-2 hover:scale-105 transition-all"
+                                            >
+                                                {approvingId === request.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                                                Réinitialiser
+                                            </button>
+                                            <button 
+                                                onClick={() => setModalConfig({
+                                                    show: true,
+                                                    title: "Rejet Demande",
+                                                    message: "Êtes-vous certain de vouloir rejeter cette demande de récupération ?",
+                                                    type: "confirm",
+                                                    onConfirm: async () => {
+                                                        const res = await resolveRecoveryRequest(request.id, undefined, "REJECT");
+                                                        if (res.success) {
+                                                            toast.success(res.message);
+                                                            fetchRestos();
+                                                        }
+                                                    }
+                                                })}
+                                                className="bg-red-600/10 text-red-500 p-2.5 rounded-xl border border-red-600/10 hover:bg-red-600 hover:text-white transition-all"
+                                            >
+                                                <XCircle className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+                                            <CheckCircle2 className={cn("w-4 h-4", request.statut === "TRAITE" ? "text-emerald-500" : "text-red-500")} />
+                                            <span className="text-[10px] font-black uppercase text-zinc-400">{request.statut}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'broadcast' && (
                 <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-700 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
                     <h3 className="text-2xl font-black uppercase mb-8 flex items-center gap-3">
@@ -807,6 +945,50 @@ export default function SuperAdminPage() {
                             <input type="password" value={oldPin} onChange={e => setOldPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-center text-white" placeholder="Ancien PIN" />
                             <input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-center text-primary" placeholder="Nouveau PIN" />
                             <button onClick={async () => { const r = await updateAdminPin(oldPin, newPin); if(r.success) { setShowSettings(false); setOldPin(""); setNewPin(""); toast.success("PIN MAJ"); }}} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* --- MODALE D'ACTION PERSONNALISÉE --- */}
+            {modalConfig.show && (
+                <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[200] flex items-center justify-center p-4 transition-all duration-300">
+                    <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 shadow-2xl shadow-primary/5 animate-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                                {modalConfig.type === 'confirm' ? <AlertCircle className="w-8 h-8 text-primary" /> : <KeyRound className="w-8 h-8 text-primary" />}
+                            </div>
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2">{modalConfig.title}</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-8 leading-relaxed px-2">{modalConfig.message}</p>
+                            
+                            {modalConfig.type === 'input' && (
+                                <input 
+                                    autoFocus
+                                    type="text"
+                                    value={modalValue}
+                                    onChange={(e) => setModalValue(e.target.value)}
+                                    placeholder={modalConfig.placeholder}
+                                    className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-center text-white mb-8 outline-none focus:ring-1 focus:ring-primary transition-all font-bold"
+                                />
+                            )}
+
+                            <div className="flex gap-3 w-full">
+                                <button 
+                                    onClick={() => { setModalConfig({ ...modalConfig, show: false }); setModalValue(""); }}
+                                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all"
+                                >
+                                    Annuler
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        modalConfig.onConfirm(modalConfig.type === 'input' ? modalValue : undefined);
+                                        setModalConfig({ ...modalConfig, show: false });
+                                        setModalValue("");
+                                    }}
+                                    className="flex-1 bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-primary/10"
+                                >
+                                    Confirmer
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

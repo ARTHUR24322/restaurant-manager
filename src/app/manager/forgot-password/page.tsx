@@ -229,28 +229,49 @@ export default function ForgotPasswordPage() {
                             </div>
 
                             <div className="grid grid-cols-1 gap-3 pt-2">
+                                {manualSuccess ? (
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-2xl text-center">
+                                        <p className="text-emerald-500 font-black uppercase text-xs tracking-widest mb-2">Demande Envoyée !</p>
+                                        <p className="text-zinc-500 text-[10px] uppercase font-bold leading-relaxed">Notre équipe va examiner votre demande et vous contactera par téléphone ou email.</p>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={async () => {
+                                            const formData = new FormData();
+                                            formData.append("nomRestaurant", manualData.nom);
+                                            formData.append("email", manualData.email);
+                                            formData.append("telephone", manualData.tel);
+                                            
+                                            const res = await (import("@/lib/recovery-actions").then(m => m.submitRecoveryRequest(formData)));
+                                            if (res.success) {
+                                                setManualSuccess(true);
+                                                (import("sonner").then(m => m.toast.success("Demande envoyée !")));
+                                            } else {
+                                                (import("sonner").then(m => m.toast.error(res.error || "Erreur de soumission")));
+                                            }
+                                        }}
+                                        disabled={!manualData.nom || !manualData.email}
+                                        className="w-full bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest text-xs flex items-center justify-center gap-2 group"
+                                    >
+                                        <Send className="w-4 h-4 text-black group-hover:translate-x-1 transition-transform" />
+                                        Soumettre la demande
+                                    </button>
+                                )}
+
+                                <div className="flex items-center gap-2 px-2">
+                                    <div className="flex-1 h-px bg-zinc-800" />
+                                    <span className="text-[8px] font-black text-zinc-600 uppercase">OU</span>
+                                    <div className="flex-1 h-px bg-zinc-800" />
+                                </div>
+
                                 <a 
                                     href={`https://wa.me/243834590319?text=Bonjour%20SmartResto,%20j'ai%20perdu%20mes%20accès%20pour%20mon%20établissement.%0A%0A🏢%20Etablissement:%20${encodeURIComponent(manualData.nom)}%0A📧%20Email:%20${encodeURIComponent(manualData.email)}%0A📞%20Tél:%20${encodeURIComponent(manualData.tel)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={cn(
-                                        "w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest text-xs flex items-center justify-center gap-2",
-                                        (!manualData.nom || !manualData.email) && "opacity-50 pointer-events-none"
-                                    )}
+                                    className="w-full bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] font-bold py-3 rounded-2xl transition-all uppercase tracking-widest text-[9px] flex items-center justify-center gap-2"
                                 >
                                     <MessageCircle className="w-4 h-4" />
-                                    Envoyer via WhatsApp
-                                </a>
-
-                                <a 
-                                    href={`mailto:arthuradmindev@gmail.com?subject=Demande d'Assistance SmartResto - ${manualData.nom}&body=Bonjour Super Admin,%0A%0AJ'ai perdu mes accès pour mon établissement. Voici mes coordonnées :%0A%0ANom de l'établissement : ${manualData.nom}%0AEmail enregistré : ${manualData.email}%0ATéléphone : ${manualData.tel}`}
-                                    className={cn(
-                                        "w-full bg-zinc-100 hover:bg-white text-black font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest text-xs flex items-center justify-center gap-2",
-                                        (!manualData.nom || !manualData.email) && "opacity-50 pointer-events-none"
-                                    )}
-                                >
-                                    <Mail className="w-4 h-4" />
-                                    Envoyer par Email
+                                    Contacter via WhatsApp
                                 </a>
                             </div>
 
