@@ -3,6 +3,7 @@
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
 import { hashPassword, comparePassword } from "./auth";
+import { ensureManager } from "./auth-actions";
 
 /**
  * Mise à jour du mot de passe admin du restaurant
@@ -10,6 +11,8 @@ import { hashPassword, comparePassword } from "./auth";
  */
 export async function updateRestaurantPassword(restaurantId: string, oldPassword: string, newPassword: string) {
     try {
+        await ensureManager(restaurantId);
+        
         if (!oldPassword) {
             return { success: false, error: "Vous devez entrer votre mot de passe actuel." };
         }
@@ -59,6 +62,7 @@ export async function updateRestaurantPassword(restaurantId: string, oldPassword
  */
 export async function updateRestaurantProfile(restaurantId: string, formData: FormData) {
     try {
+        await ensureManager(restaurantId);
         const nom = formData.get("nom") as string;
         const logoUrl = formData.get("logoUrl") as string;
 
@@ -87,8 +91,9 @@ export async function updateRestaurantProfile(restaurantId: string, formData: Fo
  */
 export async function updateRestaurantPin(restaurantId: string, newPin: string) {
     try {
-        if (!newPin || !/^\d{4}$/.test(newPin)) {
-            return { success: false, error: "Le code PIN doit comporter exactement 4 chiffres." };
+        await ensureManager(restaurantId);
+        if (!newPin || !/^\d{6}$/.test(newPin)) {
+            return { success: false, error: "Le code PIN doit comporter exactement 6 chiffres." };
         }
 
         await (prisma as any).restaurant.update({
@@ -109,6 +114,7 @@ export async function updateRestaurantPin(restaurantId: string, newPin: string) 
  */
 export async function updateRestaurantTauxChange(restaurantId: string, taux: number) {
     try {
+        await ensureManager(restaurantId);
         if (!taux || taux <= 0 || isNaN(taux)) {
             return { success: false, error: "Le taux doit être un nombre positif." };
         }
@@ -128,6 +134,7 @@ export async function updateRestaurantTauxChange(restaurantId: string, taux: num
 
 export async function updateRestaurantTheme(restaurantId: string, theme: string) {
     try {
+        await ensureManager(restaurantId);
         await (prisma as any).restaurant.update({
             where: { id: restaurantId },
             data: { preferredTheme: theme }

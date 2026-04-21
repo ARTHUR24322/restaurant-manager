@@ -84,8 +84,8 @@ export async function verifyEstablishmentPin(restoId: string, pin: string) {
 
 export async function updateChildPin(childId: string, newPin: string) {
   try {
-    if (!newPin || newPin.length < 4) {
-      return { success: false, error: "Le PIN doit faire au moins 4 chiffres." };
+    if (!newPin || newPin.length !== 6) {
+      return { success: false, error: "Le PIN doit faire exactement 6 chiffres." };
     }
 
     await prisma.restaurant.update({

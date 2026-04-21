@@ -21,8 +21,10 @@ export default function ManagerLoginPage() {
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const [step, setStep] = useState<"credentials" | "pin">("credentials");
-  const [pin, setPin] = useState(["", "", "", ""]);
+  const [pin, setPin] = useState(["", "", "", "", "", ""]);
   const pinRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -45,7 +47,7 @@ export default function ManagerLoginPage() {
       const res = await authenticateManager(formData);
       if (res.success && res.requiresPin) {
         setStep("pin");
-        setPin(["", "", "", ""]);
+        setPin(["", "", "", "", "", ""]);
       } else if (!res.success) {
         setError(res.error || "Identifiants invalides.");
       }
@@ -59,14 +61,14 @@ export default function ManagerLoginPage() {
     setPin(newPin);
     setError("");
 
-    if (value && index < 3) {
+    if (value && index < 5) {
       pinRefs[index + 1].current?.focus();
     }
 
     // Auto-submit si le PIN est complet
-    if (value && index === 3) {
+    if (value && index === 5) {
       const fullPin = [...newPin].join("");
-      if (fullPin.length === 4) {
+      if (fullPin.length === 6) {
         submitPin([...newPin].join(""));
       }
     }
@@ -78,7 +80,7 @@ export default function ManagerLoginPage() {
     }
     if (e.key === "Enter") {
       const fullPin = pin.join("");
-      if (fullPin.length === 4) submitPin(fullPin);
+      if (fullPin.length === 6) submitPin(fullPin);
     }
   };
 
@@ -91,7 +93,7 @@ export default function ManagerLoginPage() {
         router.refresh();
       } else {
         setError(res.error || "Code PIN incorrect.");
-        setPin(["", "", "", ""]);
+        setPin(["", "", "", "", "", ""]);
         setTimeout(() => pinRefs[0].current?.focus(), 100);
       }
     });
@@ -200,8 +202,8 @@ export default function ManagerLoginPage() {
 
               <h2 className="text-2xl font-black italic uppercase text-white mb-2">Code PIN</h2>
               <p className="text-zinc-500 text-sm mb-10 leading-relaxed">
-                Entrez votre code à <span className="text-primary font-black">4 chiffres</span> pour accéder au portail.<br/>
-                <span className="text-zinc-600 text-xs">Par défaut : <span className="text-zinc-400 font-bold">0000</span></span>
+                Entrez votre code à <span className="text-primary font-black">6 chiffres</span> pour accéder au portail.<br/>
+                <span className="text-zinc-600 text-xs">Par défaut : <span className="text-zinc-400 font-bold">000000</span></span>
               </p>
 
               {/* 4 cases PIN */}
@@ -237,7 +239,7 @@ export default function ManagerLoginPage() {
 
               {/* Bouton soumettre */}
               <button
-                disabled={pin.join("").length < 4 || isPending}
+                disabled={pin.join("").length < 6 || isPending}
                 onClick={() => submitPin(pin.join(""))}
                 className="w-full bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black py-4 rounded-2xl transition-all shadow-lg shadow-primary/10 uppercase tracking-widest text-xs flex items-center justify-center gap-2"
               >
@@ -247,7 +249,7 @@ export default function ManagerLoginPage() {
 
               {/* Retour */}
               <button
-                onClick={() => { setStep("credentials"); setError(""); setPin(["", "", "", ""]); }}
+                onClick={() => { setStep("credentials"); setError(""); setPin(["", "", "", "", "", ""]); }}
                 className="mt-4 flex items-center gap-2 text-zinc-600 hover:text-zinc-400 transition-colors text-[10px] font-bold uppercase tracking-widest"
               >
                 <ArrowLeft className="w-3 h-3" />

@@ -42,8 +42,8 @@ export default function MultiSitePage() {
   const [newPin, setNewPin] = useState("");
 
   const handleUpdatePin = async (id: string) => {
-    if (newPin.length < 4) {
-        import("sonner").then(s => s.toast.error("Le PIN doit faire au moins 4 chiffres."));
+    if (newPin.length !== 6) {
+        import("sonner").then(s => s.toast.error("Le PIN doit faire exactement 6 chiffres."));
         return;
     }
     const res = await updateChildPin(id, newPin);

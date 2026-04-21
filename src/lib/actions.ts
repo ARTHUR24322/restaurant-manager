@@ -88,6 +88,12 @@ export async function deletePlat(formData: FormData) {
 
     await ensureManager(restaurantId);
 
+    // SÉCURITÉ: Vérifier que le plat appartient bien à ce restaurant
+    const plat = await prisma.plat.findUnique({ where: { id: platId } });
+    if (!plat || plat.restaurantId !== restaurantId) {
+        throw new Error("Action non autorisée : Plat non trouvé ou n'appartenant pas à cet établissement");
+    }
+
     await prisma.plat.delete({
       where: { id: platId }
     });
@@ -123,10 +129,13 @@ export async function createCommande(data: {
       if (restoProfile?.tauxChange) exchangeRate = restoProfile.tauxChange;
     } catch (e) {}
     
-    // 1. Recalculer le total côté serveur pour éviter la manipulation (SÉCURITÉ)
+    // 1. Recalculer le total côté serveur pour éviter la manipulation (SÉCURITÉ RENFORCÉE)
     const platIds = data.cartItems.map((item: any) => item.plat.id);
     const plats = await prisma.plat.findMany({
-      where: { id: { in: platIds } }
+      where: { 
+        id: { in: platIds },
+        restaurantId: restaurantId // SÉCURITÉ: S'assurer que le client ne commande que depuis CE restaurant
+      }
     });
 
     let calculatedTotal = 0;

@@ -86,8 +86,8 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
 
   const handleUpdatePin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPin.length !== 4 || isNaN(Number(newPin))) {
-      toast.error("Le code PIN doit comporter 4 chiffres.");
+    if (newPin.length !== 6 || isNaN(Number(newPin))) {
+      toast.error("Le code PIN doit comporter 6 chiffres.");
       return;
     }
 
@@ -241,7 +241,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
 
                     <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 animate-in fade-in zoom-in-95 duration-300">
                         <h3 className="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                            Code PIN Bureau (4 chiffres)
+                            Code PIN Bureau (6 chiffres)
                         </h3>
                         <p className="text-[10px] text-zinc-500 font-bold uppercase mb-4">Ce code protège les sections Gestion, Stratégie et Stock.</p>
 
@@ -252,12 +252,12 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                     <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500" />
                                     <input 
                                         type="text" 
-                                        maxLength={4}
+                                        maxLength={6}
                                         required 
                                         value={newPin}
                                         onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
                                         className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none transition-all tracking-[0.5em] font-black"
-                                        placeholder="0000"
+                                        placeholder="000000"
                                     />
                                 </div>
                             </div>

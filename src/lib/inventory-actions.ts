@@ -2,12 +2,14 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { ensureManager } from "./auth-actions";
 
 /**
  * Récupérer tous les articles de stock d'un restaurant
  */
 export async function getInventory(restaurantId: string) {
   try {
+    await ensureManager(restaurantId);
     return await prisma.articleStock.findMany({
       where: { restaurantId },
       include: {
@@ -31,6 +33,7 @@ export async function getInventory(restaurantId: string) {
  */
 export async function createArticle(restaurantId: string, data: any) {
   try {
+    await ensureManager(restaurantId);
     const article = await prisma.articleStock.create({
       data: {
         ...data,
@@ -56,6 +59,7 @@ export async function recordMovement(data: {
   prixUnitaire?: number;
 }) {
   try {
+    await ensureManager(data.restaurantId);
     // 1. Créer le mouvement
     await prisma.mouvementStock.create({
       data: {
@@ -96,6 +100,7 @@ export async function recordMovement(data: {
  * Récupérer les emplacements
  */
 export async function getLocations(restaurantId: string) {
+  await ensureManager(restaurantId);
   return await prisma.emplacement.findMany({ where: { restaurantId } });
 }
 
@@ -103,6 +108,7 @@ export async function getLocations(restaurantId: string) {
  * Récupérer les fournisseurs
  */
 export async function getSuppliers(restaurantId: string) {
+  await ensureManager(restaurantId);
   return await prisma.fournisseur.findMany({ where: { restaurantId } });
 }
 
@@ -111,6 +117,7 @@ export async function getSuppliers(restaurantId: string) {
  */
 export async function createLocation(restaurantId: string, data: any) {
   try {
+    await ensureManager(restaurantId);
     const loc = await prisma.emplacement.create({
       data: { ...data, restaurantId }
     });
@@ -126,6 +133,7 @@ export async function createLocation(restaurantId: string, data: any) {
  */
 export async function createSupplier(restaurantId: string, data: any) {
   try {
+    await ensureManager(restaurantId);
     const sup = await prisma.fournisseur.create({
       data: { ...data, restaurantId }
     });
@@ -141,6 +149,10 @@ export async function createSupplier(restaurantId: string, data: any) {
  */
 export async function deleteLocation(id: string) {
   try {
+    const loc = await prisma.emplacement.findUnique({ where: { id } });
+    if (!loc) throw new Error("Introuvable");
+    await ensureManager(loc.restaurantId);
+
     await prisma.emplacement.delete({ where: { id } });
     revalidatePath("/manager/inventory");
     return { success: true };
@@ -154,6 +166,10 @@ export async function deleteLocation(id: string) {
  */
 export async function deleteSupplier(id: string) {
   try {
+    const sup = await prisma.fournisseur.findUnique({ where: { id } });
+    if (!sup) throw new Error("Introuvable");
+    await ensureManager(sup.restaurantId);
+
     await prisma.fournisseur.delete({ where: { id } });
     revalidatePath("/manager/inventory");
     return { success: true };
@@ -167,6 +183,7 @@ export async function deleteSupplier(id: string) {
  */
 export async function getInventoryStats(restaurantId: string) {
   try {
+    await ensureManager(restaurantId);
     const articles = await prisma.articleStock.findMany({
       where: { restaurantId }
     });
