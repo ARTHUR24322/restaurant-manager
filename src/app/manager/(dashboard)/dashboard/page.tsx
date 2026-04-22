@@ -79,23 +79,91 @@ const StatCard = ({ title, value, icon: Icon, trend, prefix = "$" }: any) => (
   </div>
 );
 
-const CustomBarChart = ({ data }: any) => (
-  <div className="flex items-end justify-between h-48 gap-2 pt-6">
-    {data.map((item: any, idx: number) => (
-      <div key={idx} className="flex-1 flex flex-col items-center group">
+const CustomBarChart = ({ data }: any) => {
+  if (!data || data.length === 0) return null;
+  
+  const maxVal = Math.max(...data.map((d: any) => d.val), 1);
+  const avgVal = data.reduce((acc: number, d: any) => acc + d.val, 0) / data.length;
+
+  return (
+    <div className="relative h-64 mt-12 mb-8 px-2">
+      {/* Average Line */}
+      {maxVal > 0 && (
         <div 
-          className="w-full bg-primary/20 hover:bg-primary/40 rounded-t-lg transition-all relative"
-          style={{ height: `${item.val}%` }}
+          className="absolute w-full border-t border-dashed border-primary/30 z-0 transition-all duration-1000"
+          style={{ bottom: `${(avgVal / maxVal) * 90}%` }}
         >
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-sm border border-border">
-            {item.val * 15} USD
-          </div>
+          <span className="absolute -top-5 right-0 text-[9px] font-black text-primary/60 uppercase tracking-[0.2em] bg-background/80 px-2 rounded-full border border-primary/10">
+            Moyenne: {avgVal.toFixed(2)}$
+          </span>
         </div>
-        <span className="text-[10px] font-bold text-muted-foreground mt-2">{item.day}</span>
+      )}
+
+      <div className="flex items-end justify-between h-full gap-4 relative z-10">
+        {data.map((item: any, idx: number) => {
+          const isPeak = item.val === maxVal && item.val > 0;
+          // Scale to 90% max to leave room for peak badge
+          const heightPercent = (item.val / maxVal) * 90;
+          
+          return (
+            <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+              {/* Peak Badge */}
+              {isPeak && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 animate-bounce z-20">
+                  <div className="bg-amber-500 text-white text-[8px] font-black px-2 py-0.5 rounded-md shadow-lg shadow-amber-500/40 whitespace-nowrap rotate-[-5deg]">
+                    TOP PERFORMANCE
+                  </div>
+                </div>
+              )}
+
+              {/* Data Value on top of bar */}
+              <div 
+                className={cn(
+                  "absolute opacity-0 group-hover:opacity-100 transition-all duration-300 bottom-full mb-2 z-20",
+                  isPeak ? "opacity-100" : ""
+                )}
+                style={{ bottom: `${heightPercent}%` }}
+              >
+                 <span className={cn(
+                   "text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm border",
+                   isPeak ? "bg-amber-500 text-white border-amber-400" : "bg-popover text-popover-foreground border-border"
+                 )}>
+                   {item.val.toFixed(0)}$
+                 </span>
+              </div>
+
+              <div 
+                className={cn(
+                  "w-full rounded-t-2xl transition-all duration-700 relative cursor-pointer group-hover:scale-x-105",
+                  isPeak 
+                    ? "bg-gradient-to-t from-amber-600 via-amber-500 to-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.3)]" 
+                    : "bg-gradient-to-t from-primary/40 to-primary/10 group-hover:from-primary/60 group-hover:to-primary/30"
+                )}
+                style={{ height: `${heightPercent}%` }}
+              >
+                {/* Visual "shine" effect on bars */}
+                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                {isPeak && (
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                  </div>
+                )}
+              </div>
+              
+              <div className={cn(
+                "mt-4 transition-all duration-300 transform",
+                isPeak ? "text-amber-500 font-black scale-110" : "text-muted-foreground font-bold"
+              )}>
+                <span className="text-[10px] uppercase tracking-widest">{item.day}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
-    ))}
-  </div>
-);
+    </div>
+  );
+};
 
 const PieChartPlaceholder = ({ data }: any) => (
   <div className="space-y-4 py-4">

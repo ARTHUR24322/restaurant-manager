@@ -180,7 +180,7 @@ export async function verifyManagerPin(pin: string) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 60 * 60 * 1, // 1 heure
+      maxAge: 60 * 60 * 24 * 3, // 3 jours
       path: "/",
     });
 
@@ -274,7 +274,7 @@ export async function verifySuperAdminPin(pin: string) {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
-        maxAge: 60 * 60 * 1, // Réduit de 4h à 1h
+        maxAge: 60 * 60 * 24 * 3, // 3 jours
         path: "/",
       });
 
@@ -401,7 +401,7 @@ export async function impersonateRestaurant(restoId: string) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 60 * 60 * 2,
+      maxAge: 60 * 60 * 24 * 3, // 3 jours
       path: "/",
     });
 
@@ -457,7 +457,7 @@ export async function switchSelectedRestaurant(newRestoId: string) {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "strict",
-          maxAge: 60 * 60 * 1, // Réduit de 2h à 1h
+          maxAge: 60 * 60 * 24 * 3, // 3 jours
           path: "/",
       });
 
