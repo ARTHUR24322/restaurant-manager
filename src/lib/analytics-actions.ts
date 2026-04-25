@@ -217,3 +217,44 @@ export async function getManagerAnalytics(restaurantId: string, period: "day" | 
         return { success: false };
     }
 }
+
+/**
+ * Récupère les données brutes des commandes pour les rapports (Excel/PDF)
+ */
+export async function getReportData(restaurantId: string, period: "day" | "week" | "month" | "year") {
+  try {
+    const now = new Date();
+    let startDate = new Date();
+
+    if (period === "day") {
+      startDate.setHours(0, 0, 0, 0);
+    } else if (period === "week") {
+      startDate.setDate(now.getDate() - 7);
+    } else if (period === "month") {
+      startDate.setMonth(now.getMonth() - 1);
+    } else if (period === "year") {
+      startDate.setFullYear(now.getFullYear() - 1);
+    }
+
+    const orders = await prisma.commande.findMany({
+      where: {
+        restaurantId,
+        createdAt: { gte: startDate },
+        statut: "COMPLETED"
+      },
+      include: {
+        items: {
+          include: {
+            plat: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return { success: true, orders };
+  } catch (error) {
+    console.error("Report Data Error:", error);
+    return { success: false, orders: [] };
+  }
+}

@@ -17,6 +17,10 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "SmartResto",
   description: "Plateforme intelligente de gestion de restaurant",
+  icons: {
+    icon: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";

@@ -33,10 +33,11 @@ import {
     Layers,
     ChevronUp,
     KeyRound,
-    AlertCircle
+    AlertCircle,
+    CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant } from "@/lib/admin-actions";
+import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant, getAllSubscriptionLogs } from "@/lib/admin-actions";
 import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
 import { getAllDemandes, approveDemande, rejectDemande } from "@/lib/demande-actions";
@@ -139,7 +140,8 @@ export default function SuperAdminPage() {
     const [pin, setPin] = useState("");
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'demandes' | 'recuperation' | 'broadcast' | 'settings'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'broadcast' | 'settings'>('dashboard');
+    const [subscriptionLogs, setSubscriptionLogs] = useState<any[]>([]);
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -263,6 +265,8 @@ export default function SuperAdminPage() {
             setDemandes(Array.isArray(demandesData) ? demandesData : []);
             const recoveryData = await getAllRecoveryRequests();
             setRecoveryRequests(Array.isArray(recoveryData) ? recoveryData : []);
+            const logsData = await getAllSubscriptionLogs();
+            setSubscriptionLogs(Array.isArray(logsData) ? logsData : []);
         } catch (e) {
             console.error(e);
             setRestaurants([]);
@@ -424,6 +428,7 @@ export default function SuperAdminPage() {
                     {[
                         { id: 'dashboard', label: 'Command', icon: <Activity className="w-4 h-4" /> },
                         { id: 'restaurants', label: 'Établissements', icon: <Building2 className="w-4 h-4" /> },
+                        { id: 'abonnements', label: 'Abonnements', icon: <CreditCard className="w-4 h-4" /> },
                         { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
                         { id: 'recuperation', label: 'Récupération', icon: <KeyRound className="w-4 h-4" />, count: recoveryRequests.filter(r => r.statut === "EN_ATTENTE").length },
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
@@ -624,6 +629,102 @@ export default function SuperAdminPage() {
                                     )}
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'abonnements' && (
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                        {/* Section Abonnements Actifs */}
+                        <div className="xl:col-span-2 space-y-6">
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
+                                <h3 className="text-xl font-black uppercase mb-6 flex items-center gap-2">
+                                    <ShieldCheck className="w-6 h-6 text-emerald-500" /> Abonnements Actifs
+                                </h3>
+                                <div className="space-y-4">
+                                    {restaurants
+                                        .filter(r => r.active)
+                                        .sort((a,b) => new Date(a.subscriptionEnd).getTime() - new Date(b.subscriptionEnd).getTime())
+                                        .map(resto => {
+                                            const daysLeft = Math.ceil((new Date(resto.subscriptionEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                            return (
+                                                <div key={resto.id} className="bg-zinc-950/50 p-5 rounded-3xl border border-zinc-800 flex items-center justify-between group hover:border-zinc-700 transition-all">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800">
+                                                            {resto.logoUrl ? <img src={resto.logoUrl} className="w-full h-full object-cover" title={resto.nom} /> : <Building2 className="w-6 h-6 m-3 text-zinc-700" />}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-black text-white uppercase text-sm">{resto.nom}</h4>
+                                                            <p className="text-[10px] text-zinc-500 uppercase font-bold">{resto.plan} • {resto.billingCycle} • ${resto.monthlyPrice}/m</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-8">
+                                                        <div className="text-right">
+                                                            <p className="text-[10px] font-black text-zinc-500 uppercase">Expire le</p>
+                                                            <p className="text-sm font-black text-white tracking-tighter">{new Date(resto.subscriptionEnd).toLocaleDateString()}</p>
+                                                        </div>
+                                                        <div className={cn(
+                                                            "px-4 py-2 rounded-2xl border flex flex-col items-center justify-center min-w-[80px]",
+                                                            daysLeft <= 0 ? "bg-red-500/10 border-red-500/20 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.1)]" :
+                                                            daysLeft <= 7 ? "bg-amber-500/10 border-amber-500/20 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.1)]" :
+                                                            "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                                                        )}>
+                                                            <span className="text-[18px] font-black leading-none">{daysLeft}</span>
+                                                            <span className="text-[8px] font-black uppercase">Jours</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    {restaurants.filter(r => r.active).length === 0 && (
+                                        <div className="text-center py-20 opacity-30">
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Aucun abonnement actif</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Historique des Paiements / Logs */}
+                        <div className="space-y-6">
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 h-full">
+                                <h3 className="text-xl font-black uppercase mb-6 flex items-center gap-2">
+                                    <Activity className="w-6 h-6 text-indigo-500" /> Historique Flux
+                                </h3>
+                                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {subscriptionLogs.map((log) => (
+                                        <div key={log.id} className="relative pl-6 border-l-2 border-zinc-800 pb-6 group last:pb-0">
+                                            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-zinc-900 border-2 border-zinc-800 group-hover:border-primary transition-all" />
+                                            <div className="bg-zinc-950/50 p-4 rounded-2xl border border-zinc-900 group-hover:border-zinc-800 transition-all">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h5 className="text-[10px] font-black text-white uppercase leading-tight">{log.restaurant?.nom}</h5>
+                                                        <p className="text-[8px] font-black text-zinc-500 uppercase">{new Date(log.createdAt).toLocaleString()}</p>
+                                                    </div>
+                                                    <span className="text-xs font-black text-emerald-500 tracking-tighter">${log.amount}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn(
+                                                        "text-[8px] font-black px-2 py-0.5 rounded-full uppercase",
+                                                        log.type === 'UPGRADE' ? 'bg-indigo-500/10 text-indigo-500' : 
+                                                        log.type === 'NEW' ? 'bg-emerald-500/10 text-emerald-500' :
+                                                        'bg-zinc-800 text-zinc-400'
+                                                    )}>{log.type}</span>
+                                                    <span className="text-[9px] text-zinc-500 font-medium italic">{log.oldPlan || "NONE"} → {log.newPlan}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {subscriptionLogs.length === 0 && (
+                                        <div className="text-center py-20 opacity-30">
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Aucun mouvement</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

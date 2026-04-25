@@ -7,7 +7,7 @@ import {
   Plus, Info, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame, Search, ChevronRight,
   Beef, Wine, Beer, GlassWater, IceCream, CupSoda, Cherry
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeJsonParse } from "@/lib/utils";
 import { PlateOptionsModal } from "@/components/client/PlateOptionsModal";
 import { getRecentCommandes } from "@/lib/actions";
 import { toast } from "sonner";
@@ -41,12 +41,16 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     // Connexion Temps Réel (SSE)
     const eventSource = new EventSource(`/api/events?restaurantId=${restaurantId}`);
     eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "new-order" || data.type === "status-updated") {
-        // Filtrage SaaS : Le client ne voit que le statut de ses commandes sur ce restaurant
-        if (!data.restaurantId || data.restaurantId === restaurantId) {
-            fetchMyOrder();
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "new-order" || data.type === "status-updated") {
+          // Filtrage SaaS : Le client ne voit que le statut de ses commandes sur ce restaurant
+          if (!data.restaurantId || data.restaurantId === restaurantId) {
+              fetchMyOrder();
+          }
         }
+      } catch (e) {
+        console.error("SSE Client JSON Error:", e);
       }
     };
 

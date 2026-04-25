@@ -17,7 +17,7 @@ import {
   ArrowLeft,
   Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeJsonParse } from "@/lib/utils";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/manager/ConfirmModal";
 
@@ -54,7 +54,11 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
 
       const cached = sessionStorage.getItem(`resto_profile_${id}`);
       if (cached) {
-        const r = JSON.parse(cached);
+        const r = safeJsonParse(cached);
+        if (!r) {
+           sessionStorage.removeItem(`resto_profile_${id}`);
+           return;
+        }
         const isExpired = r.subscriptionEnd ? new Date(r.subscriptionEnd) < new Date() : false;
         if (!r.active || isExpired) {
           router.push('/manager/subscription-expired');
@@ -83,10 +87,18 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
 
       const eventSource = new EventSource(`/api/events?restaurantId=${id}`);
       eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "new-order" || data.type === "status-updated") {
-          fetchProductionOrders(id!);
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "new-order" || data.type === "status-updated") {
+            fetchProductionOrders(id!);
+          }
+        } catch (e) {
+          console.error("SSE Message Error:", e);
         }
+      };
+
+      eventSource.onerror = (err) => {
+        console.error("SSE Connection Error:", err);
       };
 
       const interval = setInterval(() => fetchProductionOrders(id!), 4000);
@@ -202,8 +214,8 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
                         let selectedOpts = [];
                         try {
                           if (item.options) {
-                            const parsed = JSON.parse(item.options);
-                            selectedOpts = parsed.detail || [];
+                            const parsed = safeJsonParse(item.options);
+                            selectedOpts = parsed?.detail || [];
                           }
                         } catch (e) {}
 

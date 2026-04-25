@@ -1,0 +1,15 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond circulaire moderne -->
+  <circle cx="50" cy="50" r="48" fill="#1A1A1A"/>
+  
+  <!-- Icône centrale : Fourchette stylisée + Cercle technologique -->
+  <!-- Base de la fourchette -->
+  <path d="M50 35V75" stroke="#FFD700" stroke-width="5" stroke-linecap="round"/>
+  <!-- Dents de la fourchette -->
+  <path d="M40 30V45C40 50.5 44.5 55 50 55C55.5 55 60 50.5 60 45V30" stroke="#FFD700" stroke-width="5" stroke-linecap="round"/>
+  
+  <!-- Éléments "Smart" / Connectés -->
+  <circle cx="50" cy="25" r="4" fill="#FFD700"/>
+  <path d="M75 50C75 63.8 63.8 75 50 75" stroke="#FFD700" stroke-width="2" stroke-dasharray="4 4"/>
+  <path d="M25 50C25 36.2 36.2 25 50 25" stroke="#FFD700" stroke-width="2" stroke-dasharray="4 4"/>
+</svg>

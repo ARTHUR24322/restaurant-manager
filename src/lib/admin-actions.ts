@@ -310,6 +310,18 @@ export async function getAllRestaurants() {
     await ensureSuperAdmin();
     return await (prisma as any).restaurant.findMany();
 }
+
+export async function getAllSubscriptionLogs() {
+    await ensureSuperAdmin();
+    return await (prisma as any).subscriptionLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+            restaurant: {
+                select: { nom: true }
+            }
+        }
+    });
+}
 /**
  * Vérifie si un restaurant est le compte "Mère" (le plus ancien créé avec cet email)
  */

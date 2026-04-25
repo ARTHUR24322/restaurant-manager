@@ -21,13 +21,16 @@ import {
   Power,
   Package,
   RefreshCw,
-  Loader2
+  Loader2,
+  FileSpreadsheet,
+  FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getRecentCommandes, updateOrderStatus, confirmOrderPayment, getPlats, getRestaurantStatus } from "@/lib/actions";
 import { updateRestaurantTauxChange } from "@/lib/actions-settings";
 import { checkIsMainAccount } from "@/lib/admin-actions";
-import { getManagerAnalytics } from "@/lib/analytics-actions";
+import { getManagerAnalytics, getReportData } from "@/lib/analytics-actions";
+import { exportToExcel, exportToPDF, formatOrderForReport, calculateSummary } from "@/lib/report-exporter";
 import { printInvoice } from "@/lib/thermal-printer";
 import { MultiSiteWidget } from "@/components/manager/MultiSiteWidget";
 import { toast } from "sonner";
@@ -206,6 +209,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   const [newTaux, setNewTaux] = useState<string>("");
   const [tauxLoading, setTauxLoading] = useState(false);
   const [isMainAccount, setIsMainAccount] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     // Si l'ID est absent au montage (ex: clic depuis la sidebar sans le paramètre), le récuperer de la session !
@@ -293,6 +297,34 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
     fetchAllOrders(filter);
   };
 
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    if (!restaurantId) return;
+    setIsExporting(true);
+    try {
+        const res = await getReportData(restaurantId, filter as any);
+        if (res.success && res.orders && res.orders.length > 0) {
+            const formatted = formatOrderForReport(res.orders);
+            const summary = calculateSummary(res.orders);
+            const title = `Rapport de Ventes - ${filter.toUpperCase()} - ${restoStatus?.nom || ""}`;
+            const fileName = `Rapport_${filter}_${new Date().toISOString().split('T')[0]}`;
+            
+            if (format === 'excel') {
+                exportToExcel(formatted, fileName, summary);
+            } else {
+                exportToPDF(formatted, fileName, title, summary);
+            }
+            toast.success("Rapport généré avec succès !");
+        } else {
+            toast.error("Aucune donnée à exporter pour cette période.");
+        }
+    } catch (error) {
+        console.error(error);
+        toast.error("Erreur lors de l'exportation.");
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
   const pending = orders.filter(o => o.statut === "SUBMITTED" || o.statut === "PREPARING");
   const ready = orders.filter(o => o.statut === "READY");
   const closed = orders.filter(o => o.statut === "COMPLETED");
@@ -356,7 +388,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
         </div>
 
         <div className="flex items-center gap-2 bg-card p-1.5 rounded-2xl border border-border shadow-sm">
-          {['day', 'week', 'month'].map((p) => (
+          {['day', 'week', 'month', 'year'].map((p) => (
             <button
               key={p}
               onClick={() => setFilter(p)}
@@ -365,13 +397,29 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
                 filter === p ? "bg-primary text-primary-foreground shadow-lg" : "hover:bg-secondary text-muted-foreground"
               )}
             >
-              {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : 'Mois'}
+              {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : p === 'month' ? 'Mois' : 'Année'}
             </button>
           ))}
           <div className="w-px h-6 bg-border mx-1" />
-          <button className="p-2 hover:bg-secondary rounded-xl transition-colors">
-            <Filter className="w-4 h-4 text-muted-foreground" />
-          </button>
+          
+          <div className="flex items-center gap-1 pr-2">
+            <button 
+                disabled={isExporting}
+                onClick={() => handleExport('excel')}
+                className="p-2 hover:bg-emerald-500/10 rounded-xl transition-all text-emerald-500 hover:text-emerald-400 disabled:opacity-50"
+                title="Exporter Excel"
+            >
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+            </button>
+            <button 
+                disabled={isExporting}
+                onClick={() => handleExport('pdf')}
+                className="p-2 hover:bg-red-500/10 rounded-xl transition-all text-red-500 hover:text-red-400 disabled:opacity-50"
+                title="Exporter PDF"
+            >
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
       </div>
 
