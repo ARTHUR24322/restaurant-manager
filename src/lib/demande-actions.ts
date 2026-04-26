@@ -119,9 +119,19 @@ export async function approveDemande(id: string, adminPassword: string) {
     if (demande.cycle === "semiannual") monthlyPrice = demande.montant / 6;
     if (demande.cycle === "annual") monthlyPrice = demande.montant / 12;
 
-    // RÈGLE STRICTE : Un email ne peut servir à plusieurs établissements que si c'est du PLATINUM
-    if (isChild && motherResto.plan !== "PLATINUM") {
-        return { success: false, error: "Cet email appartient déjà à un restaurant Standard/Pro. Le multi-site est réservé au plan PLATINUM." };
+    // LIMITE SMARTRESTO SaaS : 5 enfants max (6 établissements au total par email)
+    if (isChild) {
+        const count = await (prisma as any).restaurant.count({
+            where: { email: demande.email }
+        });
+        if (count >= 6) {
+           return { success: false, error: "Limite atteinte : Vous ne pouvez pas créer plus de 5 établissements filiales (6 au total par compte)." };
+        }
+    }
+
+    // RÈGLE STRICTE : Un email ne peut servir à plusieurs établissements que si c'est du PLATINUM ou TRIAL
+    if (isChild && motherResto.plan !== "PLATINUM" && motherResto.plan !== "TRIAL") {
+        return { success: false, error: "Cet email appartient déjà à un restaurant. Le multi-site est réservé au plan PLATINUM (ou essai TRIAL)." };
     }
 
     let resto;

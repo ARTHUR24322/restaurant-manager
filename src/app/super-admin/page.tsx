@@ -41,6 +41,7 @@ import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaura
 import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
 import { getAllDemandes, approveDemande, rejectDemande } from "@/lib/demande-actions";
+import { getAllSupportMessages, markMessageRead } from "@/lib/support-actions";
 import { toast } from "sonner";
 import { sendBroadcastNotification } from "@/lib/admin-broadcast";
 import { getAllRecoveryRequests, resolveRecoveryRequest } from "@/lib/recovery-actions";
@@ -140,8 +141,9 @@ export default function SuperAdminPage() {
     const [pin, setPin] = useState("");
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'broadcast' | 'settings'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings'>('dashboard');
     const [subscriptionLogs, setSubscriptionLogs] = useState<any[]>([]);
+    const [supportMessages, setSupportMessages] = useState<any[]>([]);
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -267,6 +269,8 @@ export default function SuperAdminPage() {
             setRecoveryRequests(Array.isArray(recoveryData) ? recoveryData : []);
             const logsData = await getAllSubscriptionLogs();
             setSubscriptionLogs(Array.isArray(logsData) ? logsData : []);
+            const supportData = await getAllSupportMessages();
+            setSupportMessages(Array.isArray(supportData) ? supportData : []);
         } catch (e) {
             console.error(e);
             setRestaurants([]);
@@ -431,6 +435,7 @@ export default function SuperAdminPage() {
                         { id: 'abonnements', label: 'Abonnements', icon: <CreditCard className="w-4 h-4" /> },
                         { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
                         { id: 'recuperation', label: 'Récupération', icon: <KeyRound className="w-4 h-4" />, count: recoveryRequests.filter(r => r.statut === "EN_ATTENTE").length },
+                        { id: 'messages', label: 'Messages', icon: <Mail className="w-4 h-4" />, count: supportMessages.filter(m => m.statut === "NON_LU").length },
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
                         { id: 'settings', label: 'System', icon: <Settings className="w-4 h-4" /> },
                     ].map((tab) => (
@@ -1044,6 +1049,97 @@ export default function SuperAdminPage() {
                             </button>
                         </div>
                     </form>
+                </div>
+            )}
+            {activeTab === 'messages' && (
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10">
+                        <div className="flex justify-between items-center mb-10">
+                            <div>
+                                <h3 className="text-2xl font-black italic uppercase text-white leading-none">Support & Messages</h3>
+                                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2">{supportMessages.length} Messages reçus au total</p>
+                            </div>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={fetchRestos}
+                                    className="p-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-xl transition-all border border-zinc-700"
+                                >
+                                    <RefreshCw className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            {supportMessages.map((msg) => (
+                                <div key={msg.id} className={cn(
+                                    "p-8 rounded-[2rem] border transition-all relative overflow-hidden group",
+                                    msg.statut === "NON_LU" 
+                                        ? "bg-indigo-500/5 border-indigo-500/20 shadow-lg shadow-indigo-500/5" 
+                                        : "bg-zinc-950/40 border-zinc-800"
+                                )}>
+                                    {msg.statut === "NON_LU" && (
+                                        <div className="absolute top-0 left-0 w-1 bg-indigo-500 h-full" />
+                                    )}
+                                    
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                        <div className="flex items-center gap-6">
+                                            <div className={cn(
+                                                "w-14 h-14 rounded-2xl flex items-center justify-center border",
+                                                msg.statut === "NON_LU" ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-500" : "bg-zinc-800 border-zinc-700 text-zinc-500"
+                                            )}>
+                                                <User className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-3 mb-1">
+                                                    <h4 className="text-lg font-black text-white uppercase italic tracking-tighter">{msg.nom}</h4>
+                                                    <span className={cn(
+                                                        "text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest",
+                                                        msg.sujet === "WHATSAPP" ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" :
+                                                        msg.sujet === "CENTRE_AIDE" ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" :
+                                                        "bg-primary/10 text-primary border border-primary/20"
+                                                    )}>{msg.sujet}</span>
+                                                </div>
+                                                <div className="flex items-center gap-4 text-xs font-bold text-zinc-500">
+                                                    <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {msg.email}</span>
+                                                    <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {msg.telephone}</span>
+                                                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {new Date(msg.createdAt).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-3">
+                                            {msg.statut === "NON_LU" && (
+                                                <button
+                                                    onClick={async () => {
+                                                        const res = await markMessageRead(msg.id);
+                                                        if (res.success) fetchRestos();
+                                                    }}
+                                                    className="px-6 py-3 bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
+                                                >
+                                                    Marquer Lu
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-8 pt-8 border-t border-zinc-800/50">
+                                        <div className="bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800/50 italic text-zinc-400 text-sm leading-relaxed">
+                                            " {msg.message} "
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {supportMessages.length === 0 && (
+                                <div className="text-center py-32 bg-zinc-950/20 rounded-[2.5rem] border-2 border-dashed border-zinc-800/50">
+                                    <div className="w-20 h-20 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-600">
+                                        <Mail className="w-10 h-10" />
+                                    </div>
+                                    <h4 className="text-xl font-black text-zinc-500 uppercase tracking-tighter">Aucun message de support</h4>
+                                    <p className="text-zinc-600 text-sm mt-1 font-medium">Les demandes de vos clients apparaîtront ici.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 

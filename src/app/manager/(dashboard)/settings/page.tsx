@@ -328,20 +328,20 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                 )}
 
                 {activeTab === 'subscription' && (
-                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
                       {/* Plan Actuel Summary */}
-                      <div className="bg-card border border-border rounded-[2.5rem] p-8 relative overflow-hidden">
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] rounded-full" />
+                      <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[100px] rounded-full" />
                           
                           <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
                               <div className="space-y-4">
-                                  <div className="flex items-center gap-3">
-                                      <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center border border-indigo-500/20">
-                                          <Zap className="w-6 h-6 text-indigo-400" />
+                                  <div className="flex items-center gap-4">
+                                      <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
+                                          <Zap className="w-7 h-7 text-primary" />
                                       </div>
                                       <div>
-                                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Plan Actuel</p>
-                                          <h2 className="text-2xl font-black text-foreground italic">{restaurant?.plan || "STANDARD"}</h2>
+                                          <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Plan Actuel</p>
+                                          <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">{restaurant?.plan || "TRIAL"}</h2>
                                       </div>
                                   </div>
                                   
@@ -351,11 +351,11 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                               "w-2 h-2 rounded-full",
                                               restaurant?.active ? "bg-emerald-500 animate-pulse" : "bg-red-500"
                                           )} />
-                                          <span className="text-xs font-bold text-muted-foreground capitalize">{restaurant?.active ? "Compte Actif" : "Compte Suspendu"}</span>
+                                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{restaurant?.active ? "Compte Actif" : "Compte Suspendu"}</span>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                          <Clock className="w-4 h-4 text-muted-foreground" />
-                                          <span className="text-xs font-bold text-muted-foreground">
+                                          <Clock className="w-4 h-4 text-zinc-500" />
+                                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                                               Expire le : {restaurant?.subscriptionEnd ? new Date(restaurant.subscriptionEnd).toLocaleDateString() : "Indéfini"}
                                           </span>
                                       </div>
@@ -363,9 +363,9 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                               </div>
                               
                               <div className="flex items-center">
-                                  <div className="px-6 py-4 bg-secondary/50 rounded-3xl border border-border text-center">
-                                      <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">Jours Restants</p>
-                                      <p className="text-3xl font-black text-foreground">
+                                  <div className="px-8 py-5 bg-zinc-800/50 rounded-3xl border border-zinc-700 text-center shadow-xl">
+                                      <p className="text-[10px] font-black text-zinc-500 uppercase mb-1 tracking-widest">Jours Restants</p>
+                                      <p className="text-4xl font-black text-white italic">
                                           {restaurant?.subscriptionEnd ? Math.max(0, Math.ceil((new Date(restaurant.subscriptionEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : "0"}
                                       </p>
                                   </div>
@@ -373,60 +373,77 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                           </div>
                       </div>
 
-                      {/* Changer de Plan Options */}
-                      <div className="bg-card border border-border rounded-[2.5rem] p-10">
-                          <h3 className="text-xl font-black italic tracking-tighter mb-8 text-foreground">Changer ou Renouveler votre Plan</h3>
+                      {/* Changer de Plan Options (Full Cards) */}
+                      <div className="space-y-6">
+                          <h3 className="text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
+                             <Star className="w-7 h-7 text-primary" /> Plans & Tarification SmartResto
+                          </h3>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               {[
                                   {
-                                      id: "STANDARD",
-                                      price: "50$",
+                                      name: "Standard",
+                                      price: "30",
                                       icon: <Star className="w-5 h-5" />,
-                                      color: "text-blue-400",
-                                      bg: "bg-blue-500/10",
-                                      desc: "Idéal pour les restaurants en croissance."
+                                      badge: "Meilleure offre",
+                                      features: ["Menu digital illimité", "QR Codes illimités", "Gestion des commandes", "Impression thermique", "Tableau de bord analytique"],
+                                      gradient: "from-blue-600/10 to-indigo-700/10",
+                                      border: "border-blue-500/20"
                                   },
                                   {
-                                      id: "PRO",
-                                      price: "65$",
+                                      name: "Pro",
+                                      price: "55",
                                       icon: <Crown className="w-5 h-5" />,
-                                      color: "text-violet-400",
-                                      bg: "bg-violet-500/10",
-                                      desc: "Fonctionnalités avancées et support 24/7."
+                                      badge: "Populaire",
+                                      features: ["Tout du plan Standard", "Gestion de stock avancée", "Multi-utilisateurs illimités", "White Label (Logo)", "Support 24/7"],
+                                      gradient: "from-violet-600/10 to-purple-800/10",
+                                      border: "border-violet-500/20"
                                   },
                                   {
-                                      id: "PLATINUM",
-                                      price: "100$",
+                                      name: "Platinum",
+                                      price: "99",
                                       icon: <Globe className="w-5 h-5" />,
-                                      color: "text-emerald-400",
-                                      bg: "bg-emerald-500/10",
-                                      desc: "Dashboard Multi-site et gestion de groupe."
+                                      badge: "Enterprise",
+                                      features: ["Tout du plan Pro", "Multi-Établissements (5 filiales)", "Statistiques Globales", "Stocks Multi-sites", "Conseiller dédié"],
+                                      gradient: "from-emerald-600/10 to-teal-800/10",
+                                      border: "border-emerald-500/20"
                                   }
                               ].map((p) => (
                                   <div 
-                                      key={p.id}
+                                      key={p.name}
                                       className={cn(
-                                          "group p-6 rounded-[2rem] border transition-all hover:scale-[1.02]",
-                                          restaurant?.plan === p.id ? "border-indigo-500/50 bg-indigo-500/5" : "border-border bg-secondary/50 hover:border-zinc-700"
+                                          "group relative flex flex-col p-8 rounded-[2.5rem] border overflow-hidden transition-all hover:-translate-y-1",
+                                          restaurant?.plan === p.name.toUpperCase() 
+                                            ? "border-primary bg-primary/5 shadow-2xl shadow-primary/5" 
+                                            : `bg-zinc-900 ${p.border} hover:bg-zinc-800/50`
                                       )}
                                   >
-                                      <div className="flex items-start justify-between mb-4">
-                                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", p.bg)}>
-                                              <div className={p.color}>{p.icon}</div>
+                                      <div className="flex justify-between items-start mb-6">
+                                          <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center border border-zinc-700 text-primary">
+                                              {p.icon}
                                           </div>
-                                          <div className="text-right">
-                                              <p className="text-lg font-black text-foreground">{p.price}</p>
-                                              <p className="text-[10px] text-muted-foreground font-bold uppercase">/ Mois</p>
-                                          </div>
+                                          <span className="text-[9px] font-black uppercase bg-zinc-800 text-zinc-400 px-3 py-1.5 rounded-full border border-zinc-700">{p.badge}</span>
                                       </div>
-                                      
-                                      <h4 className="text-sm font-black text-foreground mb-1">{p.id} PLAN</h4>
-                                      <p className="text-xs text-muted-foreground mb-6 leading-relaxed">{p.desc}</p>
-                                      
+
+                                      <h4 className="text-xl font-black text-white italic uppercase tracking-tighter mb-1">{p.name}</h4>
+                                      <div className="flex items-baseline gap-1 mb-6">
+                                          <span className="text-3xl font-black text-white italic">${p.price}</span>
+                                          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">/ Mois</span>
+                                      </div>
+
+                                      <ul className="space-y-3 mb-8 flex-1">
+                                          {p.features.map(f => (
+                                              <li key={f} className="flex items-center gap-3 text-[11px] font-medium text-zinc-400 capitalize whitespace-nowrap overflow-hidden text-ellipsis">
+                                                  <div className="w-4 h-4 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
+                                                  </div>
+                                                  {f}
+                                              </li>
+                                          ))}
+                                      </ul>
+
                                       <button 
-                                          disabled={requestLoading}
-                                          type="button"
+                                          disabled={requestLoading || restaurant?.plan === p.name.toUpperCase()}
                                           onClick={async () => {
                                               if(!restaurant) return;
                                               setRequestLoading(true);
@@ -435,38 +452,39 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                                   nomProprietaire: "Propriétaire actuel",
                                                   email: restaurant.email || "inconnu", 
                                                   telephone: "Non spécifié",
-                                                  ville: "Lubumbashi",
-                                                  plan: p.id,
+                                                  ville: restaurant.ville || "Lubumbashi",
+                                                  plan: p.name.toUpperCase(),
                                                   cycle: "monthly",
                                                   montant: parseInt(p.price)
                                               });
                                               setRequestLoading(false);
                                               if(res.success) {
-                                                  toast.success("Demande envoyée ! L'administrateur reviendra vers vous.");
+                                                  toast.success(`Demande d'upgrade vers ${p.name} envoyée !`);
                                               } else {
                                                   toast.error(res.error || "Erreur lors de l'envoi.");
                                               }
                                           }}
                                           className={cn(
-                                              "w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2",
-                                              restaurant?.plan === p.id 
-                                              ? "bg-secondary text-muted-foreground" 
-                                              : "bg-foreground text-background hover:opacity-90"
+                                              "w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2",
+                                              restaurant?.plan === p.name.toUpperCase() 
+                                              ? "bg-zinc-800 text-zinc-600 border border-zinc-700 cursor-not-allowed" 
+                                              : "bg-primary text-black shadow-lg shadow-primary/10 hover:brightness-110"
                                           )}
                                       >
-                                          {requestLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
-                                          {restaurant?.plan === p.id ? "Plan Actuel (Renouveler)" : "Demander l'Upgrade"}
+                                          {restaurant?.plan === p.name.toUpperCase() ? "Plan Actuel" : "Activer ce Plan"}
+                                          {requestLoading && <Loader2 className="w-3 h-3 animate-spin" />}
                                       </button>
                                   </div>
                               ))}
                           </div>
 
-                          <div className="mt-8 p-6 bg-secondary/50 border border-border rounded-2xl flex items-start gap-4">
-                              <AlertCircle className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                          <div className="bg-primary/5 border border-primary/20 rounded-[2rem] p-8 flex items-start gap-4">
+                              <AlertCircle className="w-6 h-6 text-primary shrink-0 mt-1" />
                               <div className="space-y-1">
-                                  <p className="text-xs font-bold text-foreground uppercase italic tracking-wider">Processus de validation</p>
-                                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                      Le changement de plan ou le renouvellement n'est pas automatique. Une fois votre demande envoyée, un administrateur SmartResto vous contactera pour valider le paiement via Mobile Money ou FlexPaie.
+                                  <p className="text-sm font-black text-white uppercase italic tracking-tighter">Processus de Activation</p>
+                                  <p className="text-[11px] text-zinc-500 font-medium leading-relaxed leading-none">
+                                      Une fois votre demande envoyée, notre équipe vous contactera pour finaliser le paiement via FlexPaie (Orange, M-Pesa, Airtel ou Visa/Mastercard). 
+                                      Votre compte sera activé instantanément après confirmation.
                                   </p>
                               </div>
                           </div>

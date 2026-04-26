@@ -136,6 +136,107 @@ export async function authenticateManager(formData: FormData) {
   }
 }
 
+const RDC_CITIES = [
+  "Lubumbashi", "Kinshasa", "Goma", "Bukavu", 
+  "Mbuji-Mayi", "Kolwezi", "Likasi", "Matadi", 
+  "Kikwit", "Kananga", "Kisangani"
+];
+
+const registerSchema = z.object({
+  nom: z.string().min(2, "Le nom doit avoir au moins 2 caractères"),
+  email: z.string().email("Format d'email invalide"),
+  password: z.string().min(6, "Le mot de passe doit avoir au moins 6 caractères"),
+  adresse: z.string().min(5, "L'adresse est requise"),
+  ville: z.string().min(1, "La ville est requise"),
+  pays: z.string().refine(val => val === "République Démocratique du Congo", "Seule la RDC est acceptée"),
+});
+
+import { slugify } from "./utils/slugify";
+
+export async function registerRestaurant(formData: FormData) {
+  try {
+    const rawData = {
+      nom: formData.get("nom") as string,
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+      adresse: formData.get("adresse") as string,
+      ville: formData.get("ville") as string,
+      pays: formData.get("pays") as string,
+    };
+
+    const validated = registerSchema.safeParse(rawData);
+    if (!validated.success) {
+      return { success: false, error: validated.error.issues[0].message };
+    }
+
+    const { nom, email, password, adresse, ville, pays } = validated.data;
+
+    // 1. Vérifier si l'email existe déjà
+    const existing = await prisma.restaurant.findFirst({
+      where: { email }
+    });
+
+    if (existing) {
+      return { success: false, error: "Cet email est déjà associé à un compte." };
+    }
+
+    // 2. Préparer les données
+    const hashedPassword = await hashPassword(password);
+    let baseSlug = slugify(nom);
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    
+    while (true) {
+      const conflict = await (prisma as any).restaurant.findFirst({
+        where: { slug: uniqueSlug },
+        select: { id: true }
+      });
+      if (!conflict) break;
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // 3. Créer le restaurant directement avec TRIAL 14 jours
+    const restaurant = await (prisma as any).restaurant.create({
+      data: {
+        nom,
+        slug: uniqueSlug,
+        email,
+        adminPassword: hashedPassword,
+        ville,
+        pays,
+        plan: "TRIAL",
+        active: true,
+        tauxChange: 2800,
+        pinCode: "000000",
+        subscriptionEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 jours
+        logoUrl: "/logo.svg",
+      }
+    });
+
+    // 4. Initialisation du menu de base
+    const initialPlats = [
+      {
+        restaurantId: restaurant.id,
+        nom: "Menu découverte " + nom,
+        description: "Premier plat créé automatiquement.",
+        prixUsd: 10.0,
+        categorie: "PLAT",
+        image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800",
+      }
+    ];
+
+    for (const p of initialPlats) {
+      await (prisma as any).plat.create({ data: p });
+    }
+
+    return { success: true, restoId: restaurant.id };
+  } catch (error: any) {
+    console.error("Registration Error:", error);
+    return { success: false, error: "Une erreur est survenue lors de l'inscription." };
+  }
+}
+
 /**
  * Vérifie le code PIN et crée la session finale
  */

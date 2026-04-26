@@ -17,6 +17,13 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "SmartResto",
   description: "Plateforme intelligente de gestion de restaurant",
+  manifest: "/manifest.json",
+  themeColor: "#4f46e5",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SmartResto",
+  },
   icons: {
     icon: "/logo.svg",
     apple: "/logo.svg",
@@ -24,6 +31,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { OfflineSync } from "@/components/client/OfflineSync";
 
 export default function RootLayout({
   children,
@@ -42,6 +50,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Toaster richColors position="top-center" />
+          <OfflineSync />
           {children}
         </ThemeProvider>
       </body>

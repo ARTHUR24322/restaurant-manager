@@ -22,7 +22,7 @@ Offrez une expérience fluide et moderne à vos clients.
 ### 3. Système de Gestion des Commandes (KDS & Caisse)
 Une synchronisation parfaite entre la salle et la cuisine.
 - **Interface Cuisine (KDS)** : Affichage optimisé des commandes pour les chefs, avec gestion des priorités.
-- **Interface Caisse intuitive** : Validation rapide des commandes, gestion des paiements et des partages d'addition.
+- **Interface Caisse intuitive** : Mode "Vente Directe" pour les commandes à emporter ou les clients n'ayant pas scanné, validation rapide des commandes et gestion multi-paiements.
 - **Notifications SSE** : Communication instantanée (sans rafraîchissement) entre les différents postes.
 
 ### 4. Gestion Intelligente des Stocks

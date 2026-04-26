@@ -65,6 +65,16 @@ export async function createRestaurant(formData: FormData) {
     });
     const isChild = !!motherResto;
 
+    // LIMITE SMARTRESTO SaaS : 5 enfants max (6 établissements au total par email)
+    if (isChild) {
+        const count = await (prisma as any).restaurant.count({
+            where: { email }
+        });
+        if (count >= 6) {
+           return { success: false, error: "Limite atteinte : Vous ne pouvez pas créer plus de 5 établissements filiales (6 au total par compte)." };
+        }
+    }
+
     // Indexation du nom si c'est un enfant avec le même nom que la mère
     let finalNom = nom;
     if (isChild && motherResto.nom.toLowerCase() === nom.toLowerCase()) {
@@ -74,9 +84,9 @@ export async function createRestaurant(formData: FormData) {
         finalNom = `${nom} ${count + 1}`;
     }
 
-    // RÈGLE STRICTE : Un email ne peut servir à plusieurs établissements que si c'est du PLATINUM
-    if (isChild && motherResto.plan !== "PLATINUM") {
-        return { success: false, error: "Cet email appartient déjà à un restaurant Standard/Pro. Le multi-site est réservé au plan PLATINUM." };
+    // RÈGLE STRICTE : Un email ne peut servir à plusieurs établissements que si c'est du PLATINUM ou en TRIAL
+    if (isChild && motherResto.plan !== "PLATINUM" && motherResto.plan !== "TRIAL") {
+        return { success: false, error: "Le multi-site est réservé au plan PLATINUM (ou essai TRIAL)." };
     }
 
     // L'enfant utilise le même mot de passe que la mère (mutualisé par email)

@@ -20,24 +20,37 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const tableNumber = searchParams.get("table") || "Inconnue";
   const customerName = searchParams.get("name") || "Client";
   
-  const { items, getTotalUsd, removeItem, updateQuantity, clearCart } = useCartStore();
+  const { items, getTotalUsd, removeItem, updateQuantity, clearCart, addOfflineOrder } = useCartStore();
 
   const totalUsd = getTotalUsd();
   const totalCdf = totalUsd * exchangeRate;
 
   const handleConfirmOrder = async () => {
     setIsSubmitting(true);
+    
+    // Données de la commande
+    const orderData = {
+      cartItems: items,
+      tableNumber: tableNumber,
+      customerName: customerName,
+      totalUsd: totalUsd,
+      notes: (document.querySelector('textarea') as HTMLTextAreaElement)?.value || "",
+      restaurantId: restaurantId
+    };
+
     try {
-      // Simulation des paramètres Table et Client (Étape 2: Récupération des URL SearchParams)
-      // Pour l'instant on utilise des valeurs fixes ou vides
-      const res = await createCommande({
-        cartItems: items,
-        tableNumber: tableNumber,
-        customerName: customerName,
-        totalUsd: totalUsd,
-        notes: (document.querySelector('textarea') as HTMLTextAreaElement)?.value || "",
-        restaurantId: restaurantId // <--- Ajouté ici
-      });
+      // 1. Vérifier si on est en ligne
+      if (!navigator.onLine) {
+        addOfflineOrder(orderData);
+        toast.info("Connexion perdue. Commande enregistrée localement. Elle sera envoyée dès le retour d'Internet.");
+        setShowSuccess(true);
+        clearCart();
+        setIsOpen(false);
+        return;
+      }
+
+      // 2. Si en ligne, envoyer normalement
+      const res = await createCommande(orderData);
 
       if (res.success) {
         setLastOrderId(res.orderId);
@@ -45,11 +58,21 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
         clearCart();
         setIsOpen(false);
       } else {
-        toast.error(res.error || "La commande a échoué.");
+        // En cas d'erreur serveur (ex: timeout), proposer de sauvegarder en hors-ligne
+        toast.error("Le serveur ne répond pas. Commande sauvegardée en attente.");
+        addOfflineOrder(orderData);
+        setShowSuccess(true);
+        clearCart();
+        setIsOpen(false);
       }
     } catch (error) {
        console.error(error);
-       toast.error("Une erreur technique est survenue.");
+       // En cas de plantage réseau brutal, sauver en local
+       addOfflineOrder(orderData);
+       toast.warning("Erreur réseau. Commande mise en attente de synchronisation.");
+       setShowSuccess(true);
+       clearCart();
+       setIsOpen(false);
     } finally {
        setIsSubmitting(false);
     }

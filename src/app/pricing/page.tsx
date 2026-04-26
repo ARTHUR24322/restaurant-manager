@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   UtensilsCrossed,
   Check,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react";
 import { submitSubscriptionRequest } from "@/lib/demande-actions";
 import { toast } from "sonner";
+import { SupportModal } from "@/components/SupportModal";
 
 // ─── Types ──────────────────────────────────────────────────
 type BillingCycle = "monthly" | "semiannual" | "annual";
@@ -56,25 +58,6 @@ interface PricingPlan {
 
 // ─── Data ───────────────────────────────────────────────────
 const plans: PricingPlan[] = [
-  {
-    name: "Essai Gratuit",
-    description: "Découvrez SmartResto pendant 14 jours, sans engagement.",
-    icon: <Zap className="w-7 h-7" />,
-    prices: { monthly: 0, semiannual: 0, annual: 0 },
-    features: [
-      { text: "Menu digital illimité", included: true },
-      { text: "QR Code de base (2 tables)", included: true },
-      { text: "Gestion des commandes", included: true },
-      { text: "Essai de 14 jours", included: true },
-      { text: "Tableau de bord avancé", included: false },
-      { text: "Multi-utilisateurs", included: false },
-      { text: "Gestion de stock", included: false },
-      { text: "Support prioritaire", included: false },
-    ],
-    cta: "Commencer gratuitement",
-    gradient: "from-zinc-800/60 to-zinc-900/80",
-    iconBg: "bg-zinc-700",
-  },
   {
     name: "Standard",
     description: "Tout ce qu'il faut pour gérer votre restaurant efficacement.",
@@ -292,19 +275,14 @@ function BillingToggle({ cycle, setCycle }: { cycle: BillingCycle; setCycle: (c:
 
 function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: BillingCycle; onSubscribe: (plan: PricingPlan, cycle: BillingCycle) => void }) {
   const price = plan.prices[cycle];
-  const isFree = plan.name === "Essai Gratuit";
-
   const monthlyEquivalent =
     cycle === "semiannual" ? (price / 6).toFixed(0)
     : cycle === "annual" ? (price / 12).toFixed(0)
     : null;
 
+  const router = useRouter();
   const handleClick = () => {
-    if (isFree) {
-      onSubscribe(plan, cycle);
-      return;
-    }
-    onSubscribe(plan, cycle);
+    router.push("/manager/register");
   };
 
   return (
@@ -349,26 +327,17 @@ function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: B
         </div>
 
         <div className="mb-8">
-          {isFree ? (
-            <div className="flex items-baseline gap-1">
-              <span className="text-5xl font-black text-white tracking-tight">$0</span>
-              <span className="text-zinc-500 text-sm font-medium">/14 jours</span>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-baseline gap-1">
-                <span className="text-5xl font-black text-white tracking-tight">${price}</span>
-                <span className="text-zinc-500 text-sm font-medium">
-                  /{cycle === "monthly" ? "mois" : cycle === "semiannual" ? "6 mois" : "an"}
-                </span>
-              </div>
-              {monthlyEquivalent && (
-                <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-500" />
-                  Soit <span className="text-emerald-400 font-bold">${monthlyEquivalent}/mois</span>
-                </p>
-              )}
-            </>
+          <div className="flex items-baseline gap-1">
+            <span className="text-5xl font-black text-white tracking-tight">${price}</span>
+            <span className="text-zinc-500 text-sm font-medium">
+              /{cycle === "monthly" ? "mois" : cycle === "semiannual" ? "6 mois" : "an"}
+            </span>
+          </div>
+          {monthlyEquivalent && (
+            <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-emerald-500" />
+              Soit <span className="text-emerald-400 font-bold">${monthlyEquivalent}/mois</span>
+            </p>
           )}
         </div>
 
@@ -395,9 +364,7 @@ function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: B
             w-full py-4 rounded-2xl font-bold text-sm tracking-wide transition-all duration-300 active:scale-[0.97] flex items-center justify-center gap-2
             ${plan.popular
               ? "bg-gradient-to-r from-violet-600 to-blue-500 text-white shadow-xl shadow-violet-500/20 hover:shadow-violet-500/40 hover:brightness-110"
-              : isFree
-                ? "bg-zinc-800 text-zinc-200 hover:bg-zinc-700 border border-white/5"
-                : "bg-white/10 text-white border border-white/10 hover:bg-white/15 hover:border-white/20"
+              : "bg-white/10 text-white border border-white/10 hover:bg-white/15 hover:border-white/20"
             }
           `}
         >
@@ -442,7 +409,7 @@ function SubscriptionModal({
     try {
       const res = await (submitSubscriptionRequest as any)({
         ...formData,
-        plan: plan.name === "Essai Gratuit" ? "ESSAI" : plan.name.toUpperCase(),
+        plan: plan.name.toUpperCase(),
         cycle,
         montant: price,
       });
@@ -509,7 +476,7 @@ function SubscriptionModal({
           <div>
             <h3 className="text-xl font-black text-white tracking-tight">{plan.name}</h3>
             <p className="text-xs text-zinc-500">
-              {price === 0 ? "Essai gratuit 14 jours" : `$${price} / ${cycleLabel}`}
+              ${price} / {cycleLabel}
             </p>
           </div>
         </div>
@@ -678,6 +645,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 export default function PricingPage() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [modalPlan, setModalPlan] = useState<PricingPlan | null>(null);
+  const [supportModal, setSupportModal] = useState<{ isOpen: boolean; sujet: string }>({
+      isOpen: false,
+      sujet: "DEMANDE_INFOS",
+  });
 
   const handleOpenModal = (plan: PricingPlan, c: BillingCycle) => {
     setCycle(c);
@@ -718,8 +689,24 @@ export default function PricingPage() {
       <section id="pricing" className="relative px-6 pb-24">
         <div className="max-w-5xl mx-auto">
           {/* Toggle */}
-          <div className="flex justify-center mb-12">
+          <div className="flex flex-col items-center gap-8 mb-16">
             <BillingToggle cycle={cycle} setCycle={setCycle} />
+            
+            <Link 
+              href="/manager/register"
+              className="group relative flex items-center gap-3 px-8 py-5 bg-white/5 border border-white/10 rounded-[2rem] hover:bg-white/10 hover:border-violet-500/30 transition-all duration-300 shadow-xl"
+            >
+              <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-600/20 group-hover:scale-110 transition-transform">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Offre de Lancement</p>
+                <h4 className="text-lg font-black text-white italic tracking-tighter uppercase leading-none">Creez et Gérez votre établissement gratuitement</h4>
+              </div>
+              <ArrowRight className="w-5 h-5 text-violet-400 group-hover:translate-x-1 transition-transform ml-4" />
+              
+              <div className="absolute -top-3 -right-3 bg-emerald-500 text-black text-[9px] font-black px-3 py-1 rounded-full shadow-lg">ESSAI 14 JOURS</div>
+            </Link>
           </div>
 
           {/* Cards */}
@@ -861,9 +848,9 @@ export default function PricingPage() {
             <div>
               <h5 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Support</h5>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-zinc-400 hover:text-white transition-colors">Centre d'aide</a></li>
-                <li><a href="#" className="text-sm text-zinc-400 hover:text-white transition-colors">Contactez-nous</a></li>
-                <li><a href="#" className="text-sm text-zinc-400 hover:text-white transition-colors">WhatsApp</a></li>
+                <li><button onClick={() => setSupportModal({ isOpen: true, sujet: "CENTRE_AIDE" })} className="text-sm text-zinc-400 hover:text-white transition-colors text-left">Centre d'aide</button></li>
+                <li><button onClick={() => setSupportModal({ isOpen: true, sujet: "CONTACT" })} className="text-sm text-zinc-400 hover:text-white transition-colors text-left">Contactez-nous</button></li>
+                <li><button onClick={() => setSupportModal({ isOpen: true, sujet: "WHATSAPP" })} className="text-sm text-zinc-400 hover:text-white transition-colors text-left">WhatsApp</button></li>
               </ul>
             </div>
 
@@ -896,6 +883,12 @@ export default function PricingPage() {
           onClose={() => setModalPlan(null)}
         />
       )}
+
+      <SupportModal 
+        isOpen={supportModal.isOpen}
+        initialSujet={supportModal.sujet}
+        onClose={() => setSupportModal({ ...supportModal, isOpen: false })}
+      />
     </div>
   );
 }

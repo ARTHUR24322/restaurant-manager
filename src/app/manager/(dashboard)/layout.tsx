@@ -19,7 +19,9 @@ import {
   Globe,
   X,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2,
+  Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutManager, logoutManagerGlobal } from "@/lib/auth-actions";
@@ -280,6 +282,38 @@ function ManagerLayoutContent({
             <div className="w-8 h-8 rounded-full bg-secondary border border-border" />
           </div>
         </header>
+
+        {/* Trial Banner */}
+        {restoProfile?.plan === "TRIAL" && (
+            <div className="mx-8 mt-4 bg-primary/10 border border-primary/20 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-300 print:hidden shadow-lg shadow-primary/5">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-black shadow-lg shadow-primary/20">
+                        <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-black text-white uppercase tracking-tighter italic">Félicitations !</h4>
+                        <p className="text-[10px] text-primary font-black uppercase tracking-tight">
+                            Vous avez obtenu un essai de 14 jours pour votre inscription.
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="flex flex-col items-end">
+                        <p className="text-[9px] font-black text-zinc-500 uppercase">Temps restant</p>
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-xs font-black text-white uppercase italic">
+                                {(() => {
+                                    const end = new Date(restoProfile.subscriptionEnd);
+                                    const days = Math.max(0, Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                                    return `${days} jours`;
+                                })()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* Subscription Alert Banner */}
         {(() => {

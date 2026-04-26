@@ -25,6 +25,7 @@ model Restaurant {
   subscriptionEnd DateTime?
   preferredTheme  String     @default("dark")
   tauxChange      Float      @default(2800)
+  pays            String     @default("République Démocratique du Congo")
   sessionVersion  Int        @default(1)
   createdAt       DateTime   @default(now())
   commandes       Commande[]
@@ -239,4 +240,15 @@ model RecoveryRequest {
   telephone     String
   statut        String   @default("EN_ATTENTE") // EN_ATTENTE, TRAITE, REJETE
   createdAt     DateTime @default(now())
+}
+
+model SupportMessage {
+  id        String   @id @default(cuid())
+  nom       String
+  email     String
+  telephone String
+  message   String
+  sujet     String   @default("SUPPORT") // CENTRE_AIDE, CONTACT, WHATSAPP, etc.
+  statut    String   @default("NON_LU") // NON_LU, LU, TRAITE
+  createdAt DateTime @default(now())
 }

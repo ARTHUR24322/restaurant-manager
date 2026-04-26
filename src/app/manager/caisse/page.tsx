@@ -29,6 +29,8 @@ import { printReceipt } from "@/lib/thermal-printer";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { ConfirmModal } from "@/components/manager/ConfirmModal";
+import { DirectOrderModal } from "@/components/manager/DirectOrderModal";
+import { Plus } from "lucide-react";
 
 export default function CaissePage({ searchParams }: { searchParams: { resto_id?: string } }) {
   const router = useRouter();
@@ -38,6 +40,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
   const [restaurantName, setRestaurantName] = useState("SmartResto");
   const [restaurantTel, setRestaurantTel] = useState("");
   const { setTheme, theme } = useTheme();
+  const [showDirectOrderModal, setShowDirectOrderModal] = useState(false);
 
   // --- ETATS MODALE ---
   const [modalConfig, setModalConfig] = useState<{
@@ -208,7 +211,17 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
             <p className="text-indigo-500 text-[10px] font-black uppercase tracking-[0.2em]">Flux Financier • {restaurantName}</p>
           </div>
         </div>
-        <div className="flex gap-4">
+        
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowDirectOrderModal(true)}
+            className="flex items-center gap-3 bg-white hover:bg-zinc-200 text-black font-black px-8 py-4 rounded-2xl transition-all active:scale-95 text-[10px] uppercase tracking-widest shadow-xl shadow-white/10"
+          >
+            <Plus className="w-5 h-5" />
+            Nouvelle Vente
+          </button>
+          
+          <div className="flex gap-4">
            <div className="bg-indigo-500/5 px-6 py-3 rounded-2xl border border-indigo-500/10 flex flex-col items-end">
               <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Attente</span>
               <span className="text-2xl font-black text-white">{orders.filter(o => o.statut === 'SUBMITTED').length}</span>
@@ -218,7 +231,8 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
               <span className="text-2xl font-black text-white">{orders.filter(o => o.statut === 'READY').length}</span>
            </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Colonne 1: Nouvelles Commandes */}
@@ -326,6 +340,12 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
         confirmLabel={modalConfig.confirmLabel}
         variant={modalConfig.variant}
         isLoading={actionLoading}
+      />
+      <DirectOrderModal 
+        show={showDirectOrderModal}
+        onClose={() => setShowDirectOrderModal(false)}
+        restaurantId={restaurantId}
+        onSuccess={() => fetchOrders(restaurantId)}
       />
     </div>
   );
