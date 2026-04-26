@@ -42,6 +42,7 @@ function ManagerLayoutContent({
   const [isMainAccount, setIsMainAccount] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [hasStockout, setHasStockout] = useState(false);
   const [pendingAction, setPendingAction] = useState<() => Promise<void>>(() => async () => {});
   const restoId = searchParams.get("resto_id");
   const { setTheme, theme } = useTheme();
@@ -106,6 +107,22 @@ function ManagerLayoutContent({
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, [restoId, router]);
 
+  const currentPlan = restoProfile?.plan?.toUpperCase() || "STANDARD";
+
+  useEffect(() => {
+    if (restoId && ["PRO", "PLATINUM"].includes(currentPlan)) {
+        import("@/lib/stock-predictive-actions").then(async (m) => {
+           try {
+             const report = await m.getPredictiveStockReport(restoId);
+             if (report.success && report.predictions) {
+                const rupture = report.predictions.some((p: any) => p.daysRemaining === 0 || p.stockActuel <= 0);
+                setHasStockout(rupture);
+             }
+           } catch(e) {}
+        });
+    }
+  }, [restoId, currentPlan]);
+
   if (!authorized) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -125,7 +142,8 @@ function ManagerLayoutContent({
       label: "Gestion de Stock", 
       href: "/manager/inventory", 
       icon: Package, 
-      locked: !["PRO", "PLATINUM"].includes(currentPlan) 
+      locked: !["PRO", "PLATINUM"].includes(currentPlan),
+      badge: hasStockout
     },
     ...(isMainAccount ? [{ 
       label: "Multi-sites", 
@@ -194,7 +212,15 @@ function ManagerLayoutContent({
               className="flex items-center justify-between px-4 py-3 rounded-xl hover:bg-secondary transition-all text-muted-foreground hover:text-foreground font-medium group"
             >
               <div className="flex items-center gap-3">
-                 <item.icon className={cn("w-5 h-5 transition-colors", item.locked ? "text-zinc-600" : "group-hover:text-primary")} />
+                 <div className="relative">
+                    <item.icon className={cn("w-5 h-5 transition-colors", item.locked ? "text-zinc-600" : "group-hover:text-primary")} />
+                    {(item as any).badge && !item.locked && (
+                        <>
+                           <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+                           <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border border-zinc-900 rounded-full shadow-lg shadow-red-500/50" />
+                        </>
+                    )}
+                 </div>
                  <span className={item.locked ? "text-zinc-500" : ""}>{item.label}</span>
               </div>
               {(item as any).locked && <Lock className="w-4 h-4 text-zinc-600 ml-2" />}
