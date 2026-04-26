@@ -40,6 +40,20 @@ export async function createArticle(restaurantId: string, data: any) {
         restaurantId
       }
     });
+
+    if (data.stockActuel && data.stockActuel > 0) {
+      await prisma.mouvementStock.create({
+        data: {
+          type: "ENTREE",
+          quantite: data.stockActuel,
+          note: "Stock initial à la création",
+          prixUnitaire: data.prixAchat,
+          articleId: article.id,
+          restaurantId: restaurantId
+        }
+      });
+    }
+
     revalidatePath("/manager/inventory");
     return { success: true, article };
   } catch (error: any) {

@@ -535,6 +535,7 @@ export default function InventoryPage() {
                       categorie: formData.get("categorie"),
                       emplacementId: formData.get("emplacementId") || null,
                       fournisseurId: formData.get("fournisseurId") || null,
+                      stockActuel: parseFloat(formData.get("stockInitial") as string) || 0,
                     });
                     if(res.success) {
                       toast.success("Article ajouté !");
@@ -565,6 +566,11 @@ export default function InventoryPage() {
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Prix d'Achat (Unit.)</label>
                         <input name="prixAchat" type="number" step="0.01" required className="w-full bg-zinc-800 border-zinc-700 rounded-xl py-3 px-4 text-xs text-white focus:ring-1 focus:ring-primary outline-none transition-all" />
+                    </div>
+                    
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Stock Initial</label>
+                        <input name="stockInitial" type="number" step="0.01" defaultValue="0" className="w-full bg-zinc-800 border-zinc-700 rounded-xl py-3 px-4 text-xs text-white focus:ring-1 focus:ring-primary outline-none transition-all" />
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Seuil Alerte (Min)</label>
