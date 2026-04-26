@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Crown, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp } from "lucide-react";
+import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Crown, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from 'next/navigation';
 import { updateRestaurantPassword, updateRestaurantProfile, updateRestaurantPin, updateRestaurantTheme, updateRestaurantTauxChange } from "@/lib/actions-settings";
@@ -28,6 +28,8 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const [requestLoading, setRequestLoading] = useState(false);
   const [newTaux, setNewTaux] = useState<string>("");
   const [tauxLoading, setTauxLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -110,8 +112,22 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
 
     if (res.success) {
       toast.success("Profil mis à jour avec succès !");
+      const nom = formData.get("nom") as string;
+      const logoUrl = formData.get("logoUrl") as string;
+      // Note: If we uploaded a file, the server-side will return a new path, 
+      // but since we're in a client-side action, we might want to refresh the session or just rely on the toast.
+      // For immediate preview update, if we have a previewUrl, we can use it.
+      setRestaurant((prev: any) => ({ ...prev, nom, logoUrl: previewUrl || logoUrl }));
     } else {
       toast.error(res.error || "Erreur lors de la mise à jour.");
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
     }
   };
 
@@ -283,11 +299,50 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
 
                 {activeTab === 'profile' && (
                   <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 animate-in fade-in zoom-in-95 duration-300">
-                      <h3 className="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2">
-                          Profil Établissement
-                      </h3>
+                          <div className="flex items-center justify-between mb-8">
+                              <div>
+                                  <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                                      Profil Établissement
+                                  </h3>
+                                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Identité visuelle du restaurant</p>
+                              </div>
+                              
+                              {/* Logo Preview with Upload Trigger */}
+                              <div 
+                                className="relative group cursor-pointer"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                  <div className="w-24 h-24 bg-zinc-800 rounded-[2rem] border-2 border-dashed border-zinc-700 overflow-hidden shadow-2xl flex items-center justify-center transition-all group-hover:border-primary group-hover:bg-zinc-800/50">
+                                      {previewUrl || restaurant?.logoUrl ? (
+                                          <img src={previewUrl || restaurant.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                                      ) : (
+                                          <Upload className="w-8 h-8 text-zinc-600 group-hover:text-primary transition-colors" />
+                                      )}
+                                  </div>
+                                  <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-zinc-900 border border-zinc-700 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                      <Upload className="w-5 h-5 text-primary" />
+                                  </div>
+                                  
+                                  {/* Hidden File Input */}
+                                  <input 
+                                    type="file"
+                                    name="logoFile"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    accept="image/*"
+                                    className="hidden"
+                                  />
+                              </div>
+                          </div>
 
-                      <form action={handleUpdateProfile} className="space-y-4">
+                          <form action={handleUpdateProfile} className="space-y-6">
+                              <div className="relative p-6 bg-primary/5 border border-primary/10 rounded-3xl mb-4 group overflow-hidden">
+                                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Globe className="w-12 h-12" />
+                                 </div>
+                                 <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Source du Logo</p>
+                                 <p className="text-xs text-zinc-500 font-medium">Vous pouvez soit <span className="text-white font-bold">uploader une image locale</span> en cliquant sur l'aperçu ci-dessus, soit <span className="text-white font-bold">coller une URL</span> directe ci-dessous.</p>
+                              </div>
                           <div className="space-y-1">
                               <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Nom de l'établissement</label>
                               <div className="relative">
@@ -296,7 +351,8 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                       name="nom"
                                       type="text" 
                                       required 
-                                      className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all"
+                                      defaultValue={restaurant?.nom}
+                                      className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all font-bold italic"
                                       placeholder="Ex: Mon Super Restaurant"
                                   />
                               </div>
@@ -309,8 +365,9 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                   <input 
                                       name="logoUrl"
                                       type="url" 
-                                      className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all"
-                                      placeholder="https://..."
+                                      defaultValue={restaurant?.logoUrl}
+                                      className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all font-mono text-[11px]"
+                                      placeholder="https://votre-logo.png"
                                   />
                               </div>
                           </div>

@@ -4,6 +4,8 @@ import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
 import { hashPassword, comparePassword } from "./auth";
 import { ensureManager } from "./auth-actions";
+import { writeFile } from "fs/promises";
+import { join } from "path";
 
 /**
  * Mise à jour du mot de passe admin du restaurant
@@ -64,7 +66,20 @@ export async function updateRestaurantProfile(restaurantId: string, formData: Fo
     try {
         await ensureManager(restaurantId);
         const nom = formData.get("nom") as string;
-        const logoUrl = formData.get("logoUrl") as string;
+        const logoFile = formData.get("logoFile") as any; // File object from browser
+        let logoUrl = formData.get("logoUrl") as string;
+
+        if (logoFile && logoFile.size > 0 && typeof logoFile.arrayBuffer === 'function') {
+            const bytes = await logoFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+
+            const extension = logoFile.name.split('.').pop() || 'png';
+            const fileName = `logo-${restaurantId}-${Date.now()}.${extension}`;
+            const uploadPath = join(process.cwd(), "public", "uploads", fileName);
+            
+            await writeFile(uploadPath, buffer);
+            logoUrl = `/uploads/${fileName}`;
+        }
 
         if (!nom) {
             return { success: false, error: "Le nom de l'établissement est requis." };
