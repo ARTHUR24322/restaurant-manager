@@ -132,8 +132,6 @@ function ManagerLayoutContent({
     );
   }
 
-  const currentPlan = restoProfile?.plan?.toUpperCase() || "STANDARD";
-
   const navItems = [
     { label: "Tableau de Bord", href: "/manager/dashboard", icon: LayoutDashboard },
     { label: "Gestion du Menu", href: "/manager/menu", icon: Utensils },
