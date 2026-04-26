@@ -19,7 +19,8 @@ import {
   Loader2,
   ChevronRight,
   MoreHorizontal,
-  X
+  X,
+  LineChart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -58,7 +59,8 @@ export default function InventoryPage() {
   const [isSupModalOpen, setIsSupModalOpen] = useState(false);
   const [isLocModalOpen, setIsLocModalOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'articles' | 'suppliers' | 'locations'>('articles');
+  const [activeTab, setActiveTab] = useState<'articles' | 'suppliers' | 'locations' | 'predictions'>('articles');
+  const [predictions, setPredictions] = useState<any[]>([]);
   
   // Paywall state
   const isLocked = plan !== "PRO" && plan !== "PLATINUM";
@@ -90,16 +92,18 @@ export default function InventoryPage() {
       setPlan(profile.plan);
     }
 
-    const [invData, statsData, locData, supData] = await Promise.all([
+    const [invData, statsData, locData, supData, predData] = await Promise.all([
       getInventory(restoId!),
       getInventoryStats(restoId!),
       getLocations(restoId!),
-      getSuppliers(restoId!)
+      getSuppliers(restoId!),
+      import("@/lib/stock-predictive-actions").then(m => m.getPredictiveStockReport(restoId!))
     ]);
     setArticles(invData);
     setStats(statsData);
     setLocations(locData);
     setSuppliers(supData);
+    if (predData && predData.success) setPredictions(predData.predictions || []);
     setLoading(false);
   }
 
@@ -151,6 +155,7 @@ export default function InventoryPage() {
            { id: 'articles', label: 'Inventaire', icon: Package },
            { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
            { id: 'locations', label: 'Emplacements', icon: MapPin },
+           { id: 'predictions', label: 'Prévisions', icon: LineChart },
          ].map(tab => (
            <button
              key={tab.id}
@@ -429,6 +434,77 @@ export default function InventoryPage() {
                         <Plus className="w-8 h-8" />
                         <span className="text-xs font-black uppercase tracking-widest text-center">Nouvel Emplacement</span>
                     </button>
+                </div>
+             </div>
+          </div>
+      )}
+
+      {activeTab === 'predictions' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-200">
+             <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-6 md:p-8 space-y-6">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="p-3 bg-indigo-500/10 rounded-2xl">
+                    <LineChart className="w-6 h-6 text-indigo-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Prévisions de Rupture</h2>
+                    <p className="text-sm text-zinc-400">Analyse basée sur la consommation des 14 derniers jours.</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-zinc-800 pb-4">
+                        <th className="px-4 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Article</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Stock</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Consommation / jour</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Jours Restants</th>
+                        <th className="px-4 py-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest text-right">Date Estimée</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/50">
+                      {predictions.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center text-zinc-500">Aucune donnée suffisante.</td>
+                        </tr>
+                      ) : (
+                        predictions.map(pred => (
+                          <tr key={pred.articleId} className="group hover:bg-zinc-800/20 transition-colors">
+                            <td className="px-4 py-5 font-bold text-white uppercase italic text-sm">
+                               {pred.nom}
+                            </td>
+                            <td className="px-4 py-5 text-center text-zinc-300 font-bold">
+                               {pred.stockActuel} <span className="text-[10px] text-zinc-500 uppercase">{pred.unite}</span>
+                            </td>
+                            <td className="px-4 py-5 text-center text-zinc-400 font-medium">
+                               {pred.dailyConsumptionRate > 0 ? pred.dailyConsumptionRate.toFixed(2) : "-"}
+                            </td>
+                            <td className="px-4 py-5 text-center">
+                               {pred.daysRemaining === -1 ? (
+                                 <span className="text-zinc-600 font-bold">Stable</span>
+                               ) : pred.daysRemaining === 0 ? (
+                                 <span className="px-3 py-1 bg-red-500/10 text-red-500 text-[10px] font-black uppercase rounded-lg border border-red-500/20">Aujourd'hui</span>
+                               ) : (
+                                 <span className={cn("text-lg font-black italic", pred.isCritical ? "text-amber-500" : "text-emerald-500")}>
+                                   {pred.daysRemaining} <span className="text-[10px] uppercase font-bold text-zinc-500 not-italic">Jours</span>
+                                 </span>
+                               )}
+                            </td>
+                            <td className="px-4 py-5 text-right">
+                               {pred.stockoutDate ? (
+                                  <span className="text-sm font-medium text-zinc-300">
+                                     {new Date(pred.stockoutDate).toLocaleDateString()}
+                                  </span>
+                               ) : (
+                                  <span className="text-zinc-600">-</span>
+                               )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
              </div>
           </div>

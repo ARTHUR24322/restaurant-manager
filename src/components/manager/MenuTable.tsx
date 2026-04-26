@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState } from "react";
-import { Trash2, UtensilsCrossed } from "lucide-react";
+import { Trash2, UtensilsCrossed, BookOpen } from "lucide-react";
 import { type Plat } from "@/types";
 import { deletePlat } from "@/lib/actions";
 import { ConfirmModal } from "./ConfirmModal";
+import { RecipeModal } from "./RecipeModal";
 import { toast } from "sonner";
 
 interface MenuTableProps {
@@ -16,6 +17,9 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedPlat, setSelectedPlat] = useState<Plat | null>(null);
+  
+  const [showRecipe, setShowRecipe] = useState(false);
+  const [recipePlat, setRecipePlat] = useState<Plat | null>(null);
 
   const handleDeleteClick = (plat: Plat) => {
     setSelectedPlat(plat);
@@ -86,13 +90,22 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
                     ${plat.prixUsd.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => handleDeleteClick(plat)}
-                      className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors md:opacity-0 group-hover:opacity-100"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => { setRecipePlat(plat); setShowRecipe(true); }}
+                        className="p-2 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors border border-transparent hover:border-indigo-500/20"
+                        title="Gérer la recette"
+                      >
+                        <BookOpen className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteClick(plat)}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-transparent hover:border-destructive/20"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -110,6 +123,13 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
         confirmLabel="Supprimer"
         isLoading={isDeleting}
         variant="danger"
+      />
+
+      <RecipeModal 
+        isOpen={showRecipe}
+        onClose={() => setShowRecipe(false)}
+        plat={recipePlat}
+        restaurantId={restaurantId}
       />
     </>
   );

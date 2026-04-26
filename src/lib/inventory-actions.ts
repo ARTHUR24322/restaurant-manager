@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "./prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { ensureManager } from "./auth-actions";
 
 /**
@@ -90,6 +90,7 @@ export async function recordMovement(data: {
     });
 
     revalidatePath("/manager/inventory");
+    revalidateTag(`menu-${data.restaurantId}`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -198,5 +199,140 @@ export async function getInventoryStats(restaurantId: string) {
     };
   } catch (error) {
     return { totalItems: 0, totalValue: 0, lowStockCount: 0 };
+  }
+}
+
+/**
+ * Récupérer la recette (composition) d'un plat
+ */
+export async function getRecipeForPlat(platId: string, restaurantId: string) {
+  try {
+    await ensureManager(restaurantId);
+    return await prisma.recetteItem.findMany({
+      where: { platId },
+      include: {
+        article: true
+      }
+    });
+  } catch (error) {
+    console.error("[Recipe] Error fetching:", error);
+    return [];
+  }
+}
+
+/**
+ * Mettre à jour la recette d'un plat
+ */
+export async function updateRecipe(platId: string, restaurantId: string, items: { articleId: string; quantite: number }[]) {
+  try {
+    await ensureManager(restaurantId);
+    
+    // Vérifier que le plat appartient au restaurant
+    const plat = await prisma.plat.findFirst({
+      where: { id: platId, restaurantId }
+    });
+    
+    if (!plat) throw new Error("Plat introuvable ou non autorisé");
+
+    // Supprimer l'ancienne recette
+    await prisma.recetteItem.deleteMany({
+      where: { platId }
+    });
+
+    // Créer la nouvelle recette
+    if (items && items.length > 0) {
+      await prisma.recetteItem.createMany({
+        data: items.map(item => ({
+          platId,
+          articleId: item.articleId,
+          quantite: item.quantite
+        }))
+      });
+    }
+
+    revalidatePath("/manager/menu");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Déduire le stock pour une commande complétée
+ */
+export async function deductStockForOrder(orderId: string, restaurantId: string) {
+  try {
+    await ensureManager(restaurantId);
+
+    const checkOrder = await prisma.commande.findUnique({
+      where: { id: orderId }
+    });
+    
+    // Si la commande n'existe pas ou c'est déjà déduit (on pourrait ajouter un flag if needed), ignorer.
+    // Pour simplifier et éviter le double comptage, on déduit à la completion (qui en principe est appelée une fois).
+
+    const order = await prisma.commande.findUnique({
+      where: { id: orderId, restaurantId },
+      include: {
+        items: {
+          include: {
+            plat: {
+              include: {
+                recetteItems: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!order) return { success: false, error: "Commande introuvable" };
+
+    // Regrouper les déductions d'articles pour éviter de multiples enregistrements de mouvements
+    const articleDeductions: Record<string, number> = {};
+
+    for (const item of order.items) {
+      const qteCommandee = item.quantite;
+      if (item.plat && item.plat.recetteItems) {
+        for (const recette of item.plat.recetteItems) {
+          const totalIngredientUtilise = recette.quantite * qteCommandee;
+          if (articleDeductions[recette.articleId]) {
+            articleDeductions[recette.articleId] += totalIngredientUtilise;
+          } else {
+            articleDeductions[recette.articleId] = totalIngredientUtilise;
+          }
+        }
+      }
+    }
+
+    // Effectuer les déductions
+    for (const [articleId, qteToDeduct] of Object.entries(articleDeductions)) {
+      // 1. Créer le mouvement de sortie
+      await prisma.mouvementStock.create({
+        data: {
+          type: "SORTIE",
+          quantite: qteToDeduct,
+          note: `Vente liée à la commande #${orderId.slice(-6)}`,
+          articleId: articleId,
+          restaurantId: restaurantId
+        }
+      });
+
+      // 2. Mettre à jour le stock
+      await prisma.articleStock.update({
+        where: { id: articleId },
+        data: {
+          stockActuel: {
+            decrement: qteToDeduct
+          }
+        }
+      });
+    }
+
+    revalidateTag(`menu-${restaurantId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error("[Stock Deduction] Error:", error);
+    return { success: false, error: error.message };
   }
 }

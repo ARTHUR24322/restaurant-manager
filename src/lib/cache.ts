@@ -35,10 +35,31 @@ export const getCachedPlats = (restaurantId: string) =>
   unstable_cache(
     async () => {
       console.log(`[CACHE MISS] Fetching plats for ${restaurantId}`);
-      return prisma.plat.findMany({
+      const plats = await prisma.plat.findMany({
         where: { restaurantId, disponible: true },
         orderBy: { categorie: "asc" },
-        include: { options: true }
+        include: { 
+          options: true,
+          recetteItems: {
+            include: {
+              article: true
+            }
+          }
+        }
+      });
+
+      return plats.map(plat => {
+        let isAvailable = plat.disponible;
+        // Vérification dynamique du stock
+        if (isAvailable && plat.recetteItems && plat.recetteItems.length > 0) {
+          for (const recette of plat.recetteItems) {
+            if (recette.article && recette.article.stockActuel < recette.quantite) {
+              isAvailable = false;
+              break; // Rupture d'un des ingrédients => Plat en rupture
+            }
+          }
+        }
+        return { ...plat, disponible: isAvailable };
       });
     },
     [`menu-${restaurantId}`],

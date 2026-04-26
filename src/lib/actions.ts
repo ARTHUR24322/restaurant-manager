@@ -5,6 +5,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { broadcastEvent } from "@/lib/sse";
 import { ensureManager } from "./auth-actions";
 import { getCachedPlats, getCachedRestaurant } from "./cache";
+import { deductStockForOrder } from "./inventory-actions";
 
 // Utilitaire de diffusion Temps Réel (SSE)
 function broadcastToAll(type: string, data: any = {}) {
@@ -251,6 +252,9 @@ export async function confirmOrderPayment(orderId: string, method: string) {
         paiementStatus: method === "CASH" ? "PAID_CASH" : "PAID_MOBILE"
       }
     });
+
+    // Déduction des stocks automatique en fonction de la recette
+    await deductStockForOrder(orderId, order.restaurantId);
     
     revalidatePath("/manager/dashboard");
     revalidatePath("/client/menu");
