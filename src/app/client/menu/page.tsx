@@ -51,15 +51,26 @@ export default async function ClientMenuPage({
                </div>
                <div>
                   <h2 className="text-sm font-black uppercase tracking-widest text-white/90">{restaurant?.nom || "SmartResto"}</h2>
-                  <div className="flex items-center gap-1.5 text-primary text-[10px] font-bold uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded-full w-fit mt-1">
-                    <Clock className="w-3 h-3" /> Table {table}
-                  </div>
+                   <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1.5 text-primary text-[10px] font-bold uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded-full w-fit">
+                        <Clock className="w-3 h-3" /> Table {table}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-zinc-400 text-[10px] font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-full w-fit border border-white/5">
+                        1$ = {restaurant?.tauxChange || 2800} FC
+                      </div>
+                   </div>
                </div>
              </div>
              
-             <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
-                <Info className="w-5 h-5" />
-             </button>
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex flex-col items-end mr-2">
+                   <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500">Taux du jour</span>
+                   <span className="text-[10px] font-bold text-white/80">1$ = {restaurant?.tauxChange || 2800} FC</span>
+                </div>
+                <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+                    <Info className="w-5 h-5" />
+                </button>
+              </div>
           </div>
 
           <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter mt-6 leading-tight">

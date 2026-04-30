@@ -26,6 +26,7 @@ function SelectionPageInner() {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinError, setPinError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [loadingRole, setLoadingRole] = useState<string | null>(null);
   const [resto, setResto] = useState<any>(null);
   const { setTheme, theme } = useTheme();
 
@@ -90,8 +91,10 @@ function SelectionPageInner() {
     if (role === 'gerant') {
       setShowPinModal(true);
     } else if (role === 'caisse') {
+      setLoadingRole('caisse');
       router.push(`/manager/caisse?resto_id=${resto.id}`);
     } else if (role === 'cuisine') {
+      setLoadingRole('cuisine');
       router.push(`/manager/cuisine?resto_id=${resto.id}`);
     }
   };
@@ -151,6 +154,7 @@ function SelectionPageInner() {
             icon={<Wallet className="w-10 h-10" />}
             color="indigo"
             onClick={() => handleRoleSelect('caisse')}
+            isLoading={loadingRole === 'caisse'}
           />
           <RoleCard 
             title="Cuisine & Préparation"
@@ -158,6 +162,7 @@ function SelectionPageInner() {
             icon={<ChefHat className="w-10 h-10" />}
             color="emerald"
             onClick={() => handleRoleSelect('cuisine')}
+            isLoading={loadingRole === 'cuisine'}
           />
           <RoleCard 
             title="Gestion & Stratégie"
@@ -166,6 +171,7 @@ function SelectionPageInner() {
             color="primary"
             isLocked
             onClick={() => handleRoleSelect('gerant')}
+            isLoading={loadingRole === 'gerant'}
           />
         </div>
       ) : (
@@ -200,9 +206,10 @@ interface RoleCardProps {
   color: 'indigo' | 'emerald' | 'primary';
   onClick: () => void;
   isLocked?: boolean;
+  isLoading?: boolean;
 }
 
-function RoleCard({ title, subtitle, icon, color, onClick, isLocked }: RoleCardProps) {
+function RoleCard({ title, subtitle, icon, color, onClick, isLocked, isLoading }: RoleCardProps) {
   const colorMap = {
     indigo: 'from-indigo-500/20 to-indigo-500/5 hover:border-indigo-500/40 text-indigo-400 border-indigo-500/20 shadow-indigo-500/10',
     emerald: 'from-emerald-500/20 to-emerald-500/5 hover:border-emerald-500/40 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10',
@@ -212,9 +219,11 @@ function RoleCard({ title, subtitle, icon, color, onClick, isLocked }: RoleCardP
   return (
     <button 
       onClick={onClick}
+      disabled={isLoading}
       className={cn(
         "group relative flex flex-col items-start p-8 rounded-[2.5rem] border bg-gradient-to-br transition-all duration-200 transform hover:-translate-y-2 hover:shadow-2xl text-left overflow-hidden",
-        colorMap[color]
+        colorMap[color],
+        isLoading && "opacity-50 cursor-not-allowed scale-[0.98]"
       )}
     >
       {/* Background Decorative Pattern */}
@@ -228,7 +237,7 @@ function RoleCard({ title, subtitle, icon, color, onClick, isLocked }: RoleCardP
         color === 'emerald' ? 'bg-emerald-500 text-white' : 
         'bg-primary text-black'
       )}>
-        {icon}
+        {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : icon}
       </div>
 
       <div className="space-y-2 relative z-10">

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { type Plat } from "@/types";
 import { getManagerSession } from "@/lib/manager-actions";
 import { MenuTable } from "@/components/manager/MenuTable";
+import { SubmitButton } from "@/components/manager/SubmitButton";
 
 export default async function ManagerMenuPage({ searchParams }: { searchParams: { resto_id?: string } }) {
   let restaurantId = searchParams.resto_id;
@@ -12,7 +13,8 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
     const session = await getManagerSession();
     restaurantId = session?.id || "";
   }
-  const plats = (restaurantId ? await getPlats(restaurantId) : []) as unknown as Plat[];
+  const finalRestaurantId = restaurantId as string;
+  const plats = (finalRestaurantId ? await getPlats(finalRestaurantId) : []) as unknown as Plat[];
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -31,7 +33,7 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
               <Plus className="w-5 h-5 text-primary" /> Nouveau Plat
             </h2>
             <form action={addPlat} className="flex flex-col gap-4">
-              <input type="hidden" name="restaurantId" value={restaurantId} />
+              <input type="hidden" name="restaurantId" value={finalRestaurantId} />
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Nom du plat</label>
                 <input 
@@ -83,15 +85,38 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Image (URL HD)</label>
-                <input 
-                  name="image" 
-                  type="url" 
-                  required 
-                  placeholder="https://images.remote.com/..." 
-                  className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none text-xs text-foreground" 
-                />
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">Photo du plat</label>
+                  <div className="flex flex-col gap-3">
+                    {/* Upload Local */}
+                    <div className="relative group">
+                      <input 
+                        name="imageFile" 
+                        type="file" 
+                        accept="image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <div className="w-full bg-secondary/30 border-2 border-dashed border-border rounded-xl px-4 py-4 flex flex-col items-center justify-center gap-2 group-hover:border-primary/50 transition-colors">
+                        <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary" />
+                        <span className="text-xs text-muted-foreground group-hover:text-foreground">Choisir une photo locale (Mobile/PC)</span>
+                      </div>
+                    </div>
+                    
+                    {/* URL alternative */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <span className="text-xs text-muted-foreground font-mono">http://</span>
+                      </div>
+                      <input 
+                        name="image" 
+                        type="url" 
+                        placeholder="...ou coller une URL HD ici" 
+                        className="w-full bg-secondary/50 border border-border rounded-xl pl-12 pr-4 py-2 focus:ring-1 focus:ring-primary outline-none text-xs text-foreground" 
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -103,19 +128,16 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                 />
               </div>
 
-              <button 
-                type="submit" 
-                className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl mt-2 hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20"
-              >
+              <SubmitButton loadingText="Ajout en cours...">
                 Ajouter au Menu
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </div>
 
         {/* Liste des plats (Composant Client) */}
         <div className="lg:col-span-2">
-          <MenuTable plats={plats} restaurantId={restaurantId} />
+          <MenuTable plats={plats} restaurantId={finalRestaurantId} />
         </div>
       </div>
     </div>

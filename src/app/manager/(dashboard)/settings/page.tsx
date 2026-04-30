@@ -8,6 +8,7 @@ import { updateRestaurantPassword, updateRestaurantProfile, updateRestaurantPin,
 import { getManagerSession } from "@/lib/manager-actions";
 import { submitSubscriptionRequest } from "@/lib/demande-actions";
 import { checkIsMainAccount } from "@/lib/admin-actions";
+import { SubmitButton } from "@/components/manager/SubmitButton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -245,13 +246,9 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                 </div>
                             </div>
 
-                            <button 
-                                disabled={loading}
-                                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-black font-black py-4 rounded-2xl mt-4 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/10 active:scale-95"
-                            >
-                                <Save className="w-4 h-4" /> 
-                                {loading ? "Mise à jour..." : "Enregistrer les modifications"}
-                            </button>
+                            <SubmitButton isLoading={loading} loadingText="Mise à jour...">
+                                Enregistrer les modifications
+                            </SubmitButton>
                         </form>
                     </div>
 
@@ -278,13 +275,13 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                 </div>
                             </div>
 
-                            <button 
-                                disabled={pinLoading}
-                                className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-black py-4 rounded-2xl mt-4 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/10 active:scale-95"
+                            <SubmitButton 
+                                className="bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/10 text-white" 
+                                loadingText="Mise à jour..."
+                                isLoading={pinLoading}
                             >
-                                <Save className="w-4 h-4" /> 
-                                {pinLoading ? "Mise à jour..." : "Modifier le Code PIN"}
-                            </button>
+                                Modifier le Code PIN
+                            </SubmitButton>
                         </form>
                     </div>
 
@@ -372,14 +369,9 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                               </div>
                           </div>
 
-                          <button 
-                              type="submit"
-                              disabled={loading}
-                              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-black font-black py-4 rounded-2xl mt-4 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/10 active:scale-95"
-                          >
-                              <Save className="w-4 h-4" /> 
-                              {loading ? "Mise à jour..." : "Enregistrer les modifications"}
-                          </button>
+                          <SubmitButton isLoading={loading} loadingText="Mise à jour...">
+                              Enregistrer les modifications
+                          </SubmitButton>
                       </form>
                   </div>
                 )}
@@ -659,8 +651,11 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                   </div>
                               )}
 
-                              <button
-                                  disabled={tauxLoading || !newTaux || isNaN(parseFloat(newTaux))}
+                              <SubmitButton 
+                                  className="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white" 
+                                  loadingText="Enregistrement..."
+                                  type="button"
+                                  isLoading={tauxLoading}
                                   onClick={async () => {
                                       if (!restaurantId || !newTaux) return;
                                       setTauxLoading(true);
@@ -673,11 +668,9 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                           toast.error(res.error || "Erreur lors de la mise à jour.");
                                       }
                                   }}
-                                  className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white font-black py-4 rounded-2xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95"
                               >
-                                  {tauxLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                                  {tauxLoading ? "Enregistrement..." : "Enregistrer le nouveau taux"}
-                              </button>
+                                  Enregistrer le nouveau taux
+                              </SubmitButton>
                           </div>
                       </div>
 

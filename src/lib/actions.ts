@@ -6,6 +6,8 @@ import { broadcastEvent } from "@/lib/sse";
 import { ensureManager } from "./auth-actions";
 import { getCachedPlats, getCachedRestaurant } from "./cache";
 import { deductStockForOrder } from "./inventory-actions";
+import { writeFile } from "fs/promises";
+import { join } from "path";
 
 // Utilitaire de diffusion Temps Réel (SSE)
 function broadcastToAll(type: string, data: any = {}) {
@@ -43,7 +45,20 @@ export async function addPlat(formData: FormData) {
     const description = formData.get("description") as string;
     const prixUsd = parseFloat(formData.get("prixUsd") as string);
     const categorie = formData.get("categorie") as string;
-    const image = formData.get("image") as string;
+    let image = formData.get("image") as string;
+    const imageFile = formData.get("imageFile") as any;
+
+    if (imageFile && imageFile.size > 0 && typeof imageFile.arrayBuffer === 'function') {
+      const bytes = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const extension = imageFile.name.split('.').pop() || 'png';
+      const fileName = `plat-${restaurantId}-${Date.now()}.${extension}`;
+      const uploadPath = join(process.cwd(), "public", "uploads", fileName);
+      
+      await writeFile(uploadPath, buffer);
+      image = `/uploads/${fileName}`;
+    }
 
     if (!nom || isNaN(prixUsd)) {
       throw new Error("Nom et Prix sont obligatoires");
@@ -172,8 +187,11 @@ export async function createCommande(data: {
     });
 
     broadcastToAll("new-order", { ...order, restaurantId });
-    revalidatePath("/manager");
+    
+    // Revalidation asynchrone (non-bloquante pour la réponse immédiate)
+    revalidateTag(`menu-${restaurantId}`);
     revalidatePath("/manager/dashboard");
+
     return { success: true, orderId: order.id };
   } catch (error) {
     console.error("Critical: Error creating order:", error);
@@ -224,7 +242,6 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     
     revalidatePath("/manager/dashboard");
     revalidatePath("/manager/cuisine");
-    revalidatePath("/client/menu");
     
     return { success: true };
   } catch (error) {

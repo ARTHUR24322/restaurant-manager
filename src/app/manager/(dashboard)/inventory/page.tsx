@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { useSearchParams } from 'next/navigation';
 import { getManagerSession } from "@/lib/manager-actions";
+import { SubmitButton } from "@/components/manager/SubmitButton";
 
 export default function InventoryPage() {
   const searchParams = useSearchParams();
@@ -597,9 +598,9 @@ export default function InventoryPage() {
                         </select>
                     </div>
                     
-                    <button type="submit" className="md:col-span-2 w-full bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl transition-all shadow-lg shadow-primary/10 uppercase tracking-widest text-xs mt-4">
+                    <SubmitButton loadingText="Création en cours...">
                         Créer la fiche Article
-                    </button>
+                    </SubmitButton>
                 </form>
              </div>
         </div>
@@ -678,7 +679,9 @@ export default function InventoryPage() {
                     
                     <div className="flex gap-3 pt-2">
                         <button type="button" onClick={() => setIsMovementModalOpen(false)} className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-black py-4 rounded-2xl transition-all uppercase tracking-widest text-[10px]">Annuler</button>
-                        <button type="submit" className="flex-[2] bg-white hover:bg-zinc-200 text-black font-black py-4 rounded-2xl transition-all shadow-lg uppercase tracking-widest text-[10px]">Enregistrer</button>
+                        <SubmitButton className="flex-[2] bg-white hover:bg-zinc-200 text-black shadow-lg" loadingText="Enregistrement...">
+                            Enregistrer
+                        </SubmitButton>
                     </div>
                 </form>
              </div>
@@ -718,7 +721,9 @@ export default function InventoryPage() {
                     <input name="email" placeholder="Email" className="w-full bg-zinc-800 border-zinc-700 rounded-xl py-3 px-4 text-xs text-white outline-none focus:ring-1 focus:ring-primary placeholder:text-zinc-600" />
                     <div className="flex gap-2 pt-4">
                         <button type="button" onClick={() => setIsSupModalOpen(false)} className="flex-1 bg-zinc-800 py-4 rounded-xl text-xs font-black uppercase text-zinc-500">Annuler</button>
-                        <button type="submit" className="flex-1 bg-primary py-4 rounded-xl text-xs font-black uppercase text-black">Enregistrer</button>
+                        <SubmitButton loadingText="Création...">
+                            Enregistrer
+                        </SubmitButton>
                     </div>
                 </form>
              </div>
@@ -754,7 +759,9 @@ export default function InventoryPage() {
                     <textarea name="description" placeholder="Description courte..." className="w-full bg-zinc-800 border-zinc-700 rounded-xl py-3 px-4 text-xs text-white outline-none focus:ring-1 focus:ring-primary h-24 placeholder:text-zinc-600" />
                     <div className="flex gap-2 pt-4">
                         <button type="button" onClick={() => setIsLocModalOpen(false)} className="flex-1 bg-zinc-800 py-4 rounded-xl text-xs font-black uppercase text-zinc-500">Annuler</button>
-                        <button type="submit" className="flex-1 bg-primary py-4 rounded-xl text-xs font-black uppercase text-black">Enregistrer</button>
+                        <SubmitButton loadingText="Création...">
+                            Enregistrer
+                        </SubmitButton>
                     </div>
                 </form>
              </div>
