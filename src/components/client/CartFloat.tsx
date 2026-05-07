@@ -20,7 +20,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const tableNumber = searchParams.get("table") || "Inconnue";
   const customerName = searchParams.get("name") || "Client";
   
-  const { items, getTotalUsd, removeItem, updateQuantity, clearCart, addOfflineOrder } = useCartStore();
+  const { items, getTotalUsd, removeItem, updateQuantity, clearCart, addOfflineOrder, addSubmittedOrderId } = useCartStore();
 
   const totalUsd = getTotalUsd();
   const totalCdf = totalUsd * exchangeRate;
@@ -41,7 +41,8 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
     try {
       // 1. Vérifier si on est en ligne
       if (!navigator.onLine) {
-        addOfflineOrder(orderData);
+        const tempId = addOfflineOrder(orderData);
+        addSubmittedOrderId(tempId); // On suit aussi les commandes offline
         toast.info("Connexion perdue. Commande enregistrée localement. Elle sera envoyée dès le retour d'Internet.");
         setShowSuccess(true);
         clearCart();
@@ -54,13 +55,17 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
 
       if (res.success) {
         setLastOrderId(res.orderId);
+        if (res.orderId) {
+          addSubmittedOrderId(res.orderId);
+        }
         setShowSuccess(true);
         clearCart();
         setIsOpen(false);
       } else {
         // En cas d'erreur serveur (ex: timeout), proposer de sauvegarder en hors-ligne
         toast.error("Le serveur ne répond pas. Commande sauvegardée en attente.");
-        addOfflineOrder(orderData);
+        const tempId = addOfflineOrder(orderData);
+        addSubmittedOrderId(tempId);
         setShowSuccess(true);
         clearCart();
         setIsOpen(false);
@@ -68,7 +73,8 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
     } catch (error) {
        console.error(error);
        // En cas de plantage réseau brutal, sauver en local
-       addOfflineOrder(orderData);
+       const tempId = addOfflineOrder(orderData);
+       addSubmittedOrderId(tempId);
        toast.warning("Erreur réseau. Commande mise en attente de synchronisation.");
        setShowSuccess(true);
        clearCart();

@@ -202,10 +202,21 @@ export async function createCommande(data: {
 export async function getRecentCommandes(restaurantId?: string) {
   try {
     if (!restaurantId) return [];
-    const commandes = await prisma.commande.findMany({
-      where: { restaurantId },
-      orderBy: { createdAt: "desc" },
-      take: 20,
+    
+    // On récupère les commandes actives (non terminées/annulées) 
+    // + les 10 dernières commandes terminées pour historique récent
+    const orders = await prisma.commande.findMany({
+      where: { 
+        restaurantId,
+        OR: [
+          { statut: { in: ["SUBMITTED", "PREPARING", "READY"] } },
+          { 
+            statut: { in: ["COMPLETED", "CANCELLED"] },
+            createdAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) } // 12 dernières heures
+          }
+        ]
+      },
+      orderBy: { createdAt: "asc" },
       include: {
         items: {
           include: {
@@ -214,7 +225,7 @@ export async function getRecentCommandes(restaurantId?: string) {
         }
       }
     });
-    return commandes;
+    return orders;
   } catch (error) {
     console.error("Error fetching recent orders:", error);
     return [];
@@ -280,6 +291,35 @@ export async function confirmOrderPayment(orderId: string, method: string) {
     return { success: true };
   } catch (error) {
     console.error("Error confirming payment:", error);
+    return { success: false };
+  }
+}
+export async function cancelOrder(orderId: string) {
+  try {
+    const order = await prisma.commande.findUnique({
+      where: { id: orderId },
+      select: { restaurantId: true }
+    });
+
+    if (!order) throw new Error("Commande introuvable");
+    
+    // Vérification de l'autorisation
+    await ensureManager(order.restaurantId);
+
+    await prisma.commande.update({
+      where: { id: orderId },
+      data: { statut: "CANCELLED" }
+    });
+    
+    broadcastToAll("status-updated", { orderId, newStatus: "CANCELLED", restaurantId: order.restaurantId });
+    
+    revalidatePath("/manager/dashboard");
+    revalidatePath("/manager/caisse");
+    revalidatePath("/manager/cuisine");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error cancelling order:", error);
     return { success: false };
   }
 }

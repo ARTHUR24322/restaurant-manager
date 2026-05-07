@@ -192,7 +192,7 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-black bg-zinc-800 text-zinc-500 px-3 py-1 rounded-full uppercase tracking-widest mb-3 inline-block">
-                  #{order.id.slice(-4)}
+                  #{order?.id?.slice(-4) || "..."}
                 </span>
                 <h3 className="text-5xl font-black italic tracking-tighter text-white">Table {order.table}</h3>
               </div>
@@ -223,8 +223,8 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
                           <li key={idx} className="flex flex-col gap-2 border-b border-zinc-800/20 pb-4 last:border-0 last:pb-0">
                              <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
-                                   <span className="text-xl font-black text-emerald-500">{item.quantite}x</span>
-                                   <span className="font-black text-white italic text-base uppercase tracking-tighter">{item.plat?.nom || "Plat"}</span>
+                                   <span className="text-xl font-black text-emerald-500">{item?.quantite}x</span>
+                                   <span className="font-black text-white italic text-base uppercase tracking-tighter">{item?.plat?.nom || "Plat supprimé"}</span>
                                 </div>
                              </div>
                              {selectedOpts.length > 0 && (

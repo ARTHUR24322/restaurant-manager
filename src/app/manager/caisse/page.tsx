@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   getRecentCommandes, 
   updateOrderStatus,
-  confirmOrderPayment 
+  confirmOrderPayment,
+  cancelOrder
 } from "@/lib/actions";
 import { getRestaurantById } from "@/lib/admin-actions";
 import { 
@@ -19,7 +20,9 @@ import {
   Send,
   Printer,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Trash2,
+  XCircle
 } from "lucide-react";
 import { cn, safeJsonParse } from "@/lib/utils";
 import { format } from "date-fns";
@@ -183,6 +186,26 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
     });
   };
 
+  const handleCancelRequest = (id: string, table: string) => {
+    setModalConfig({
+      show: true,
+      title: "Annulation Commande",
+      message: `Voulez-vous vraiment annuler la commande de la Table ${table} ? Cette action est irréversible.`,
+      confirmLabel: "Annuler la commande",
+      variant: "danger",
+      onConfirm: async () => {
+        setActionLoading(true);
+        const res = await cancelOrder(id);
+        if (res.success) {
+          toast.success("Commande annulée !");
+          fetchOrders(restaurantId);
+        }
+        setActionLoading(false);
+        setModalConfig(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
   if (loading) {
       return (
           <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
@@ -257,6 +280,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
                 key={order.id} 
                 order={order} 
                 onAction={() => handleValidateRequest(order.id, order.table)}
+                onCancel={() => handleCancelRequest(order.id, order.table)}
                 actionLabel="Envoyer en cuisine"
                 actionIcon={<Send className="w-4 h-4" />}
                 variant="indigo"
@@ -297,7 +321,16 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
 
                     <div className="flex items-center justify-between bg-zinc-950 p-6 rounded-3xl border border-zinc-800">
                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Total Facturé</span>
-                       <span className="text-3xl font-black text-white italic tracking-tighter">${order.totalUsd.toFixed(2)}</span>
+                       <div className="flex flex-col items-end">
+                          <span className="text-3xl font-black text-white italic tracking-tighter">${order.totalUsd.toFixed(2)}</span>
+                          <button 
+                            onClick={() => handleCancelRequest(order.id, order.table)}
+                            className="text-[9px] font-black text-red-500 uppercase tracking-widest mt-1 hover:text-red-400 transition-colors flex items-center gap-1"
+                          >
+                            <XCircle className="w-3 h-3" />
+                            Annuler
+                          </button>
+                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -351,7 +384,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
   );
 }
 
-function OrderCard({ order, onAction, actionLabel, actionIcon, variant }: any) {
+function OrderCard({ order, onAction, onCancel, actionLabel, actionIcon, variant }: any) {
   const isIndigo = variant === 'indigo';
   
   return (
@@ -379,7 +412,7 @@ function OrderCard({ order, onAction, actionLabel, actionIcon, variant }: any) {
                   <div key={idx} className="flex items-center justify-between text-sm">
                      <div className="flex items-center gap-3">
                         <span className="font-black text-indigo-500">{item.quantite}x</span>
-                        <span className="font-bold text-zinc-300 italic">{item.plat.nom}</span>
+                        <span className="font-bold text-zinc-300 italic">{item.plat?.nom || "Plat supprimé"}</span>
                      </div>
                      <span className="text-zinc-500 font-bold">${(item.plat.prixUsd * item.quantite).toFixed(2)}</span>
                   </div>
@@ -404,6 +437,14 @@ function OrderCard({ order, onAction, actionLabel, actionIcon, variant }: any) {
              {actionIcon}
              {actionLabel}
              <ChevronRight className="w-4 h-4 ml-1" />
+          </button>
+          
+          <button 
+            onClick={onCancel}
+            className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-400 font-bold py-2 mt-2 text-[9px] uppercase tracking-widest transition-all"
+          >
+             <Trash2 className="w-3 h-3 opacity-50" />
+             Annuler cette commande
           </button>
        </div>
     </div>

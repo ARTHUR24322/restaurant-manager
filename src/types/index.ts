@@ -1,7 +1,7 @@
 export type Categorie = "ENTREE" | "PLAT" | "DESSERT" | "JUS" | "VIN" | "BIERE" | "SODA" | "EAU" | "CAFE" | "COCKTAIL";
 
-// SUBMITTED (Attente Caisse) -> PREPARING (En Cuisine) -> READY (Prêt à servir) -> COMPLETED (Payé/Clôturé)
-export type CommandeStatut = "SUBMITTED" | "PREPARING" | "READY" | "COMPLETED";
+// SUBMITTED (Attente Caisse) -> PREPARING (En Cuisine) -> READY (Prêt à servir) -> COMPLETED (Payé/Clôturé) | CANCELLED (Annulé)
+export type CommandeStatut = "SUBMITTED" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
 
 export type PaiementStatut = "UNPAID" | "PAID_CASH" | "PAID_MOBILE";
 

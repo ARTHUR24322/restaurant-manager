@@ -27,12 +27,17 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
   const [timeLeft, setTimeLeft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   
-  const { addItem } = useCartStore();
+  const { addItem, submittedOrderIds } = useCartStore();
 
   useEffect(() => {
     const fetchMyOrder = async () => {
       const all = await getRecentCommandes(restaurantId);
-      const myOrder = all.find((o: any) => o.table === tableNumber && o.statut !== "COMPLETED");
+      // On filtre pour ne voir QUE les commandes passées par cet appareil (via submittedOrderIds)
+      const myOrder = all.find((o: any) => 
+        o.table === tableNumber && 
+        o.statut !== "COMPLETED" && 
+        submittedOrderIds.includes(o.id)
+      );
       setActiveOrder(myOrder || null);
     };
 
@@ -211,7 +216,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
               </div>
               <div className="text-right hidden sm:block">
                  <p className="text-[10px] font-black uppercase opacity-50">Récupération</p>
-                 <p className="text-xs font-bold font-mono">#{activeOrder.id.slice(-4)}</p>
+                 <p className="text-xs font-bold font-mono">#{activeOrder?.id?.slice(-4) || "..."}</p>
               </div>
            </div>
         </div>
