@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { CloudOff, RefreshCw, Wifi } from "lucide-react";
 
 export function OfflineSync() {
-  const { offlineOrders, removeOfflineOrder } = useCartStore();
+  const { offlineOrders, removeOfflineOrder, addSubmittedOrderId } = useCartStore();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
 
@@ -57,6 +57,9 @@ export function OfflineSync() {
 
         if (res.success) {
           removeOfflineOrder(order.id);
+          if (res.orderId) {
+            addSubmittedOrderId(res.orderId);
+          }
           successCount++;
         }
       } catch (error) {

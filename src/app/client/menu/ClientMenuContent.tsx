@@ -31,8 +31,12 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
 
   useEffect(() => {
     const fetchMyOrder = async () => {
+      if (!restaurantId || !submittedOrderIds.length) {
+        setActiveOrder(null);
+        return;
+      }
+      
       const all = await getRecentCommandes(restaurantId);
-      // On filtre pour ne voir QUE les commandes passées par cet appareil (via submittedOrderIds)
       const myOrder = all.find((o: any) => 
         o.table === tableNumber && 
         o.statut !== "COMPLETED" && 
@@ -49,7 +53,6 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       try {
         const data = JSON.parse(event.data);
         if (data.type === "new-order" || data.type === "status-updated") {
-          // Filtrage SaaS : Le client ne voit que le statut de ses commandes sur ce restaurant
           if (!data.restaurantId || data.restaurantId === restaurantId) {
               fetchMyOrder();
           }
@@ -59,7 +62,15 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       }
     };
 
-    const interval = setInterval(fetchMyOrder, 10000); // Polling de secours
+    const interval = setInterval(fetchMyOrder, 10000); 
+
+    return () => {
+      eventSource.close();
+      clearInterval(interval);
+    };
+  }, [restaurantId, tableNumber, submittedOrderIds]);
+
+  useEffect(() => {
 
     // Gestion de Session de 1 heure (Sécurité)
     const SESSION_DURATION_MS = 1 * 60 * 60 * 1000; // 1 heure
@@ -97,8 +108,6 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     const sessionInterval = setInterval(checkSession, 1000);
 
     return () => {
-      eventSource.close();
-      clearInterval(interval);
       clearInterval(sessionInterval);
     };
   }, []);
