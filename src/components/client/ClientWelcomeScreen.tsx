@@ -40,12 +40,17 @@ export function ClientWelcomeScreen({ restaurantName, table, logoUrl, children }
         if (now - timestamp > oneHour) {
           // SESSION EXPIRÉE DÈS LE CHARGEMENT
           localStorage.removeItem(sessionKey);
-          setSessionExpired(true);
-          setIsSubmitted(false);
+          
           if (queryName) {
+            setSessionExpired(true);
+            setIsSubmitted(false);
             const current = new URLSearchParams(Array.from(searchParams.entries()));
             current.delete("name");
             window.history.replaceState({}, '', `${pathname}?${current.toString()}`);
+          } else {
+            // Pas de nom dans l'URL ? On laisse l'utilisateur se ré-enregistrer normalement
+            setSessionExpired(false);
+            setIsSubmitted(false);
           }
         } else {
             // Session valide, on lance le Timer d'expulsion
@@ -86,7 +91,7 @@ export function ClientWelcomeScreen({ restaurantName, table, logoUrl, children }
                   </p>
                   <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[2rem] shadow-xl">
                       <p className="text-sm font-bold text-zinc-300">
-                          Veuillez <span className="text-emerald-500 font-black">scanner à nouveau</span> le QR code physique présent sur votre table pour réactiver la carte et commander.
+                          Veuillez <span className="text-emerald-500 font-black">scanner à nouveau</span> le QR code présent sur votre table pour obtenir <span className="text-primary">1 heure supplémentaire</span> d&apos;accès au menu.
                       </p>
                   </div>
               </div>
