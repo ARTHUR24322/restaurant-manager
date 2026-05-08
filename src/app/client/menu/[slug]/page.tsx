@@ -59,6 +59,9 @@ export default async function ClientMenuSlugPage({
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] font-bold uppercase tracking-widest">
                 <Clock className="w-3 h-3" /> {restaurant.nom}
               </div>
+              <div className="flex items-center gap-1.5 text-zinc-400 text-[10px] font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-full w-fit border border-white/5">
+                1$ = {restaurant.tauxChange} FC
+              </div>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight text-white italic">
                Bonjour, <span className="text-primary">{clientName}</span>
@@ -90,7 +93,7 @@ export default async function ClientMenuSlugPage({
         />
       </main>
 
-      <CartFloat restaurantId={restaurantId} />
+      <CartFloat restaurantId={restaurantId} exchangeRate={restaurant.tauxChange} />
     </div>
     </ClientWelcomeScreen>
   );

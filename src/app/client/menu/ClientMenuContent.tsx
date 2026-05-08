@@ -117,9 +117,16 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     "ENTREE": { label: "Entrées", icon: Soup },
     "PLAT": { label: "Plats", icon: Beef },
     "DESSERT": { label: "Dessert", icon: IceCream },
+    "SOFT": { label: "Soft Drinks", icon: CupSoda },
     "JUS": { label: "Jus", icon: Cherry },
     "VIN": { label: "Vins", icon: Wine },
+    "WHISKY": { label: "Whisky", icon: Wine }, 
+    "CHAMPAGNE": { label: "Champagnes", icon: Wine },
     "BIERE": { label: "Bières", icon: Beer },
+    "VIANDE": { label: "Viandes", icon: Beef },
+    "POISSON": { label: "Poisson", icon: Soup }, 
+    "LEGUME": { label: "Légumes", icon: Soup },
+    "GARNITURE": { label: "Garnitures", icon: Soup },
     "SODA": { label: "Sodas", icon: CupSoda },
     "EAU": { label: "Eaux", icon: GlassWater },
     "CAFE": { label: "Cafés", icon: Coffee },
@@ -317,12 +324,12 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                 <div className="absolute -top-8 right-6 z-30">
                     {!isOutOfStock ? (
                       <div className="bg-primary text-black h-16 min-w-[4.5rem] px-4 rounded-2xl flex flex-col items-center justify-center shadow-[0_10px_20px_-10px_rgba(var(--primary),0.5)] group-hover:shadow-[0_10px_30px_-5px_rgba(var(--primary),0.6)] group-hover:-translate-y-1 transition-all duration-300">
-                          <span className="font-black text-lg">${plat.prixUsd.toFixed(2)}</span>
+                          <span className="font-black text-lg">{plat.devise === "USD" ? "$" : ""}{plat.prixUsd.toFixed(2)}{plat.devise === "FC" ? " FC" : ""}</span>
                           <span className="text-[8px] font-black uppercase tracking-widest opacity-60 mt-0.5">Ajouter</span>
                       </div>
                     ) : (
                       <div className="bg-zinc-800 text-zinc-500 h-16 min-w-[4.5rem] px-4 rounded-2xl flex items-center justify-center border border-zinc-700">
-                          <span className="font-black text-lg">${plat.prixUsd.toFixed(2)}</span>
+                          <span className="font-black text-lg">{plat.devise === "USD" ? "$" : ""}{plat.prixUsd.toFixed(2)}{plat.devise === "FC" ? " FC" : ""}</span>
                       </div>
                     )}
                 </div>

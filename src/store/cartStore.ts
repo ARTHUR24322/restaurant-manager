@@ -23,7 +23,7 @@ interface CartStore {
   removeItem: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, quantite: number) => void;
   clearCart: () => void;
-  getTotalUsd: () => number;
+  getTotalUsd: (exchangeRate: number) => number;
   
   // Offline support
   addOfflineOrder: (order: Omit<OfflineOrder, "id" | "createdAt">) => string;
@@ -71,9 +71,14 @@ export const useCartStore = create<CartStore>()(
           ),
         })),
       clearCart: () => set({ items: [] }),
-      getTotalUsd: () => {
+      getTotalUsd: (exchangeRate) => {
         const items = get().items;
-        return items.reduce((total, item) => total + item.plat.prixUsd * item.quantite, 0);
+        return items.reduce((total, item) => {
+          const priceUsd = item.plat.devise === "FC" 
+            ? (item.plat.prixUsd / exchangeRate) 
+            : item.plat.prixUsd;
+          return total + priceUsd * item.quantite;
+        }, 0);
       },
       
       addOfflineOrder: (orderData) => {

@@ -44,6 +44,7 @@ export async function addPlat(formData: FormData) {
     const nom = formData.get("nom") as string;
     const description = formData.get("description") as string;
     const prixUsd = parseFloat(formData.get("prixUsd") as string);
+    const devise = (formData.get("devise") as string) || "USD";
     const categorie = formData.get("categorie") as string;
     let image = formData.get("image") as string;
     const imageFile = formData.get("imageFile") as any;
@@ -74,6 +75,7 @@ export async function addPlat(formData: FormData) {
         nom,
         description,
         prixUsd,
+        devise,
         categorie,
         image,
         restaurantId,
@@ -158,7 +160,10 @@ export async function createCommande(data: {
     data.cartItems.forEach((item: any) => {
       const plat = plats.find(p => p.id === item.plat.id);
       if (plat) {
-        calculatedTotal += plat.prixUsd * item.quantite;
+        const itemPriceUsd = plat.devise === "FC" 
+          ? (plat.prixUsd / exchangeRate) 
+          : plat.prixUsd;
+        calculatedTotal += itemPriceUsd * item.quantite;
       }
     });
 

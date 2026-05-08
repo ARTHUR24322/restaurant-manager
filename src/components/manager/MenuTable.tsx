@@ -87,7 +87,7 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
                     </span>
                   </td>
                   <td className="px-6 py-4 font-bold text-sm text-foreground">
-                    ${plat.prixUsd.toFixed(2)}
+                    {plat.devise === "USD" ? "$" : ""}{plat.prixUsd.toFixed(2)} {plat.devise === "FC" ? "FC" : ""}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">

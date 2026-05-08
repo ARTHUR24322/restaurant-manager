@@ -22,7 +22,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   
   const { items, getTotalUsd, removeItem, updateQuantity, clearCart, addOfflineOrder, addSubmittedOrderId } = useCartStore();
 
-  const totalUsd = getTotalUsd();
+  const totalUsd = getTotalUsd(exchangeRate);
   const totalCdf = totalUsd * exchangeRate;
 
   const handleConfirmOrder = async () => {
@@ -162,7 +162,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
               <div className="flex-1">
                 <h4 className="font-bold text-sm text-white/90">{item.plat.nom}</h4>
                 <p className="text-primary font-black text-sm mt-0.5">
-                  ${item.plat.prixUsd.toFixed(2)}
+                  {item.plat.devise === "USD" ? "$" : ""}{item.plat.prixUsd.toFixed(2)}{item.plat.devise === "FC" ? " FC" : ""}
                 </p>
                 {/* Options choisies */}
                 {Object.keys(item.selectedOptions).length > 0 && (

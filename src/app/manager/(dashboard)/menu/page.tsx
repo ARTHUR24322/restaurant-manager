@@ -53,17 +53,26 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Prix ($ USD)</label>
-                  <input 
-                    name="prixUsd" 
-                    type="number" 
-                    step="0.01" 
-                    required 
-                    placeholder="12.50" 
-                    className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none text-foreground" 
-                  />
+                  <label className="text-sm font-medium text-foreground">Prix</label>
+                  <div className="flex gap-2">
+                    <input 
+                      name="prixUsd" 
+                      type="number" 
+                      step="0.01" 
+                      required 
+                      placeholder="12.50" 
+                      className="flex-1 bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none text-foreground w-full" 
+                    />
+                    <select 
+                      name="devise"
+                      className="bg-secondary/50 border border-border rounded-xl px-2 py-2 focus:ring-1 focus:ring-primary outline-none text-foreground font-bold"
+                    >
+                      <option value="USD">$ USD</option>
+                      <option value="FC">FC</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-foreground">Catégorie</label>
@@ -74,10 +83,16 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                     <option value="ENTREE">Entrée</option>
                     <option value="PLAT">Plat De Résistance</option>
                     <option value="DESSERT">Dessert / Sucré</option>
+                    <option value="SOFT">Soft Drinks</option>
                     <option value="JUS">Jus Naturels</option>
                     <option value="VIN">Vins & Domaines</option>
+                    <option value="WHISKY">Whisky</option>
+                    <option value="CHAMPAGNE">Champagnes</option>
                     <option value="BIERE">Bières</option>
-                    <option value="SODA">Sodas</option>
+                    <option value="VIANDE">Viandes & Autres</option>
+                    <option value="POISSON">Poisson</option>
+                    <option value="LEGUME">Légumes</option>
+                    <option value="GARNITURE">Garnitures</option>
                     <option value="EAU">Eaux</option>
                     <option value="CAFE">Cafés & Thés</option>
                     <option value="COCKTAIL">Cocktails</option>

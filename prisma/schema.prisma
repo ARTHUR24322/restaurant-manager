@@ -125,6 +125,7 @@ model Plat {
   nom          String
   description  String?
   prixUsd      Float
+  devise       String         @default("USD")
   image        String
   categorie    String
   disponible   Boolean        @default(true)

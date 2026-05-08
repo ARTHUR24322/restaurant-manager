@@ -1,4 +1,4 @@
-export type Categorie = "ENTREE" | "PLAT" | "DESSERT" | "JUS" | "VIN" | "BIERE" | "SODA" | "EAU" | "CAFE" | "COCKTAIL";
+export type Categorie = "ENTREE" | "PLAT" | "DESSERT" | "JUS" | "VIN" | "BIERE" | "SODA" | "EAU" | "CAFE" | "COCKTAIL" | "SOFT" | "WHISKY" | "CHAMPAGNE" | "VIANDE" | "LEGUME" | "GARNITURE" | "POISSON";
 
 // SUBMITTED (Attente Caisse) -> PREPARING (En Cuisine) -> READY (Prêt à servir) -> COMPLETED (Payé/Clôturé) | CANCELLED (Annulé)
 export type CommandeStatut = "SUBMITTED" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
@@ -17,6 +17,7 @@ export interface Plat {
   nom: string;
   description?: string;
   prixUsd: number;
+  devise: string;
   image: string;
   categorie: Categorie;
   options: Option[];
