@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState } from "react";
-import { Trash2, UtensilsCrossed, BookOpen } from "lucide-react";
+import { Trash2, UtensilsCrossed, BookOpen, Edit2 } from "lucide-react";
 import { type Plat } from "@/types";
 import { deletePlat } from "@/lib/actions";
 import { ConfirmModal } from "./ConfirmModal";
 import { RecipeModal } from "./RecipeModal";
+import { EditPlatModal } from "./EditPlatModal";
 import { toast } from "sonner";
 
 interface MenuTableProps {
@@ -21,9 +22,17 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
   const [showRecipe, setShowRecipe] = useState(false);
   const [recipePlat, setRecipePlat] = useState<Plat | null>(null);
 
+  const [showEdit, setShowEdit] = useState(false);
+  const [editPlat, setEditPlat] = useState<Plat | null>(null);
+
   const handleDeleteClick = (plat: Plat) => {
     setSelectedPlat(plat);
     setShowConfirm(true);
+  };
+
+  const handleEditClick = (plat: Plat) => {
+    setEditPlat(plat);
+    setShowEdit(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -92,6 +101,13 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
+                        onClick={() => handleEditClick(plat)}
+                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-primary/20"
+                        title="Modifier"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
                         onClick={() => { setRecipePlat(plat); setShowRecipe(true); }}
                         className="p-2 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors border border-transparent hover:border-indigo-500/20"
                         title="Gérer la recette"
@@ -113,6 +129,13 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
           </tbody>
         </table>
       </div>
+
+      <EditPlatModal 
+        isOpen={showEdit}
+        onClose={() => setShowEdit(false)}
+        plat={editPlat}
+        restaurantId={restaurantId}
+      />
 
       <ConfirmModal
         show={showConfirm}

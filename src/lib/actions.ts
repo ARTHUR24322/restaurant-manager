@@ -98,6 +98,57 @@ export async function addPlat(formData: FormData) {
   }
 }
 
+export async function updatePlat(formData: FormData) {
+  try {
+    const restaurantId = formData.get("restaurantId") as string;
+    const platId = formData.get("platId") as string;
+    if (!restaurantId || !platId) throw new Error("IDs requis");
+
+    await ensureManager(restaurantId);
+
+    const nom = formData.get("nom") as string;
+    const description = formData.get("description") as string;
+    const prixUsd = parseFloat(formData.get("prixUsd") as string);
+    const devise = (formData.get("devise") as string) || "USD";
+    const categorie = formData.get("categorie") as string;
+    let image = formData.get("image") as string;
+    const imageFile = formData.get("imageFile") as any;
+
+    const data: any = {
+      nom,
+      description,
+      prixUsd,
+      devise,
+      categorie,
+    };
+
+    if (imageFile && imageFile.size > 0 && typeof imageFile.arrayBuffer === 'function') {
+      const bytes = await imageFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const extension = imageFile.name.split('.').pop() || 'png';
+      const fileName = `plat-${restaurantId}-${Date.now()}.${extension}`;
+      const uploadPath = join(process.cwd(), "public", "uploads", fileName);
+      await writeFile(uploadPath, buffer);
+      data.image = `/uploads/${fileName}`;
+    } else if (image) {
+      data.image = image;
+    }
+
+    await prisma.plat.update({
+      where: { id: platId },
+      data,
+    });
+
+    revalidatePath("/manager/menu");
+    revalidatePath("/client/menu");
+    revalidateTag(`menu-${restaurantId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating plat:", error);
+    throw error;
+  }
+}
+
 export async function deletePlat(formData: FormData) {
   try {
     const restaurantId = formData.get("restaurantId") as string;
