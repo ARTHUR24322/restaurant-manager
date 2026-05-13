@@ -369,6 +369,7 @@ export async function confirmOrderPayment(orderId: string, method: string) {
       const pointsToEarn = Math.floor(fullOrder.totalUsd * multiplier);
 
       if (pointsToEarn > 0) {
+        const customerName = fullOrder.client || "Client";
         await prisma.loyaltyCustomer.upsert({
           where: {
             phone_restaurantId: {
@@ -381,12 +382,13 @@ export async function confirmOrderPayment(orderId: string, method: string) {
           },
           create: {
             phone: fullOrder.phone,
+            name: customerName,
             points: pointsToEarn,
             restaurantId: order.restaurantId
           }
         });
 
-        // Optionnel : logging de transaction
+        // Logging de transaction
         const customer = await prisma.loyaltyCustomer.findUnique({
           where: {
             phone_restaurantId: {
@@ -403,7 +405,7 @@ export async function confirmOrderPayment(orderId: string, method: string) {
               type: "EARN",
               points: pointsToEarn,
               commandeId: orderId,
-              note: `Gain pour la commande ${orderId.slice(-4)}`
+              note: `Gain pour la commande #${orderId.slice(-4)}`
             }
           });
         }
@@ -494,7 +496,7 @@ export async function getLoyaltyConfig(restaurantId: string) {
   }
 }
 
-export async function assignPhoneToOrder(orderId: string, phone: string) {
+export async function assignPhoneToOrder(orderId: string, phone: string, customerName?: string) {
   try {
     const order = await prisma.commande.update({
       where: { id: orderId },
@@ -510,7 +512,8 @@ export async function assignPhoneToOrder(orderId: string, phone: string) {
     const multiplier = config?.pointsPerUsd || 1;
     const potentialPoints = Math.floor(order.totalUsd * multiplier);
     
-    const customer = await prisma.loyaltyCustomer.findUnique({
+    // Check if customer already exists
+    let customer = await prisma.loyaltyCustomer.findUnique({
       where: {
         phone_restaurantId: {
           phone,
@@ -519,8 +522,24 @@ export async function assignPhoneToOrder(orderId: string, phone: string) {
       }
     });
 
+    const isNewCustomer = !customer;
+
+    // If new customer and name provided, pre-create the loyalty account
+    if (!customer && customerName) {
+      customer = await prisma.loyaltyCustomer.create({
+        data: {
+          phone,
+          name: customerName,
+          points: 0,
+          restaurantId: order.restaurantId
+        }
+      });
+    }
+
     return {
       success: true,
+      isNewCustomer,
+      customerName: customer?.name || customerName || "Client",
       currentPoints: customer?.points || 0,
       potentialPoints,
       threshold,
@@ -561,5 +580,101 @@ export async function updateLoyaltySettings(formData: FormData) {
   } catch (error) {
     console.error("Error updating loyalty settings:", error);
     return { success: false, error: "Erreur lors de la mise à jour." };
+  }
+}
+
+// -----------------------------
+// GESTION DES CLIENTS FIDÉLITÉ (MANAGER)
+// -----------------------------
+
+export async function getLoyaltyCustomers(restaurantId: string) {
+  try {
+    await ensureManager(restaurantId);
+    
+    const customers = await prisma.loyaltyCustomer.findMany({
+      where: { restaurantId },
+      orderBy: { points: "desc" },
+      include: {
+        _count: {
+          select: { transactions: true }
+        }
+      }
+    });
+
+    const config = await prisma.loyaltyConfig.findUnique({
+      where: { restaurantId }
+    });
+
+    return {
+      success: true,
+      customers,
+      config: config || { pointsPerUsd: 1, rewardThreshold: 100, rewardDescription: "Un cadeau offert !" }
+    };
+  } catch (error) {
+    console.error("Error fetching loyalty customers:", error);
+    return { success: false, customers: [], config: null };
+  }
+}
+
+export async function getLoyaltyCustomerDetails(restaurantId: string, customerId: string) {
+  try {
+    await ensureManager(restaurantId);
+    
+    const customer = await prisma.loyaltyCustomer.findUnique({
+      where: { id: customerId },
+      include: {
+        transactions: {
+          orderBy: { createdAt: "desc" },
+          take: 50
+        }
+      }
+    });
+
+    if (!customer || customer.restaurantId !== restaurantId) {
+      return { success: false, customer: null };
+    }
+
+    return { success: true, customer };
+  } catch (error) {
+    console.error("Error fetching customer details:", error);
+    return { success: false, customer: null };
+  }
+}
+
+export async function redeemLoyaltyPoints(restaurantId: string, customerId: string, pointsToRedeem: number, note?: string) {
+  try {
+    await ensureManager(restaurantId);
+    
+    const customer = await prisma.loyaltyCustomer.findUnique({
+      where: { id: customerId }
+    });
+
+    if (!customer || customer.restaurantId !== restaurantId) {
+      return { success: false, error: "Client introuvable." };
+    }
+
+    if (customer.points < pointsToRedeem) {
+      return { success: false, error: "Points insuffisants." };
+    }
+
+    await prisma.loyaltyCustomer.update({
+      where: { id: customerId },
+      data: { points: { decrement: pointsToRedeem } }
+    });
+
+    await prisma.loyaltyTransaction.create({
+      data: {
+        customerId,
+        type: "REDEEM",
+        points: -pointsToRedeem,
+        note: note || `Échange de ${pointsToRedeem} points contre un cadeau`
+      }
+    });
+
+    revalidatePath("/manager/loyalty");
+    return { success: true };
+  } catch (error) {
+    console.error("Error redeeming points:", error);
+    return { success: false, error: "Erreur lors de l'échange." };
   }
 }

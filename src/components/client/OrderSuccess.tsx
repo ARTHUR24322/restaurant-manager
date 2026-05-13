@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { CheckCircle, ArrowRight, ShoppingBag, Gift, Phone, Loader2 } from "lucide-react";
+import { CheckCircle, ArrowRight, ShoppingBag, Gift, Phone, Loader2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assignPhoneToOrder } from "@/lib/actions";
 
@@ -13,10 +13,44 @@ interface OrderSuccessProps {
 
 export function OrderSuccess({ isOpen, onClose, orderId }: OrderSuccessProps) {
   const [phone, setPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [isLoyaltyLoading, setIsLoyaltyLoading] = useState(false);
   const [loyaltyStatus, setLoyaltyStatus] = useState<any>(null);
+  const [step, setStep] = useState<"phone" | "name" | "result">("phone");
 
   if (!isOpen) return null;
+
+  const handlePhoneSubmit = async () => {
+    if (!phone || !orderId) return;
+    setIsLoyaltyLoading(true);
+    // First check: send phone without name to see if customer exists
+    const status = await assignPhoneToOrder(orderId, phone);
+    setIsLoyaltyLoading(false);
+
+    if (status.success) {
+      if (status.isNewCustomer) {
+        // New customer → ask for their name
+        setStep("name");
+      } else {
+        // Returning customer → show points directly
+        setLoyaltyStatus(status);
+        setStep("result");
+      }
+    }
+  };
+
+  const handleNameSubmit = async () => {
+    if (!customerName.trim() || !orderId) return;
+    setIsLoyaltyLoading(true);
+    // Re-assign with customer name for the new account
+    const status = await assignPhoneToOrder(orderId, phone, customerName.trim());
+    setIsLoyaltyLoading(false);
+
+    if (status.success) {
+      setLoyaltyStatus(status);
+      setStep("result");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
@@ -44,15 +78,15 @@ export function OrderSuccess({ isOpen, onClose, orderId }: OrderSuccessProps) {
             <p className="text-muted-foreground font-medium">Votre commande a été transmise avec succès au Manager et à la Cuisine.</p>
         </div>
 
-        {orderId && !loyaltyStatus && (
+        {orderId && step === "phone" && (
             <div className="bg-secondary/50 p-3 rounded-xl border border-border">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Numéro de Commande</span>
                 <span className="font-mono font-bold text-lg select-all">#{orderId}</span>
             </div>
         )}
 
-        {/* --------- LOYALTY SECTION --------- */}
-        {orderId && !loyaltyStatus && (
+        {/* --------- LOYALTY: STEP 1 - PHONE --------- */}
+        {orderId && step === "phone" && (
           <div className="bg-pink-500/5 border border-pink-500/20 rounded-2xl p-4 animate-in slide-in-from-bottom-4 duration-300">
              <div className="flex items-center justify-center gap-2 mb-3 text-pink-500">
                <Gift className="w-5 h-5 animate-bounce" />
@@ -64,13 +98,7 @@ export function OrderSuccess({ isOpen, onClose, orderId }: OrderSuccessProps) {
               className="flex items-center gap-2"
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (!phone) return;
-                setIsLoyaltyLoading(true);
-                const status = await assignPhoneToOrder(orderId, phone);
-                setIsLoyaltyLoading(false);
-                if (status.success) {
-                  setLoyaltyStatus(status);
-                }
+                await handlePhoneSubmit();
               }}
              >
                 <div className="relative flex-1">
@@ -94,12 +122,65 @@ export function OrderSuccess({ isOpen, onClose, orderId }: OrderSuccessProps) {
           </div>
         )}
 
-        {loyaltyStatus && (
+        {/* --------- LOYALTY: STEP 2 - NAME (new customer) --------- */}
+        {orderId && step === "name" && (
+          <div className="bg-pink-500/5 border border-pink-500/20 rounded-2xl p-5 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 space-y-4">
+             <div className="flex items-center justify-center gap-2 text-pink-500">
+               <Gift className="w-5 h-5" />
+               <p className="text-xs font-black uppercase tracking-widest">Bienvenue !</p>
+             </div>
+             <div className="w-14 h-14 bg-pink-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-pink-500/40">
+               <User className="w-7 h-7 text-white" />
+             </div>
+             <p className="text-sm font-bold text-foreground">C'est votre première visite !</p>
+             <p className="text-[11px] text-muted-foreground">
+               Entrez votre prénom pour créer votre compte fidélité et commencer à accumuler des points.
+             </p>
+             
+             <form 
+              className="flex items-center gap-2"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await handleNameSubmit();
+              }}
+             >
+                <div className="relative flex-1">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input 
+                     type="text"
+                     placeholder="Votre prénom..."
+                     value={customerName}
+                     onChange={(e) => setCustomerName(e.target.value)}
+                     className="w-full bg-background border border-border rounded-xl py-2.5 pl-9 text-sm text-foreground focus:ring-2 focus:ring-pink-500/50 outline-none"
+                     autoFocus
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={isLoyaltyLoading || customerName.trim().length < 2}
+                  className="bg-pink-500 text-white rounded-xl px-4 py-2.5 font-bold text-sm tracking-wide disabled:opacity-50 hover:bg-pink-600 transition-colors flex items-center justify-center min-w-[4rem]"
+                >
+                  {isLoyaltyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "OK"}
+                </button>
+             </form>
+          </div>
+        )}
+
+        {/* --------- LOYALTY: STEP 3 - RESULT --------- */}
+        {loyaltyStatus && step === "result" && (
           <div className="bg-pink-500/10 border border-pink-500/20 rounded-2xl p-5 animate-in zoom-in-95 duration-500 shadow-[0_0_20px_-5px_rgba(236,72,153,0.3)]">
               <div className="w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-pink-500/40">
                   <Gift className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-black italic text-pink-500 uppercase">Points Ajoutés !</h3>
+              
+              {loyaltyStatus.isNewCustomer ? (
+                <h3 className="text-lg font-black italic text-pink-500 uppercase">Bienvenue {loyaltyStatus.customerName} !</h3>
+              ) : (
+                <h3 className="text-lg font-black italic text-pink-500 uppercase">
+                  Rebonjour {loyaltyStatus.customerName} !
+                </h3>
+              )}
+              
               <p className="text-xs text-foreground font-bold mt-1">Vous gagnez <span className="text-pink-500 text-base">{loyaltyStatus.potentialPoints} points</span></p>
               
               <div className="w-full bg-background border border-border h-3 rounded-full mt-4 overflow-hidden relative">

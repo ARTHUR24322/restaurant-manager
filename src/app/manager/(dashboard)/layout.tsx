@@ -21,7 +21,8 @@ import {
   Lock,
   ShieldCheck,
   CheckCircle2,
-  Clock
+  Clock,
+  Gift
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutManager, logoutManagerGlobal } from "@/lib/auth-actions";
@@ -142,6 +143,12 @@ function ManagerLayoutContent({
       icon: Package, 
       locked: !["PRO", "PLATINUM"].includes(currentPlan),
       badge: hasStockout
+    },
+    { 
+      label: "Clients Fidélité", 
+      href: "/manager/loyalty", 
+      icon: Gift, 
+      locked: !["PRO", "PLATINUM"].includes(currentPlan)
     },
     ...(isMainAccount ? [{ 
       label: "Multi-sites", 

@@ -287,6 +287,7 @@ model LoyaltyConfig {
 model LoyaltyCustomer {
   id           String               @id @default(cuid())
   phone        String
+  name         String               @default("Client")
   points       Int                  @default(0)
   restaurantId String
   restaurant   Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
