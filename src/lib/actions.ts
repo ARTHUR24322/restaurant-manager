@@ -134,9 +134,24 @@ export async function updatePlat(formData: FormData) {
       data.image = image;
     }
 
+    const optionsRaw = formData.get("options") as string;
+    const optionsList = optionsRaw 
+      ? optionsRaw.split(",").map(opt => opt.trim()).filter(opt => opt !== "") 
+      : [];
+
     await prisma.plat.update({
       where: { id: platId },
-      data,
+      data: {
+        ...data,
+        options: {
+          deleteMany: {},
+          create: optionsList.map(opt => ({
+            nom: opt,
+            type: "CHECKBOX",
+            choix: JSON.stringify([opt])
+          }))
+        }
+      },
     });
 
     revalidatePath("/manager/menu");
@@ -340,6 +355,61 @@ export async function confirmOrderPayment(orderId: string, method: string) {
     // Déduction des stocks automatique en fonction de la recette
     await deductStockForOrder(orderId, order.restaurantId);
     
+    // NOUVEAU: Mettre à jour les points de fidélité si un téléphone est attaché à la commande
+    const fullOrder = await prisma.commande.findUnique({
+      where: { id: orderId }
+    });
+    
+    if (fullOrder && fullOrder.phone) {
+      const config = await prisma.loyaltyConfig.findUnique({
+        where: { restaurantId: order.restaurantId }
+      });
+      
+      const multiplier = config ? config.pointsPerUsd : 1;
+      const pointsToEarn = Math.floor(fullOrder.totalUsd * multiplier);
+
+      if (pointsToEarn > 0) {
+        await prisma.loyaltyCustomer.upsert({
+          where: {
+            phone_restaurantId: {
+              phone: fullOrder.phone,
+              restaurantId: order.restaurantId
+            }
+          },
+          update: {
+            points: { increment: pointsToEarn }
+          },
+          create: {
+            phone: fullOrder.phone,
+            points: pointsToEarn,
+            restaurantId: order.restaurantId
+          }
+        });
+
+        // Optionnel : logging de transaction
+        const customer = await prisma.loyaltyCustomer.findUnique({
+          where: {
+            phone_restaurantId: {
+              phone: fullOrder.phone,
+              restaurantId: order.restaurantId
+            }
+          }
+        });
+        
+        if (customer) {
+          await prisma.loyaltyTransaction.create({
+            data: {
+              customerId: customer.id,
+              type: "EARN",
+              points: pointsToEarn,
+              commandeId: orderId,
+              note: `Gain pour la commande ${orderId.slice(-4)}`
+            }
+          });
+        }
+      }
+    }
+
     revalidatePath("/manager/dashboard");
     revalidatePath("/client/menu");
     broadcastToAll("status-updated", { orderId, newStatus: "COMPLETED", restaurantId: order.restaurantId });
@@ -377,5 +447,119 @@ export async function cancelOrder(orderId: string) {
   } catch (error) {
     console.error("Error cancelling order:", error);
     return { success: false };
+  }
+}
+
+// -----------------------------
+// SYSTÈME DE FIDÉLITÉ (LOYALTY)
+// -----------------------------
+
+export async function getLoyaltyStatus(restaurantId: string, phone: string) {
+  try {
+    const config = await prisma.loyaltyConfig.findUnique({
+      where: { restaurantId }
+    });
+    
+    const threshold = config?.rewardThreshold || 100;
+    
+    const customer = await prisma.loyaltyCustomer.findUnique({
+      where: {
+        phone_restaurantId: {
+          phone,
+          restaurantId
+        }
+      }
+    });
+
+    return {
+      points: customer?.points || 0,
+      threshold,
+      rewardDescription: config?.rewardDescription || "Un cadeau offert !"
+    };
+  } catch (error) {
+    console.error("Error fetching loyalty status:", error);
+    return null;
+  }
+}
+
+export async function getLoyaltyConfig(restaurantId: string) {
+  try {
+    const config = await prisma.loyaltyConfig.findUnique({
+      where: { restaurantId }
+    });
+    return config;
+  } catch (error) {
+    console.error("Error fetching loyalty config:", error);
+    return null;
+  }
+}
+
+export async function assignPhoneToOrder(orderId: string, phone: string) {
+  try {
+    const order = await prisma.commande.update({
+      where: { id: orderId },
+      data: { phone }
+    });
+    
+    // Return loyalty status dynamically based on current order potential points
+    const config = await prisma.loyaltyConfig.findUnique({
+      where: { restaurantId: order.restaurantId }
+    });
+    
+    const threshold = config?.rewardThreshold || 100;
+    const multiplier = config?.pointsPerUsd || 1;
+    const potentialPoints = Math.floor(order.totalUsd * multiplier);
+    
+    const customer = await prisma.loyaltyCustomer.findUnique({
+      where: {
+        phone_restaurantId: {
+          phone,
+          restaurantId: order.restaurantId
+        }
+      }
+    });
+
+    return {
+      success: true,
+      currentPoints: customer?.points || 0,
+      potentialPoints,
+      threshold,
+      rewardDescription: config?.rewardDescription || "Un cadeau offert !"
+    };
+  } catch (error) {
+    console.error("Error assigning phone to order:", error);
+    return { success: false };
+  }
+}
+
+export async function updateLoyaltySettings(formData: FormData) {
+  try {
+    const restaurantId = formData.get("restaurantId") as string;
+    await ensureManager(restaurantId);
+
+    const pointsPerUsd = parseInt(formData.get("pointsPerUsd") as string);
+    const rewardThreshold = parseInt(formData.get("rewardThreshold") as string);
+    const rewardDescription = formData.get("rewardDescription") as string;
+
+    await prisma.loyaltyConfig.upsert({
+      where: { restaurantId },
+      update: {
+        pointsPerUsd,
+        rewardThreshold,
+        rewardDescription
+      },
+      create: {
+        restaurantId,
+        pointsPerUsd,
+        rewardThreshold,
+        rewardDescription
+      }
+    });
+
+    revalidatePath("/manager/settings");
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating loyalty settings:", error);
+    return { success: false, error: "Erreur lors de la mise à jour." };
   }
 }

@@ -1,11 +1,13 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Crown, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp, Upload } from "lucide-react";
+import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from 'next/navigation';
+import { Crown, Gift } from "lucide-react";
 import { updateRestaurantPassword, updateRestaurantProfile, updateRestaurantPin, updateRestaurantTheme, updateRestaurantTauxChange } from "@/lib/actions-settings";
 import { getManagerSession } from "@/lib/manager-actions";
+import { getLoyaltyConfig, updateLoyaltySettings } from "@/lib/actions";
 import { submitSubscriptionRequest } from "@/lib/demande-actions";
 import { checkIsMainAccount } from "@/lib/admin-actions";
 import { SubmitButton } from "@/components/manager/SubmitButton";
@@ -16,7 +18,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   
-  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance' | 'monnaie'>('security');
+  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance' | 'monnaie' | 'loyalty'>('security');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -31,6 +33,11 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const [tauxLoading, setTauxLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Loyalty Config
+  const [loyaltyRate, setLoyaltyRate] = useState<string>("1");
+  const [loyaltyThreshold, setLoyaltyThreshold] = useState<string>("100");
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -56,6 +63,13 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
           if ((session as any).preferredTheme && (session as any).preferredTheme !== theme) {
             setTheme((session as any).preferredTheme);
           }
+        }
+        
+        // Charger la config de fidélité
+        const loyaltyInfo = await getLoyaltyConfig(restoId);
+        if (loyaltyInfo) {
+          setLoyaltyRate(String(loyaltyInfo.pointsPerUsd));
+          setLoyaltyThreshold(String(loyaltyInfo.rewardThreshold));
         }
       }
     }
@@ -186,6 +200,15 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                   )}
                 >
                     <DollarSign className="w-4 h-4" /> Taux de Change
+                </button>
+                <button 
+                  onClick={() => setActiveTab('loyalty')}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
+                    activeTab === 'loyalty' ? "bg-pink-500 text-white shadow-lg shadow-pink-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                    <Gift className="w-4 h-4" /> Fidélisation
                 </button>
             </div>
 
@@ -683,6 +706,88 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                   Le taux USD/FC varie souvent. Pour des factures exactes, mettez-le à jour chaque matin avant d'ouvrir votre service. Le taux affiché sur les nouvelles commandes est celui sauvegardé au moment de la commande.
                               </p>
                           </div>
+                      </div>
+                  </div>
+                )}
+
+                {activeTab === 'loyalty' && (
+                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="bg-card border border-border rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/5 blur-[100px] rounded-full" />
+                          <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 text-foreground flex items-center gap-3 relative z-10">
+                              <Gift className="w-8 h-8 text-pink-500" /> Programme de Fidélité
+                          </h3>
+                          <p className="text-[11px] text-muted-foreground mb-8 leading-relaxed max-w-lg relative z-10">
+                              Fidélisez votre clientèle en leur offrant des points à chaque commande. Ces points peuvent ensuite être échangés contre un cadeau que vous définissez.
+                          </p>
+                          
+                          <form className="space-y-6 relative z-10" onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!restaurantId || !loyaltyRate || !loyaltyThreshold) return;
+                            
+                            setLoyaltyLoading(true);
+                            // Fake update config wait server call
+                            const formData = new FormData();
+                            formData.append("restaurantId", restaurantId);
+                            formData.append("pointsPerUsd", loyaltyRate);
+                            formData.append("rewardThreshold", loyaltyThreshold);
+                            formData.append("rewardDescription", "Un cadeau offert !"); // Or could make it configurable next time
+                            
+                            try {
+                              const res = await updateLoyaltySettings(formData);
+                              if (res.success) {
+                                toast.success("Configuration de fidélité mise à jour");
+                              } else {
+                                toast.error("Erreur de mise à jour");
+                              }
+                            } catch (e) {
+                              toast.error("Erreur serveur");
+                            } finally {
+                              setLoyaltyLoading(false);
+                            }
+                          }}>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Points par USD dépensé</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="number"
+                                            min="1"
+                                            value={loyaltyRate}
+                                            onChange={(e) => setLoyaltyRate(e.target.value)}
+                                            className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-4 text-sm text-white focus:ring-2 focus:ring-pink-500/50 outline-none transition-all font-black"
+                                            placeholder="Ex: 1"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 uppercase">Points</span>
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500 px-2 mt-1">Exemple : Avec 1 point par USD, une commande de 25$ rapportera 25 points.</p>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Points requis pour un cadeau</label>
+                                    <div className="relative">
+                                        <Crown className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-500" />
+                                        <input 
+                                            type="number"
+                                            min="10"
+                                            value={loyaltyThreshold}
+                                            onChange={(e) => setLoyaltyThreshold(e.target.value)}
+                                            className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-2 focus:ring-pink-500/50 outline-none transition-all font-black"
+                                            placeholder="Ex: 100"
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500 px-2 mt-1">Palier à atteindre pour bénéficier du cadeau.</p>
+                                </div>
+                              </div>
+
+                              <SubmitButton 
+                                  className="bg-pink-500 hover:bg-pink-600 shadow-pink-500/20 text-white" 
+                                  loadingText="Enregistrement..."
+                                  isLoading={loyaltyLoading}
+                              >
+                                  Enregistrer la configuration
+                              </SubmitButton>
+                          </form>
                       </div>
                   </div>
                 )}

@@ -150,6 +150,16 @@ export function EditPlatModal({ isOpen, onClose, plat, restaurantId }: EditPlatM
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Options (séparées par des virgules)</label>
+            <input 
+              name="options" 
+              defaultValue={plat.options?.map(o => o.nom).join(", ")}
+              placeholder="Ex: Pimenté, Moyen, Pas pimenté" 
+              className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none text-sm text-foreground" 
+            />
+          </div>
+
           <div className="pt-4 flex gap-3">
             <button
               type="button"

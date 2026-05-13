@@ -31,94 +31,95 @@ model Restaurant {
   commandes       Commande[]
   plats           Plat[]
   visites         Visite[]
-  
+
   // Stock Relations
-  articles        ArticleStock[]
-  emplacements    Emplacement[]
-  fournisseurs    Fournisseur[]
-  mouvements      MouvementStock[]
+  articles         ArticleStock[]
+  emplacements     Emplacement[]
+  fournisseurs     Fournisseur[]
+  mouvements       MouvementStock[]
   subscriptionLogs SubscriptionLog[]
-  notifications   Notification[]
+  notifications    Notification[]
+  loyaltyConfig    LoyaltyConfig?
+  loyaltyCustomers LoyaltyCustomer[]
 }
 
 model ArticleStock {
-  id           String           @id @default(cuid())
-  nom          String
-  reference    String?          @unique
-  codeBarres   String?          @unique
-  description  String?
-  categorie    String?          @default("GENERAL")
-  prixAchat    Float            @default(0)
-  prixVente    Float?
-  stockActuel  Float            @default(0)
-  stockMin     Float            @default(5)
-  stockMax     Float?
-  unite        String           @default("Unité") // Kg, L, Bouteille, etc.
-  
+  id          String  @id @default(cuid())
+  nom         String
+  reference   String? @unique
+  codeBarres  String? @unique
+  description String?
+  categorie   String? @default("GENERAL")
+  prixAchat   Float   @default(0)
+  prixVente   Float?
+  stockActuel Float   @default(0)
+  stockMin    Float   @default(5)
+  stockMax    Float?
+  unite       String  @default("Unité") // Kg, L, Bouteille, etc.
+
   restaurantId String
-  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
   emplacementId String?
-  emplacement   Emplacement?    @relation(fields: [emplacementId], references: [id], onDelete: SetNull)
-  
+  emplacement   Emplacement? @relation(fields: [emplacementId], references: [id], onDelete: SetNull)
+
   fournisseurId String?
-  fournisseur   Fournisseur?      @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
-  
-  mouvements    MouvementStock[]
-  recetteItems  RecetteItem[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  fournisseur   Fournisseur? @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
+
+  mouvements   MouvementStock[]
+  recetteItems RecetteItem[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@index([restaurantId])
 }
 
 model Emplacement {
-  id           String         @id @default(cuid())
-  nom          String
-  description  String?
-  
+  id          String  @id @default(cuid())
+  nom         String
+  description String?
+
   restaurantId String
-  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
-  articles     ArticleStock[]
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  articles ArticleStock[]
 
   @@index([restaurantId])
 }
 
 model Fournisseur {
-  id           String         @id @default(cuid())
-  nom          String
-  contact      String?
-  telephone    String?
-  email        String?
-  adresse      String?
-  
+  id        String  @id @default(cuid())
+  nom       String
+  contact   String?
+  telephone String?
+  email     String?
+  adresse   String?
+
   restaurantId String
-  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
-  articles     ArticleStock[]
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  articles ArticleStock[]
 
   @@index([restaurantId])
 }
 
 model MouvementStock {
-  id           String       @id @default(cuid())
-  type         String       // ENTREE, SORTIE, PERTE, RETOUR, AJUSTEMENT
+  id           String  @id @default(cuid())
+  type         String // ENTREE, SORTIE, PERTE, RETOUR, AJUSTEMENT
   quantite     Float
-  prixUnitaire Float?       // Prix lors du mouvement
+  prixUnitaire Float? // Prix lors du mouvement
   note         String?
-  
-  articleId    String
-  article      ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  
+
+  articleId String
+  article   ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
   restaurantId String
-  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  
-  createdAt    DateTime     @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 
   @@index([restaurantId])
 }
-
 
 model Plat {
   id           String         @id @default(cuid())
@@ -151,6 +152,7 @@ model Commande {
   id             String         @id @default(cuid())
   table          String
   client         String?
+  phone          String?
   statut         String         @default("PENDING")
   noteSpeciale   String?
   tauxChange     Float
@@ -210,15 +212,15 @@ model SystemConfig {
 }
 
 model SubscriptionLog {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   restaurantId String
   oldPlan      String?
   newPlan      String
-  type         String   // UPGRADE, DOWNGRADE, RENEWAL, NEW
-  amount       Float    // Total amount paid for this period
-  monthlyPrice Float    // Calculated MRR
+  type         String // UPGRADE, DOWNGRADE, RENEWAL, NEW
+  amount       Float // Total amount paid for this period
+  monthlyPrice Float // Calculated MRR
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
 
   @@index([restaurantId])
 }
@@ -231,11 +233,12 @@ model Notification {
   type         String   @default("INFO") // INFO, WARNING, SUCCESS, URGENT
   read         Boolean  @default(false)
   createdAt    DateTime @default(now())
-  
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }
+
 model RecoveryRequest {
   id            String   @id @default(cuid())
   nomRestaurant String
@@ -257,15 +260,53 @@ model SupportMessage {
 }
 
 model RecetteItem {
-  id           String       @id @default(cuid())
-  platId       String
-  articleId    String
-  quantite     Float        // Quantité de l'article utilisée pour ce plat
-  
-  plat         Plat         @relation(fields: [platId], references: [id], onDelete: Cascade)
-  article      ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  id        String @id @default(cuid())
+  platId    String
+  articleId String
+  quantite  Float // Quantité de l'article utilisée pour ce plat
+
+  plat    Plat         @relation(fields: [platId], references: [id], onDelete: Cascade)
+  article ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@index([platId])
   @@index([articleId])
 }
 
+model LoyaltyConfig {
+  id                String     @id @default(cuid())
+  restaurantId      String     @unique
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  pointsPerUsd      Int        @default(1)
+  rewardThreshold   Int        @default(100) // Points needed for a gift
+  rewardDescription String?    @default("Un cadeau offert !")
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model LoyaltyCustomer {
+  id           String               @id @default(cuid())
+  phone        String
+  points       Int                  @default(0)
+  restaurantId String
+  restaurant   Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  transactions LoyaltyTransaction[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([phone, restaurantId])
+  @@index([restaurantId])
+}
+
+model LoyaltyTransaction {
+  id         String          @id @default(cuid())
+  customerId String
+  customer   LoyaltyCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type       String // EARN, REDEEM
+  points     Int
+  commandeId String? // Link to order if EARN
+  note       String?
+  createdAt  DateTime        @default(now())
+
+  @@index([customerId])
+}
