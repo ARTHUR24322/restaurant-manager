@@ -9,114 +9,107 @@ datasource db {
 }
 
 model Restaurant {
-  id              String     @id @default(cuid())
-  nom             String
-  slug            String?    @unique
-  email           String
-  telephone       String?
-  ville           String     @default("Lubumbashi")
-  plan            String     @default("STANDARD")
-  logoUrl         String?
-  adminPassword   String
-  pinCode         String     @default("0000")
-  active          Boolean    @default(true)
-  billingCycle    String     @default("monthly")
-  monthlyPrice    Float      @default(0)
-  subscriptionEnd DateTime?
-  preferredTheme  String     @default("dark")
-  tauxChange      Float      @default(2800)
-  pays            String     @default("République Démocratique du Congo")
-  sessionVersion  Int        @default(1)
-  createdAt       DateTime   @default(now())
-  commandes       Commande[]
-  plats           Plat[]
-  visites         Visite[]
-
-  // Stock Relations
-  articles         ArticleStock[]
-  emplacements     Emplacement[]
-  fournisseurs     Fournisseur[]
-  mouvements       MouvementStock[]
-  subscriptionLogs SubscriptionLog[]
-  notifications    Notification[]
-  loyaltyConfig    LoyaltyConfig?
-  loyaltyCustomers LoyaltyCustomer[]
+  id                        String            @id @default(cuid())
+  nom                       String
+  slug                      String?           @unique
+  email                     String
+  ville                     String            @default("Lubumbashi")
+  plan                      String            @default("STANDARD")
+  logoUrl                   String?
+  adminPassword             String
+  pinCode                   String            @default("0000")
+  active                    Boolean           @default(true)
+  billingCycle              String            @default("monthly")
+  monthlyPrice              Float             @default(0)
+  subscriptionEnd           DateTime?
+  preferredTheme            String            @default("dark")
+  createdAt                 DateTime          @default(now())
+  telephone                 String?
+  tauxChange                Float             @default(2800)
+  sessionVersion            Int               @default(1)
+  pays                      String            @default("République Démocratique du Congo")
+  whatsappAccessToken       String?
+  whatsappBusinessAccountId String?
+  whatsappEnabled           Boolean           @default(false)
+  whatsappPhoneNumberId     String?
+  articles                  ArticleStock[]
+  clientRewards             ClientReward[]
+  commandes                 Commande[]
+  emplacements              Emplacement[]
+  fournisseurs              Fournisseur[]
+  loyaltyConfig             LoyaltyConfig?
+  loyaltyCustomers          LoyaltyCustomer[]
+  mouvements                MouvementStock[]
+  notifications             Notification[]
+  plats                     Plat[]
+  rewardCatalog             RewardCatalog[]
+  subscriptionLogs          SubscriptionLog[]
+  visites                   Visite[]
 }
 
 model ArticleStock {
-  id          String  @id @default(cuid())
-  nom         String
-  reference   String? @unique
-  codeBarres  String? @unique
-  description String?
-  categorie   String? @default("GENERAL")
-  prixAchat   Float   @default(0)
-  prixVente   Float?
-  stockActuel Float   @default(0)
-  stockMin    Float   @default(5)
-  stockMax    Float?
-  unite       String  @default("Unité") // Kg, L, Bouteille, etc.
-
-  restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-
+  id            String           @id @default(cuid())
+  nom           String
+  reference     String?          @unique
+  codeBarres    String?          @unique
+  description   String?
+  categorie     String?          @default("GENERAL")
+  prixAchat     Float            @default(0)
+  prixVente     Float?
+  stockActuel   Float            @default(0)
+  stockMin      Float            @default(5)
+  stockMax      Float?
+  unite         String           @default("Unité")
+  restaurantId  String
   emplacementId String?
-  emplacement   Emplacement? @relation(fields: [emplacementId], references: [id], onDelete: SetNull)
-
   fournisseurId String?
-  fournisseur   Fournisseur? @relation(fields: [fournisseurId], references: [id], onDelete: SetNull)
-
-  mouvements   MouvementStock[]
-  recetteItems RecetteItem[]
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  emplacement   Emplacement?     @relation(fields: [emplacementId], references: [id])
+  fournisseur   Fournisseur?     @relation(fields: [fournisseurId], references: [id])
+  restaurant    Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  mouvements    MouvementStock[]
+  recetteItems  RecetteItem[]
 
   @@index([restaurantId])
 }
 
 model Emplacement {
-  id          String  @id @default(cuid())
-  nom         String
-  description String?
-
+  id           String         @id @default(cuid())
+  nom          String
+  description  String?
   restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-
-  articles ArticleStock[]
+  articles     ArticleStock[]
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }
 
 model Fournisseur {
-  id        String  @id @default(cuid())
-  nom       String
-  contact   String?
-  telephone String?
-  email     String?
-  adresse   String?
-
+  id           String         @id @default(cuid())
+  nom          String
+  contact      String?
+  telephone    String?
+  email        String?
+  adresse      String?
   restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-
-  articles ArticleStock[]
+  articles     ArticleStock[]
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }
 
 model MouvementStock {
-  id           String  @id @default(cuid())
-  type         String // ENTREE, SORTIE, PERTE, RETOUR, AJUSTEMENT
+  id           String       @id @default(cuid())
+  type         String
   quantite     Float
-  prixUnitaire Float? // Prix lors du mouvement
+  prixUnitaire Float?
   note         String?
-
-  articleId String
-  article   ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
-
+  articleId    String
   restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
+  createdAt    DateTime     @default(now())
+  article      ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }
@@ -126,16 +119,16 @@ model Plat {
   nom             String
   description     String?
   prixUsd         Float
-  devise          String         @default("USD")
   image           String
   categorie       String
   disponible      Boolean        @default(true)
-  isLoyaltyReward Boolean        @default(false)
   restaurantId    String
+  devise          String         @default("USD")
+  isLoyaltyReward Boolean        @default(false)
   items           CommandeItem[]
   options         Option[]
-  recetteItems    RecetteItem[]
   restaurant      Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  recetteItems    RecetteItem[]
 
   @@index([restaurantId])
 }
@@ -153,7 +146,6 @@ model Commande {
   id             String         @id @default(cuid())
   table          String
   client         String?
-  phone          String?
   statut         String         @default("PENDING")
   noteSpeciale   String?
   tauxChange     Float
@@ -163,6 +155,7 @@ model Commande {
   restaurantId   String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  phone          String?
   restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   items          CommandeItem[]
 
@@ -175,8 +168,8 @@ model CommandeItem {
   platId     String
   quantite   Int      @default(1)
   options    String
-  plat       Plat     @relation(fields: [platId], references: [id], onDelete: Cascade)
   commande   Commande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  plat       Plat     @relation(fields: [platId], references: [id], onDelete: Cascade)
 
   @@index([commandeId])
   @@index([platId])
@@ -217,25 +210,24 @@ model SubscriptionLog {
   restaurantId String
   oldPlan      String?
   newPlan      String
-  type         String // UPGRADE, DOWNGRADE, RENEWAL, NEW
-  amount       Float // Total amount paid for this period
-  monthlyPrice Float // Calculated MRR
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  type         String
+  amount       Float
+  monthlyPrice Float
   createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }
 
 model Notification {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   restaurantId String
   title        String
   message      String
-  type         String   @default("INFO") // INFO, WARNING, SUCCESS, URGENT
-  read         Boolean  @default(false)
-  createdAt    DateTime @default(now())
-
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  type         String     @default("INFO")
+  read         Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }
@@ -245,7 +237,7 @@ model RecoveryRequest {
   nomRestaurant String
   email         String
   telephone     String
-  statut        String   @default("EN_ATTENTE") // EN_ATTENTE, TRAITE, REJETE
+  statut        String   @default("EN_ATTENTE")
   createdAt     DateTime @default(now())
 }
 
@@ -255,46 +247,46 @@ model SupportMessage {
   email     String
   telephone String
   message   String
-  sujet     String   @default("SUPPORT") // CENTRE_AIDE, CONTACT, WHATSAPP, etc.
-  statut    String   @default("NON_LU") // NON_LU, LU, TRAITE
+  sujet     String   @default("SUPPORT")
+  statut    String   @default("NON_LU")
   createdAt DateTime @default(now())
 }
 
 model RecetteItem {
-  id        String @id @default(cuid())
+  id        String       @id @default(cuid())
   platId    String
   articleId String
-  quantite  Float // Quantité de l'article utilisée pour ce plat
-
-  plat    Plat         @relation(fields: [platId], references: [id], onDelete: Cascade)
-  article ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  quantite  Float
+  article   ArticleStock @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  plat      Plat         @relation(fields: [platId], references: [id], onDelete: Cascade)
 
   @@index([platId])
   @@index([articleId])
 }
 
 model LoyaltyConfig {
-  id                String     @id @default(cuid())
-  restaurantId      String     @unique
-  restaurant        Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  pointsPerUsd      Int        @default(1)
-  rewardThreshold   Int        @default(100) // Points needed for a gift
-  rewardDescription String?    @default("Un cadeau offert !")
-  isActive          Boolean    @default(true)
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  restaurantId    String     @unique
+  pointsPerUsd    Int        @default(1)
+  rewardThreshold Int        @default(100)
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  restaurant      Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 }
 
 model LoyaltyCustomer {
-  id           String               @id @default(cuid())
-  phone        String
-  name         String               @default("Client")
-  points       Int                  @default(0)
-  restaurantId String
-  restaurant   Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  transactions LoyaltyTransaction[]
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  id                String               @id @default(cuid())
+  phone             String
+  points            Int                  @default(0)
+  restaurantId      String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  name              String               @default("Client")
+  totalPointsEarned Int                  @default(0)
+  rewards           ClientReward[]
+  restaurant        Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  transactions      LoyaltyTransaction[]
 
   @@unique([phone, restaurantId])
   @@index([restaurantId])
@@ -303,12 +295,45 @@ model LoyaltyCustomer {
 model LoyaltyTransaction {
   id         String          @id @default(cuid())
   customerId String
-  customer   LoyaltyCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  type       String // EARN, REDEEM
+  type       String
   points     Int
-  commandeId String? // Link to order if EARN
+  commandeId String?
   note       String?
   createdAt  DateTime        @default(now())
+  customer   LoyaltyCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
+}
+
+model RewardCatalog {
+  id             String     @id @default(cuid())
+  restaurantId   String
+  type           String
+  requiredPoints Int
+  productId      String?
+  discountValue  Float?
+  allowedDays    String[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  restaurant     Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId])
+}
+
+model ClientReward {
+  id           String          @id @default(cuid())
+  customerId   String
+  restaurantId String
+  type         String
+  productId    String?
+  promoCode    String?         @unique
+  isUsed       Boolean         @default(false)
+  allowedDays  String[]
+  expiresAt    DateTime?
+  createdAt    DateTime        @default(now())
+  customer     LoyaltyCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([restaurantId])
 }

@@ -22,7 +22,14 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   
   const { items, getTotalUsd, removeItem, updateQuantity, clearCart, addOfflineOrder, addSubmittedOrderId } = useCartStore();
 
-  const totalUsd = getTotalUsd(exchangeRate);
+  const baseTotalUsd = getTotalUsd(exchangeRate);
+  
+  // Promo Logic
+  const savedPromo = typeof window !== 'undefined' ? localStorage.getItem('sr_applied_promo') : null;
+  const appliedPromo = savedPromo ? JSON.parse(savedPromo) : null;
+  const discountPercent = appliedPromo?.discountValue || 0;
+  const discountAmount = (baseTotalUsd * discountPercent) / 100;
+  const totalUsd = baseTotalUsd - discountAmount;
   const totalCdf = totalUsd * exchangeRate;
 
   const handleConfirmOrder = async () => {
@@ -35,7 +42,8 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
       customerName: customerName,
       totalUsd: totalUsd,
       notes: (document.querySelector('textarea') as HTMLTextAreaElement)?.value || "",
-      restaurantId: restaurantId
+      restaurantId: restaurantId,
+      promoRewardId: appliedPromo?.id
     };
 
     try {
@@ -54,6 +62,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
       const res = await createCommande(orderData);
 
       if (res.success) {
+        if (appliedPromo) localStorage.removeItem('sr_applied_promo');
         setLastOrderId(res.orderId);
         if (res.orderId) {
           addSubmittedOrderId(res.orderId);
@@ -199,7 +208,40 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
         {/* Pied : Totaux et Action */}
         <div className="p-6 bg-zinc-900/80 rounded-b-[2.5rem] md:rounded-b-[2.5rem] border-t border-white/5">
           
-          <div className="mb-6">
+          <div className="mb-6 space-y-4">
+             <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  id="promo-input"
+                  placeholder="CODE PROMO" 
+                  className="flex-1 text-[10px] font-black uppercase bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all"
+                  disabled={isSubmitting}
+                />
+                <button 
+                  onClick={async () => {
+                    const input = (document.getElementById('promo-input') as HTMLInputElement).value;
+                    if (!input) return;
+                    setIsSubmitting(true);
+                    try {
+                      const { validateAndApplyPromo } = await import("@/lib/actions-loyalty");
+                      const res = await validateAndApplyPromo(restaurantId || "", input);
+                      if (res.success) {
+                        toast.success(`Réduction de ${res.reward.discountValue}% appliquée !`);
+                        localStorage.setItem('sr_applied_promo', JSON.stringify(res.reward));
+                        // On force un re-render via un état interne ou on utilise le store
+                        window.location.reload(); // Simple solution pour l'instant
+                      } else {
+                        toast.error(res.error || "Code invalide.");
+                      }
+                    } catch(e) {}
+                    setIsSubmitting(false);
+                  }}
+                  className="px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-xl text-[10px] font-black uppercase"
+                >
+                  Appliquer
+                </button>
+             </div>
+
             <textarea 
               placeholder="Une note spéciale ? (Allergie, extra...)" 
               className="w-full text-sm bg-black/40 border border-white/10 rounded-2xl p-4 resize-none focus:ring-1 focus:ring-primary h-20 text-white placeholder:text-zinc-600 outline-none transition-all"
@@ -208,6 +250,12 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
           </div>
 
           <div className="space-y-2 mb-6">
+              {discountAmount > 0 && (
+                <div className="flex justify-between items-center text-emerald-500 text-xs font-bold uppercase tracking-widest pb-1 border-b border-white/5 mb-1">
+                  <span>Réduction {discountPercent}%</span>
+                  <span>-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-end border-b border-white/5 pb-2">
                 <span className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Total USD</span>
                 <span className="font-black text-2xl text-white">${totalUsd.toFixed(2)}</span>

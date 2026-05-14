@@ -411,3 +411,45 @@ export async function renewSubscription(restaurantId: string, durationDays: numb
         return { success: false, error: error.message || "Erreur lors du réabonnement." };
     }
 }
+
+/**
+ * MEGA ACTION : Récupère TOUTES les données du dashboard Super Admin en un seul appel.
+ * Évite l'épuisement du pool de connexions (Prisma Error P2024 / P1001).
+ */
+export async function getSuperAdminPageData() {
+    try {
+        await ensureSuperAdmin();
+
+        // On lance tout en parallèle mais dans UN SEUL contexte de fonction serveur
+        // (Note: Toujours géré par le pool Prisma, mais réduit les allers-retours client-serveur)
+        const [
+            restaurants,
+            demandes,
+            recoveryRequests,
+            supportMessages,
+            subscriptionLogs
+        ] = await Promise.all([
+            (prisma as any).restaurant.findMany({ orderBy: { createdAt: 'desc' } }),
+            (prisma as any).demandeAbonnement.findMany({ orderBy: { createdAt: 'desc' } }),
+            (prisma as any).recoveryRequest.findMany({ orderBy: { createdAt: 'desc' } }),
+            (prisma as any).supportMessage.findMany({ orderBy: { createdAt: 'desc' } }),
+            (prisma as any).subscriptionLog.findMany({ 
+                orderBy: { createdAt: 'desc' }, 
+                take: 50,
+                include: { restaurant: { select: { nom: true } } }
+            })
+        ]);
+
+        return {
+            success: true,
+            restaurants,
+            demandes,
+            recoveryRequests,
+            supportMessages,
+            subscriptionLogs
+        };
+    } catch (e: any) {
+        console.error("[Mega-Action] Super Admin Data Fetch Error:", e);
+        return { success: false, error: e.message };
+    }
+}

@@ -30,26 +30,49 @@ export async function recordVisit(restaurantId: string, table: string) {
 export async function getGlobalAnalytics() {
   try {
     await ensureSuperAdmin();
-    const totalVisites = await prisma.visite.count();
-    
-    // Pour compter les visites du jour
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const visitesJour = await prisma.visite.count({
-      where: {
-        createdAt: {
-          gte: today
-        }
-      }
-    });
 
-    // Classement des restaurants (Limit 10)
-    const visitStats = await prisma.visite.groupBy({
-      by: ['restaurantId'],
-      _count: { id: true },
-      orderBy: { _count: { id: 'desc' } },
-      take: 10
-    });
+    const [
+      totalVisites,
+      visitesJour,
+      visitStats,
+      aggOrders,
+      aggSaaS,
+      planGroup,
+      cityGroup,
+      recentLogs
+    ] = await Promise.all([
+      prisma.visite.count(),
+      prisma.visite.count({ where: { createdAt: { gte: today } } }),
+      prisma.visite.groupBy({
+        by: ['restaurantId'],
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 10
+      }),
+      prisma.commande.aggregate({
+        _sum: { totalUsd: true },
+        where: { statut: "COMPLETED" }
+      }),
+      prisma.restaurant.aggregate({
+        _sum: { monthlyPrice: true },
+        where: { active: true }
+      }),
+      prisma.restaurant.groupBy({
+        by: ['plan'],
+        _count: { id: true },
+      }),
+      prisma.restaurant.groupBy({
+        by: ['ville'],
+        _count: { id: true }
+      }),
+      prisma.subscriptionLog.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: { restaurant: { select: { nom: true } } }
+      })
+    ]);
 
     const topRestaurants = await Promise.all(visitStats.map(async (v) => {
       const r = await prisma.restaurant.findUnique({
@@ -64,58 +87,19 @@ export async function getGlobalAnalytics() {
       };
     }));
 
-    // Calcul du revenu global sur toute la plateforme (GMV)
-    const aggOrders = await prisma.commande.aggregate({
-      _sum: { totalUsd: true },
-      where: { statut: "COMPLETED" }
-    });
-    const globalRevenue = aggOrders._sum.totalUsd || 0;
-
-    // Calcul du revenu SaaS (MRR) - Dynamique
-    const aggSaaS = await prisma.restaurant.aggregate({
-      _sum: { monthlyPrice: true },
-      where: { active: true }
-    });
-    const saasRevenue = aggSaaS._sum.monthlyPrice || 0;
-
-    // Group by pour les statistiques Plan & Villes
-    const planGroup = await prisma.restaurant.groupBy({
-        by: ['plan'],
-        _count: { id: true },
-    });
-    const planDistribution = planGroup.map(g => ({ name: g.plan, value: g._count.id }));
-
-    const cityGroup = await prisma.restaurant.groupBy({
-        by: ['ville'],
-        _count: { id: true }
-    });
-    const cityDistribution = cityGroup.map(g => ({ name: g.ville, value: g._count.id }));
-
-    // Récupérer les 10 derniers logs d'abonnement pour le flux d'activité
-    const recentLogs = await prisma.subscriptionLog.findMany({
-      take: 10,
-      orderBy: { createdAt: 'desc' },
-      include: {
-          restaurant: { select: { nom: true } }
-      }
-    });
-
-    // Enrichir les logs
-    const logsWithRestos = recentLogs.map((log: any) => ({
-        ...log,
-        restaurantNom: log.restaurant?.nom || "Inconnu"
-    }));
-
     return {
       success: true,
       totalVisites,
       visitesJour,
       topRestaurants,
-      globalRevenue,
-      saasRevenue,
-      planDistribution,
-      cityDistribution,
-      subscriptionActivity: logsWithRestos
+      globalRevenue: aggOrders._sum.totalUsd || 0,
+      saasRevenue: aggSaaS._sum.monthlyPrice || 0,
+      planDistribution: planGroup.map(g => ({ name: g.plan, value: g._count.id })),
+      cityDistribution: cityGroup.map(g => ({ name: g.ville, value: g._count.id })),
+      subscriptionActivity: recentLogs.map((log: any) => ({
+        ...log,
+        restaurantNom: log.restaurant?.nom || "Inconnu"
+      }))
     };
 
   } catch (error: any) {
@@ -310,5 +294,69 @@ export async function getReportData(restaurantId: string, period: "day" | "week"
   } catch (error) {
     console.error("Report Data Error:", error);
     return { success: false, orders: [] };
+  }
+}
+/**
+ * Récupère les données de monitoring opérationnel (Stocks, WA, Commandes Live)
+ */
+export async function getGlobalMonitoringData() {
+  try {
+    await ensureSuperAdmin();
+
+    const [
+      criticalStocks,
+      allStocks,
+      waStats,
+      activeOrdersCount,
+      totalPointsDistributed
+    ] = await Promise.all([
+      prisma.articleStock.findMany({
+        where: { stockActuel: { lte: prisma.articleStock.fields.stockMin } },
+        include: { restaurant: { select: { nom: true, id: true } } },
+        take: 20
+      }),
+      prisma.articleStock.findMany({
+        include: { restaurant: { select: { nom: true, id: true } } },
+        orderBy: { updatedAt: 'desc' },
+        take: 20
+      }),
+      prisma.restaurant.groupBy({
+        by: ['whatsappEnabled'] as any,
+        _count: { id: true }
+      }),
+      prisma.commande.count({
+        where: { statut: { in: ["PENDING", "PREPARING", "READY"] } }
+      }),
+      prisma.loyaltyCustomer.aggregate({
+        _sum: { points: true }
+      })
+    ]);
+
+    return {
+      success: true,
+      criticalStocks: criticalStocks.map(s => ({
+        id: s.id,
+        nom: s.nom,
+        actuel: s.stockActuel,
+        min: s.stockMin,
+        unite: s.unite,
+        restaurant: s.restaurant.nom
+      })),
+      allStocks: allStocks.map(s => ({
+        id: s.id,
+        nom: s.nom,
+        actuel: s.stockActuel,
+        min: s.stockMin,
+        unite: s.unite,
+        restaurant: s.restaurant.nom,
+        updatedAt: s.updatedAt
+      })),
+      whatsappHealth: waStats as any,
+      activeOrdersCount,
+      totalPointsDistributed: totalPointsDistributed._sum.points || 0,
+    };
+  } catch (error) {
+    console.error("Global Monitoring Error:", error);
+    return { success: false };
   }
 }

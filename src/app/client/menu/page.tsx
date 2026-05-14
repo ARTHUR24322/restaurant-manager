@@ -1,5 +1,10 @@
 import { getPlats } from "@/lib/actions";
-import { Utensils, Search, Clock, Info } from "lucide-react";
+import { 
+  Phone, Star, Gift, Ticket, Loader2, 
+  ChevronRight, Calendar, ArrowRight, CheckCircle2,
+  AlertCircle, X, Clock, Info, Search, Utensils
+} from "lucide-react";
+import Link from "next/link";
 import { CartFloat } from "@/components/client/CartFloat";
 import ClientMenuContent from "./ClientMenuContent";
 import { recordVisit } from "@/lib/analytics-actions";
@@ -67,6 +72,12 @@ export default async function ClientMenuPage({
                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500">Taux du jour</span>
                    <span className="text-[10px] font-bold text-white/80">1$ = {restaurant?.tauxChange || 2800} FC</span>
                 </div>
+                <Link 
+                  href={`/client/loyalty?resto_id=${restaurantId}&table=${table}`}
+                  className="w-10 h-10 rounded-full bg-primary/20 backdrop-blur-md border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/30 transition-colors animate-pulse shadow-lg shadow-primary/10"
+                >
+                    <Gift className="w-5 h-5" />
+                </Link>
                 <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
                     <Info className="w-5 h-5" />
                 </button>

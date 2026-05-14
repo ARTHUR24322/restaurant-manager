@@ -8,6 +8,8 @@ import { getCachedPlats, getCachedRestaurant } from "./cache";
 import { deductStockForOrder } from "./inventory-actions";
 import { writeFile } from "fs/promises";
 import { join } from "path";
+import { notifyOrderReady, sendDigitalReceipt, sendWhatsAppTemplate } from "./whatsapp-service";
+import { LoyaltyService } from "./loyalty-service";
 
 // Utilitaire de diffusion Temps Réel (SSE)
 function broadcastToAll(type: string, data: any = {}) {
@@ -17,7 +19,7 @@ function broadcastToAll(type: string, data: any = {}) {
 export async function getRestaurantStatus(restaurantId: string) {
   try {
     return await getCachedRestaurant(restaurantId);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching restaurant status:", error);
     return null;
   }
@@ -27,7 +29,7 @@ export async function getPlats(restaurantId?: string) {
   try {
     if (!restaurantId) return [];
     return await getCachedPlats(restaurantId);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching plats:", error);
     return [];
   }
@@ -92,7 +94,7 @@ export async function addPlat(formData: FormData) {
     revalidatePath("/manager/menu");
     revalidatePath("/client/menu");
     revalidateTag(`menu-${restaurantId}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error adding plat:", error);
     throw error;
   }
@@ -158,7 +160,7 @@ export async function updatePlat(formData: FormData) {
     revalidatePath("/client/menu");
     revalidateTag(`menu-${restaurantId}`);
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating plat:", error);
     throw error;
   }
@@ -185,7 +187,7 @@ export async function deletePlat(formData: FormData) {
     revalidatePath("/manager/menu");
     revalidatePath("/client/menu");
     revalidateTag(`menu-${restaurantId}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting plat:", error);
     throw error;
   }
@@ -198,46 +200,54 @@ export async function createCommande(data: {
   notes?: string;
   totalUsd: number;
   restaurantId?: string;
+  promoRewardId?: string;
 }) {
   try {
     const restaurantId = data.restaurantId;
     if (!restaurantId) throw new Error("Restaurant ID requis");
 
-    // 0. Récupérer le taux de change du restaurant (mis à jour quotidiennement par le gérant)
+    // 0. Récupérer le taux de change
     let exchangeRate = 2800;
-    try {
-      const restoProfile = await (prisma as any).restaurant.findUnique({
-        where: { id: restaurantId },
-        select: { tauxChange: true }
-      });
-      if (restoProfile?.tauxChange) exchangeRate = restoProfile.tauxChange;
-    } catch (e) {}
+    const restoProfile = await prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { tauxChange: true }
+    });
+    if (restoProfile?.tauxChange) exchangeRate = restoProfile.tauxChange;
     
-    // 1. Recalculer le total côté serveur pour éviter la manipulation (SÉCURITÉ RENFORCÉE)
+    // 1. Recalculer le total côté serveur
     const platIds = data.cartItems.map((item: any) => item.plat.id);
     const plats = await prisma.plat.findMany({
       where: { 
         id: { in: platIds },
-        restaurantId: restaurantId // SÉCURITÉ: S'assurer que le client ne commande que depuis CE restaurant
+        restaurantId: restaurantId
       }
     });
 
     let calculatedTotal = 0;
     for (const item of data.cartItems) {
-      if (!item.quantite || item.quantite <= 0) {
-        throw new Error("La quantité doit être supérieure à 0");
-      }
-      
       const plat = plats.find(p => p.id === item.plat.id);
       if (plat) {
-        const itemPriceUsd = plat.devise === "FC" 
-          ? (plat.prixUsd / exchangeRate) 
-          : plat.prixUsd;
-        calculatedTotal += itemPriceUsd * item.quantite;
+        calculatedTotal += plat.prixUsd * item.quantite;
       }
     }
 
-    // Create the order with nested items creation
+    // 1.5 Appliquer Promo si existante
+    if (data.promoRewardId) {
+       const reward = await prisma.clientReward.findUnique({
+         where: { id: data.promoRewardId, restaurantId, isUsed: false }
+       });
+       if (reward) {
+          const discount = (calculatedTotal * (reward.discountValue || 0)) / 100;
+          calculatedTotal -= discount;
+          // Marquer comme utilisé
+          await prisma.clientReward.update({
+            where: { id: data.promoRewardId },
+            data: { isUsed: true }
+          });
+       }
+    }
+
+    // Create the order
     const order = await prisma.commande.create({
       data: {
         table: data.tableNumber,
@@ -268,7 +278,7 @@ export async function createCommande(data: {
     revalidatePath("/manager/dashboard");
 
     return { success: true, orderId: order.id };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Critical: Error creating order:", error);
     return { success: false, error: "Erreur lors de l'envoi de la commande. Veuillez réessayer." };
   }
@@ -301,7 +311,7 @@ export async function getRecentCommandes(restaurantId?: string) {
       }
     });
     return orders;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching recent orders:", error);
     return [];
   }
@@ -326,11 +336,19 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     
     broadcastToAll("status-updated", { orderId, newStatus, restaurantId: order.restaurantId });
     
+    // NOUVEAU: Notification WhatsApp si la commande est prête
+    if (newStatus === "READY") {
+      const fullOrder = await prisma.commande.findUnique({ where: { id: orderId } });
+      if (fullOrder && fullOrder.phone) {
+        notifyOrderReady(fullOrder).catch((err: any) => console.error("WA Ready Error:", err));
+      }
+    }
+    
     revalidatePath("/manager/dashboard");
     revalidatePath("/manager/cuisine");
     
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating order status:", error);
     return { success: false };
   }
@@ -340,7 +358,7 @@ export async function confirmOrderPayment(orderId: string, method: string) {
   try {
     const order = await prisma.commande.findUnique({
       where: { id: orderId },
-      select: { restaurantId: true, statut: true }
+      select: { restaurantId: true, statut: true, id: true, totalUsd: true, client: true, phone: true, table: true }
     });
 
     if (!order) throw new Error("Commande introuvable");
@@ -362,61 +380,52 @@ export async function confirmOrderPayment(orderId: string, method: string) {
     // Déduction des stocks automatique en fonction de la recette
     await deductStockForOrder(orderId, order.restaurantId);
     
-    // NOUVEAU: Mettre à jour les points de fidélité si un téléphone est attaché à la commande
-    const fullOrder = await prisma.commande.findUnique({
-      where: { id: orderId }
-    });
-    
-    if (fullOrder && fullOrder.phone) {
-      const config = await prisma.loyaltyConfig.findUnique({
-        where: { restaurantId: order.restaurantId }
-      });
+    // Points de fidélité et Reçu WhatsApp
+    if (order.phone) {
+      const customer = await LoyaltyService.addPoints(order.phone, order.restaurantId, order.totalUsd, orderId);
       
-      const multiplier = config ? config.pointsPerUsd : 1;
-      const pointsToEarn = Math.floor(fullOrder.totalUsd * multiplier);
-
-      if (pointsToEarn > 0) {
-        const customerName = fullOrder.client || "Client";
-        await prisma.loyaltyCustomer.upsert({
-          where: {
-            phone_restaurantId: {
-              phone: fullOrder.phone,
-              restaurantId: order.restaurantId
-            }
-          },
-          update: {
-            points: { increment: pointsToEarn }
-          },
-          create: {
-            phone: fullOrder.phone,
-            name: customerName,
-            points: pointsToEarn,
-            restaurantId: order.restaurantId
-          }
-        });
-
-        // Logging de transaction
-        const customer = await prisma.loyaltyCustomer.findUnique({
-          where: {
-            phone_restaurantId: {
-              phone: fullOrder.phone,
-              restaurantId: order.restaurantId
-            }
-          }
-        });
+      if (customer) {
+        // Notification Fidélité WhatsApp
+        const config = await prisma.loyaltyConfig.findUnique({ where: { restaurantId: order.restaurantId } });
+        const threshold = config?.rewardThreshold || 100;
         
-        if (customer) {
-          await prisma.loyaltyTransaction.create({
-            data: {
-              customerId: customer.id,
-              type: "EARN",
-              points: pointsToEarn,
-              commandeId: orderId,
-              note: `Gain pour la commande #${orderId.slice(-4)}`
-            }
-          });
+        if (customer.points >= threshold) {
+          sendWhatsAppTemplate(
+            order.restaurantId,
+            order.phone,
+            "loyalty_reward_reached",
+            "fr",
+            [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: customer.points.toString() },
+                  { type: "text", text: "une récompense" }
+                ]
+              }
+            ]
+          ).catch((err: any) => console.error("WA Loyalty Reward Error:", err));
+        } else {
+          sendWhatsAppTemplate(
+            order.restaurantId,
+            order.phone,
+            "loyalty_points_earned",
+            "fr",
+            [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: Math.floor(order.totalUsd * (config?.pointsPerUsd || 1)).toString() },
+                  { type: "text", text: customer.points.toString() }
+                ]
+              }
+            ]
+          ).catch((err: any) => console.error("WA Loyalty Earn Error:", err));
         }
       }
+
+      // Envoi du reçu numérique via WhatsApp
+      sendDigitalReceipt(order).catch((err: any) => console.error("WA Receipt Error:", err));
     }
 
     revalidatePath("/manager/dashboard");
@@ -429,6 +438,7 @@ export async function confirmOrderPayment(orderId: string, method: string) {
     return { success: false };
   }
 }
+
 export async function cancelOrder(orderId: string) {
   try {
     const order = await prisma.commande.findUnique({
@@ -549,8 +559,7 @@ export async function assignPhoneToOrder(orderId: string, phone: string, custome
       customerName: customer?.name || customerName || "Client",
       currentPoints: customer?.points || 0,
       potentialPoints,
-      threshold,
-      rewardDescription: config?.rewardDescription || "Un cadeau offert !"
+      threshold
     };
   } catch (error) {
     console.error("Error assigning phone to order:", error);
@@ -565,20 +574,17 @@ export async function updateLoyaltySettings(formData: FormData) {
 
     const pointsPerUsd = parseInt(formData.get("pointsPerUsd") as string);
     const rewardThreshold = parseInt(formData.get("rewardThreshold") as string);
-    const rewardDescription = formData.get("rewardDescription") as string;
 
     await prisma.loyaltyConfig.upsert({
       where: { restaurantId },
       update: {
         pointsPerUsd,
-        rewardThreshold,
-        rewardDescription
+        rewardThreshold
       },
       create: {
         restaurantId,
         pointsPerUsd,
-        rewardThreshold,
-        rewardDescription
+        rewardThreshold
       }
     });
 
@@ -615,7 +621,7 @@ export async function getLoyaltyCustomers(restaurantId: string) {
     return {
       success: true,
       customers,
-      config: config || { pointsPerUsd: 1, rewardThreshold: 100, rewardDescription: "Un cadeau offert !" }
+      config: config || { pointsPerUsd: 1, rewardThreshold: 100 }
     };
   } catch (error) {
     console.error("Error fetching loyalty customers:", error);
@@ -845,9 +851,25 @@ export async function redeemLoyaltyGiftByPhone(
       }
     });
 
+    // Envoi de la confirmation par WhatsApp
+    sendWhatsAppTemplate(
+      restaurantId,
+      phone,
+      "loyalty_gift_redeemed", // Template: Félicitations! Vous avez échangé vos points contre {1}. 🎁
+      "fr",
+      [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: plat.nom }
+          ]
+        }
+      ]
+    ).catch((err: any) => console.error("WA Gift Redeem Error:", err));
+
     revalidatePath("/manager/loyalty");
     return { success: true, giftName: plat.nom, newPoints: customer.points - config.rewardThreshold };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error redeeming gift by phone:", error);
     return { success: false, error: "Erreur lors de l'échange." };
   }

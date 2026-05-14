@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp, Upload } from "lucide-react";
+import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp, Upload, MessageSquare, ShieldCheck, Check } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from 'next/navigation';
 import { Crown, Gift } from "lucide-react";
@@ -10,6 +10,7 @@ import { getManagerSession } from "@/lib/manager-actions";
 import { getLoyaltyConfig, updateLoyaltySettings } from "@/lib/actions";
 import { submitSubscriptionRequest } from "@/lib/demande-actions";
 import { checkIsMainAccount } from "@/lib/admin-actions";
+import { getWhatsAppSettings, updateWhatsAppSettings, testWhatsAppConnection } from "@/lib/actions-whatsapp";
 import { SubmitButton } from "@/components/manager/SubmitButton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -18,7 +19,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   
-  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance' | 'monnaie' | 'loyalty'>('security');
+  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance' | 'monnaie' | 'loyalty' | 'whatsapp'>('security');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -38,6 +39,14 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   const [loyaltyRate, setLoyaltyRate] = useState<string>("1");
   const [loyaltyThreshold, setLoyaltyThreshold] = useState<string>("100");
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+
+  // WhatsApp Config
+  const [waAccessToken, setWaAccessToken] = useState("");
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState("");
+  const [waBusinessAccountId, setWaBusinessAccountId] = useState("");
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [waLoading, setWaLoading] = useState(false);
+  const [waTestLoading, setWaTestLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -70,6 +79,14 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
         if (loyaltyInfo) {
           setLoyaltyRate(String(loyaltyInfo.pointsPerUsd));
           setLoyaltyThreshold(String(loyaltyInfo.rewardThreshold));
+        }
+
+        // Charger la config WhatsApp
+        const waInfo = await getWhatsAppSettings(restoId);
+        if (waInfo.success && waInfo.data) {
+          setWaPhoneNumberId(waInfo.data.whatsappPhoneNumberId || "");
+          setWaBusinessAccountId(waInfo.data.whatsappBusinessAccountId || "");
+          setWaEnabled(waInfo.data.whatsappEnabled || false);
         }
       }
     }
@@ -209,6 +226,15 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                   )}
                 >
                     <Gift className="w-4 h-4" /> Fidélisation
+                </button>
+                <button 
+                  onClick={() => setActiveTab('whatsapp')}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
+                    activeTab === 'whatsapp' ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                    <MessageSquare className="w-4 h-4" /> WhatsApp API
                 </button>
             </div>
 
@@ -726,12 +752,11 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                             if (!restaurantId || !loyaltyRate || !loyaltyThreshold) return;
                             
                             setLoyaltyLoading(true);
-                            // Fake update config wait server call
                             const formData = new FormData();
                             formData.append("restaurantId", restaurantId);
                             formData.append("pointsPerUsd", loyaltyRate);
                             formData.append("rewardThreshold", loyaltyThreshold);
-                            formData.append("rewardDescription", "Un cadeau offert !"); // Or could make it configurable next time
+                            formData.append("rewardDescription", "Un cadeau offert !");
                             
                             try {
                               const res = await updateLoyaltySettings(formData);
@@ -760,9 +785,8 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                         />
                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 uppercase">Points</span>
                                     </div>
-                                    <p className="text-[10px] text-zinc-500 px-2 mt-1">Exemple : Avec 1 point par USD, une commande de 25$ rapportera 25 points.</p>
                                 </div>
-
+ 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Points requis pour un cadeau</label>
                                     <div className="relative">
@@ -776,10 +800,9 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                             placeholder="Ex: 100"
                                         />
                                     </div>
-                                    <p className="text-[10px] text-zinc-500 px-2 mt-1">Palier à atteindre pour bénéficier du cadeau.</p>
                                 </div>
                               </div>
-
+ 
                               <SubmitButton 
                                   className="bg-pink-500 hover:bg-pink-600 shadow-pink-500/20 text-white" 
                                   loadingText="Enregistrement..."
@@ -788,7 +811,141 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                   Enregistrer la configuration
                               </SubmitButton>
                           </form>
-                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'whatsapp' && (
+                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
+                          <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 text-foreground flex items-center gap-3 relative z-10">
+                              <MessageSquare className="w-8 h-8 text-emerald-500" /> Intégration WhatsApp
+                          </h3>
+                          <p className="text-[11px] text-zinc-500 mb-8 leading-relaxed max-w-lg relative z-10">
+                              Utilisez votre propre compte **WhatsApp Business API** pour envoyer des reçus numériques et des notifications de commande prête à vos clients.
+                          </p>
+                          
+                          <form className="space-y-6 relative z-10" onSubmit={async (e) => {
+                            e.preventDefault();
+                            setWaLoading(true);
+                            const res = await updateWhatsAppSettings(restaurantId, {
+                              accessToken: waAccessToken,
+                              phoneNumberId: waPhoneNumberId,
+                              businessAccountId: waBusinessAccountId,
+                              enabled: waEnabled
+                            });
+                            setWaLoading(false);
+                            if (res.success) {
+                              toast.success("Paramètres WhatsApp mis à jour !");
+                              setWaAccessToken(""); // Clear input
+                            } else {
+                              toast.error(res.error || "Une erreur est survenue");
+                            }
+                          }}>
+                              <div className="flex items-center gap-4 mb-4 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-2xl">
+                                <div className={cn(
+                                  "w-3 h-3 rounded-full",
+                                  waEnabled ? "bg-emerald-500 animate-pulse" : "bg-zinc-700"
+                                )} />
+                                <div className="flex-1">
+                                  <p className="text-xs font-bold">Activer les notifications WhatsApp</p>
+                                  <p className="text-[10px] text-zinc-500">Si activé, les clients recevront leurs reçus par WhatsApp.</p>
+                                </div>
+                                <input 
+                                  type="checkbox"
+                                  checked={waEnabled}
+                                  onChange={(e) => setWaEnabled(e.target.checked)}
+                                  className="w-5 h-5 accent-emerald-500 cursor-pointer"
+                                />
+                              </div>
+
+                              <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">System User Access Token (Meta)</label>
+                                    <div className="relative">
+                                        <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                        <input 
+                                            type="password"
+                                            value={waAccessToken}
+                                            onChange={(e) => setWaAccessToken(e.target.value)}
+                                            className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-12 text-sm text-white focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all"
+                                            placeholder="••••••••••••••••"
+                                        />
+                                    </div>
+                                    <p className="text-[9px] text-zinc-500 px-2 mt-1 italic">Ce token est chiffré en base de données avec AES-256-GCM.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">Phone Number ID</label>
+                                      <div className="relative">
+                                          <input 
+                                              type="text"
+                                              value={waPhoneNumberId}
+                                              onChange={(e) => setWaPhoneNumberId(e.target.value)}
+                                              className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-4 text-sm text-white focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all font-mono"
+                                              placeholder="Ex: 109283734625"
+                                          />
+                                      </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                      <label className="text-[10px] font-black text-zinc-500 uppercase ml-2">WhatsApp Business Account ID</label>
+                                      <div className="relative">
+                                          <input 
+                                              type="text"
+                                              value={waBusinessAccountId}
+                                              onChange={(e) => setWaBusinessAccountId(e.target.value)}
+                                              className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-3 pl-4 text-sm text-white focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all font-mono"
+                                              placeholder="Ex: 509283734621"
+                                          />
+                                      </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-4">
+                                <SubmitButton 
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20 text-white" 
+                                    loadingText="Sauvegarde..."
+                                    isLoading={waLoading}
+                                >
+                                    Enregistrer la configuration
+                                </SubmitButton>
+                                
+                                <button 
+                                  type="button"
+                                  disabled={waTestLoading || !waPhoneNumberId}
+                                  onClick={async () => {
+                                    const testPhone = window.prompt("Entrez votre numéro WhatsApp (indicatif inclus, ex: 243...) :");
+                                    if (!testPhone) return;
+                                    setWaTestLoading(true);
+                                    const res = await testWhatsAppConnection(restaurantId, testPhone);
+                                    setWaTestLoading(false);
+                                    if (res.success) {
+                                      toast.success("Message de test envoyé !");
+                                    } else {
+                                      toast.error("Échec du test : vérifier vos IDs et Token Meta.");
+                                    }
+                                  }}
+                                  className="px-6 rounded-2xl border border-border bg-secondary hover:bg-secondary/80 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
+                                >
+                                  {waTestLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                                  Tester
+                                </button>
+                              </div>
+                          </form>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-3xl p-6 flex items-start gap-4">
+                       <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                       <div className="space-y-1">
+                          <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none mb-1">Configuration Meta Required</p>
+                          <p className="text-[11px] text-zinc-500 leading-relaxed">
+                            N'oubliez pas d'approuver vos modèles de messages (**Templates**) sur le portail Meta for Developers avant de les utiliser. Les noms de modèles attendus par SmartResto sont : `order_ready` et `digital_receipt`.
+                          </p>
+                       </div>
+                    </div>
                   </div>
                 )}
             </div>

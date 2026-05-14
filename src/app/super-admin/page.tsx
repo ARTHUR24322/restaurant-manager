@@ -34,10 +34,24 @@ import {
     ChevronUp,
     KeyRound,
     AlertCircle,
-    CreditCard
+    CreditCard,
+    Boxes,
+    Wifi,
+    BarChart3,
+    Activity as Pulse,
+    Link2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant, getAllSubscriptionLogs, renewSubscription } from "@/lib/admin-actions";
+import { 
+    createRestaurant, 
+    getAllRestaurants, 
+    toggleSubscription, 
+    updateRestaurant, 
+    deleteRestaurant, 
+    getAllSubscriptionLogs, 
+    renewSubscription,
+    getSuperAdminPageData
+} from "@/lib/admin-actions";
 import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
 import { getAllDemandes, approveDemande, rejectDemande } from "@/lib/demande-actions";
@@ -45,6 +59,7 @@ import { getAllSupportMessages, markMessageRead } from "@/lib/support-actions";
 import { toast } from "sonner";
 import { sendBroadcastNotification } from "@/lib/admin-broadcast";
 import { getAllRecoveryRequests, resolveRecoveryRequest } from "@/lib/recovery-actions";
+import { getGlobalMonitoringData } from "@/lib/analytics-actions";
 
 // --- COMPOSANTS DE VISUALISATION (SVG) ---
 
@@ -141,7 +156,8 @@ export default function SuperAdminPage() {
     const [pin, setPin] = useState("");
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings'>('dashboard');
+    const [monitoringData, setMonitoringData] = useState<any>(null);
     const [subscriptionLogs, setSubscriptionLogs] = useState<any[]>([]);
     const [supportMessages, setSupportMessages] = useState<any[]>([]);
     const [renewLoadingId, setRenewLoadingId] = useState<string | null>(null);
@@ -260,20 +276,24 @@ export default function SuperAdminPage() {
     const fetchRestos = async () => {
         setLoading(true);
         try {
-            const data = await getAllRestaurants();
-            setRestaurants(Array.isArray(data) ? data : []);
+            // 1. Récupération des données structurelles en UN SEUL appel (Mega Action)
+            const megaData = await getSuperAdminPageData();
+            if (megaData.success) {
+                setRestaurants(megaData.restaurants || []);
+                setDemandes(megaData.demandes || []);
+                setRecoveryRequests(megaData.recoveryRequests || []);
+                setSubscriptionLogs(megaData.subscriptionLogs || []);
+                setSupportMessages(megaData.supportMessages || []);
+            }
+
+            // 2. Récupération des analytics et monitoring (appels séparés pour ne pas surcharger)
             const stats = await getGlobalAnalytics();
             if (stats.success) setAnalytics(stats);
-            const demandesData = await getAllDemandes();
-            setDemandes(Array.isArray(demandesData) ? demandesData : []);
-            const recoveryData = await getAllRecoveryRequests();
-            setRecoveryRequests(Array.isArray(recoveryData) ? recoveryData : []);
-            const logsData = await getAllSubscriptionLogs();
-            setSubscriptionLogs(Array.isArray(logsData) ? logsData : []);
-            const supportData = await getAllSupportMessages();
-            setSupportMessages(Array.isArray(supportData) ? supportData : []);
+
+            const mData = await getGlobalMonitoringData();
+            if (mData.success) setMonitoringData(mData);
         } catch (e) {
-            console.error(e);
+            console.error("Dashboard Fetch Error:", e);
             setRestaurants([]);
         }
         setLoading(false);
@@ -431,7 +451,8 @@ export default function SuperAdminPage() {
 
                 <nav className="flex items-center bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800/50">
                     {[
-                        { id: 'dashboard', label: 'Command', icon: <Activity className="w-4 h-4" /> },
+                        { id: 'dashboard', label: 'Command', icon: <Pulse className="w-4 h-4" /> },
+                        { id: 'monitoring', label: 'Monitoring', icon: <Boxes className="w-4 h-4" /> },
                         { id: 'restaurants', label: 'Établissements', icon: <Building2 className="w-4 h-4" /> },
                         { id: 'abonnements', label: 'Abonnements', icon: <CreditCard className="w-4 h-4" /> },
                         { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
@@ -497,6 +518,54 @@ export default function SuperAdminPage() {
                                 </div>
                                 <MiniBarChart data={analytics?.cityDistribution || []} />
                             </div>
+                        </div>
+
+                        {/* Global Stock Overview */}
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-[3rem] p-10 flex flex-col">
+                             <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+                                        <BarChart3 className="w-5 h-5 text-emerald-500" /> Inventaire Global Régulier
+                                    </h3>
+                                    <p className="text-[10px] font-bold text-zinc-500 uppercase mt-1">Dernières mises à jour de stock</p>
+                                </div>
+                             </div>
+                             
+                             <div className="space-y-3 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
+                                 {monitoringData?.allStocks?.map((stock: any) => (
+                                     <div key={stock.id} className="bg-zinc-950/30 p-4 rounded-2xl border border-zinc-800/50 flex items-center justify-between group hover:bg-zinc-900 transition-all">
+                                         <div className="flex items-center gap-3">
+                                             <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-500 group-hover:bg-primary group-hover:text-black transition-all">
+                                                 <Link2 className="w-4 h-4" />
+                                             </div>
+                                             <div>
+                                                 <h5 className="text-[11px] font-black text-zinc-200 uppercase">{stock.nom}</h5>
+                                                 <p className="text-[9px] font-bold text-zinc-600 uppercase">{stock.restaurant}</p>
+                                             </div>
+                                         </div>
+                                         <div className="text-right">
+                                             <p className="text-sm font-black text-white italic">{stock.actuel} <span className="text-[9px] text-zinc-600 not-italic uppercase">{stock.unite}</span></p>
+                                             <p className="text-[7px] text-zinc-700 font-bold uppercase">{new Date(stock.updatedAt).toLocaleDateString()}</p>
+                                         </div>
+                                     </div>
+                                 ))}
+                                 {(!monitoringData?.allStocks || monitoringData.allStocks.length === 0) && (
+                                     <div className="text-center py-20 opacity-30">
+                                         <p className="text-[10px] font-black uppercase">Aucune donnée de stockage</p>
+                                     </div>
+                                 )}
+                             </div>
+
+                             <div className="grid grid-cols-2 gap-6 mt-8">
+                                <div className="bg-zinc-950/50 p-6 rounded-3xl border border-zinc-800">
+                                    <p className="text-[9px] font-black text-zinc-500 uppercase mb-1">Moyenne Panier</p>
+                                    <p className="text-2xl font-black italic text-white">$ 24.50</p>
+                                </div>
+                                <div className="bg-zinc-950/50 p-6 rounded-3xl border border-zinc-800">
+                                    <p className="text-[9px] font-black text-zinc-500 uppercase mb-1">Efficacité Prep</p>
+                                    <p className="text-2xl font-black italic text-emerald-500">92%</p>
+                                </div>
+                             </div>
                         </div>
 
                         {/* Flux d'activité existant */}
