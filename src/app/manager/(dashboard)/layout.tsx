@@ -141,20 +141,20 @@ function ManagerLayoutContent({
       label: "Gestion de Stock", 
       href: "/manager/inventory", 
       icon: Package, 
-      locked: !["PRO", "PLATINUM"].includes(currentPlan),
+      locked: false, // Inclus dans tous les plans dès STANDARD ($45)
       badge: hasStockout
     },
     { 
       label: "Clients Fidélité", 
       href: "/manager/loyalty", 
       icon: Gift, 
-      locked: !["PRO", "PLATINUM"].includes(currentPlan)
+      locked: !["PRO", "PLATINUM", "FREE", "TRIAL"].includes(currentPlan)
     },
     ...(isMainAccount ? [{ 
       label: "Multi-sites", 
       href: "/manager/multi-site", 
       icon: Globe, 
-      locked: currentPlan !== "PLATINUM" 
+      locked: !["PLATINUM", "FREE", "TRIAL"].includes(currentPlan) 
     }] : []),
     ...(isMainAccount ? [{ label: "Paramètres", href: "/manager/settings", icon: Settings }] : []),
   ];

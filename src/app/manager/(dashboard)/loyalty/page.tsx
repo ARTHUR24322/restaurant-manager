@@ -16,7 +16,8 @@ import {
 import { 
   addToRewardCatalog, 
   deleteFromRewardCatalog, 
-  getClientLoyalty 
+  getClientLoyalty,
+  redeemRewardAsManager
 } from "@/lib/actions-loyalty";
 import { getManagerSession } from "@/lib/manager-actions";
 import { getPlats } from "@/lib/actions";
@@ -48,6 +49,8 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
   const [selectedPlatId, setSelectedPlatId] = useState("");
   const [discountValue, setDiscountValue] = useState("");
   const [allowedDays, setAllowedDays] = useState<string[]>(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]);
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [redeemedReward, setRedeemedReward] = useState<any>(null);
 
   const daysOfWeek = [
     { id: "Monday", label: "Lun" },
@@ -106,6 +109,25 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
       refreshData(restaurantId);
     } else {
       toast.error(res.error || "Erreur");
+    }
+  };
+
+  const handleRedeem = async (catalogId: string) => {
+    if (!selectedCustomer) return;
+    
+    setIsRedeeming(true);
+    const res = await redeemRewardAsManager(restaurantId, selectedCustomer.phone, catalogId);
+    setIsRedeeming(false);
+    
+    if (res.success) {
+      toast.success("Récompense accordée avec succès !");
+      setRedeemedReward(res.reward);
+      // On ne ferme pas setSelectedCustomer(null) de suite pour laisser voir le code si besoin ?
+      // En fait on va fermer la sélection et montrer un autre état "succès"
+      setSelectedCustomer(null);
+      refreshData(restaurantId);
+    } else {
+      toast.error(res.error || "Erreur lors de l'échange.");
     }
   };
 
@@ -213,7 +235,11 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
                   </thead>
                   <tbody className="divide-y divide-border">
                     {customers.filter(c => c.phone.includes(searchQuery) || c.name?.toLowerCase().includes(searchQuery.toLowerCase())).map((customer) => (
-                      <tr key={customer.id} className="hover:bg-secondary/20 transition-all cursor-pointer group">
+                      <tr 
+                        key={customer.id} 
+                        onClick={() => setSelectedCustomer(customer)}
+                        className="hover:bg-secondary/20 transition-all cursor-pointer group"
+                      >
                         <td className="px-8 py-5">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-pink-500/10 text-pink-500 rounded-xl flex items-center justify-center font-black">
@@ -488,6 +514,140 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
                     Créer la récompense
                  </SubmitButton>
               </form>
+           </div>
+        </div>
+      )}
+      {/* --- SELECTED CUSTOMER MODAL (REDEMPTION) --- */}
+      {selectedCustomer && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+           <div className="bg-card border-border border rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden">
+               <button 
+                 onClick={() => setSelectedCustomer(null)}
+                 className="absolute top-8 right-8 p-2 text-muted-foreground hover:text-pink-500 transition-colors"
+               >
+                 <X className="w-6 h-6" />
+               </button>
+
+               <div className="flex items-center gap-6 mb-10">
+                  <div className="w-20 h-20 bg-pink-500/10 text-pink-500 rounded-[2rem] flex items-center justify-center text-3xl font-black italic">
+                    {selectedCustomer.name?.charAt(0) || "C"}
+                  </div>
+                  <div>
+                     <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">{selectedCustomer.name || 'Client Anonyme'}</h2>
+                     <p className="font-mono text-zinc-500">{selectedCustomer.phone}</p>
+                     <div className="flex items-center gap-2 mt-2">
+                        <div className="bg-amber-500/10 border border-amber-500/20 px-4 py-1 rounded-full flex items-center gap-2">
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                            <span className="text-sm font-black italic text-amber-500">{selectedCustomer.points} Points disponibles</span>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <h3 className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2 mb-4">
+                     <Award className="w-4 h-4" /> Récompenses Éligibles
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                     {catalog.map((item) => {
+                        const canAfford = selectedCustomer.points >= item.requiredPoints;
+                        return (
+                           <div key={item.id} className={cn(
+                             "p-6 rounded-3xl border flex items-center justify-between transition-all",
+                             canAfford ? "bg-secondary/50 border-border" : "bg-card border-border opacity-50"
+                           )}>
+                              <div className="flex items-center gap-4">
+                                 <div className={cn(
+                                   "w-12 h-12 rounded-2xl flex items-center justify-center",
+                                   item.type === 'PRODUCT' ? "bg-amber-500/20 text-amber-500" : "bg-emerald-500/20 text-emerald-500"
+                                 )}>
+                                    {item.type === 'PRODUCT' ? <Utensils className="w-6 h-6" /> : <Ticket className="w-6 h-6" />}
+                                 </div>
+                                 <div>
+                                    <p className="text-lg font-black italic uppercase tracking-tighter text-white">
+                                       {item.type === 'PRODUCT' ? (plats.find(p => p.id === item.productId)?.nom || "Produit") : `${item.discountValue}% Réduction`}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{item.requiredPoints} points requis</p>
+                                 </div>
+                              </div>
+
+                              <button 
+                                onClick={() => handleRedeem(item.id)}
+                                disabled={!canAfford || isRedeeming}
+                                className={cn(
+                                  "px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all",
+                                  canAfford 
+                                    ? "bg-pink-500 text-white hover:scale-105 active:scale-95 shadow-lg shadow-pink-500/20" 
+                                    : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                                )}
+                              >
+                                 {isRedeeming ? <Loader2 className="w-3 h-3 animate-spin" /> : "Échanger"}
+                              </button>
+                           </div>
+                        );
+                     })}
+                     {catalog.length === 0 && (
+                        <div className="text-center py-12 bg-secondary/20 rounded-3xl border border-dashed border-border">
+                            <Ticket className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-20" />
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Aucune récompense configurée</p>
+                        </div>
+                     )}
+                  </div>
+               </div>
+
+               <p className="text-[10px] text-zinc-500 italic mt-8 text-center uppercase font-bold tracking-widest">
+                  Note: L'échange est irréversible. Les points seront déduits immédiatement.
+               </p>
+           </div>
+        </div>
+      )}
+      {/* --- REDEMPTION SUCCESS MODAL --- */}
+      {redeemedReward && (
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-2xl z-[110] flex items-center justify-center p-4">
+           <div className="bg-card border-emerald-500/30 border-2 rounded-[3.5rem] p-12 max-w-lg w-full shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full" />
+                
+                <div className="w-24 h-24 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
+                    <CheckCircle2 className="w-12 h-12" />
+                </div>
+
+                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">Échange Réussi !</h2>
+                <p className="text-zinc-500 font-medium mb-8">La récompense a été générée et les points ont été déduits.</p>
+
+                {redeemedReward.type === 'PROMO_CODE' ? (
+                    <div className="space-y-6">
+                        <div className="p-8 bg-zinc-900 border-2 border-dashed border-emerald-500/30 rounded-3xl relative group">
+                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">Code Promo Unique</p>
+                            <p className="text-5xl font-black text-white italic tracking-widest font-mono group-hover:scale-110 transition-transform cursor-copy" onClick={() => {
+                                navigator.clipboard.writeText(redeemedReward.promoCode);
+                                toast.success("Code copié !");
+                            }}>
+                                {redeemedReward.promoCode}
+                            </p>
+                        </div>
+                        <div className="flex gap-2 items-start justify-center p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                            <AlertCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase leading-relaxed text-left">
+                                Ce code est à usage unique. Il est valide seulement le(s) : <br/>
+                                <span className="text-emerald-500">{redeemedReward.allowedDays?.join(", ") || "Tous les jours"}</span>
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-3xl">
+                         <Utensils className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                         <p className="text-sm font-black text-white uppercase italic">Produit Gratuit Accordé</p>
+                         <p className="text-[10px] text-zinc-500 mt-2 font-bold uppercase tracking-widest italic">Le produit a été marqué comme servi au comptoir.</p>
+                    </div>
+                )}
+
+                <button 
+                  onClick={() => setRedeemedReward(null)}
+                  className="w-full bg-white text-black font-black py-5 rounded-[2rem] mt-10 hover:bg-zinc-200 transition-all active:scale-95 shadow-xl shadow-white/5 uppercase tracking-widest text-[10px]"
+                >
+                    Terminer
+                </button>
            </div>
         </div>
       )}

@@ -79,14 +79,31 @@ export async function claimRewardAction(restaurantId: string, phone: string, cat
   }
 }
 
-export async function validateAndApplyPromo(restaurantId: string, promoCode: string) {
+export async function validateAndApplyPromo(restaurantId: string, promoCode: string, phone: string) {
   try {
-    const result = await LoyaltyService.validatePromoCode(promoCode, restaurantId);
+    const result = await LoyaltyService.validatePromoCode(promoCode, restaurantId, phone);
     if (!result.valid) return { success: false, error: result.error };
 
-    // Note: l'application réelle du code (déduction prix) se fera au checkout
     return { success: true, reward: result.reward };
   } catch (error) {
     return { success: false, error: "Erreur serveur." };
+  }
+}
+export async function redeemRewardAsManager(restaurantId: string, phone: string, catalogId: string) {
+  try {
+    const reward = await LoyaltyService.redeemReward(phone, restaurantId, catalogId);
+    
+    // Si c'est un produit, on peut considérer qu'il est donné immédiatement au comptoir
+    if (reward.type === 'PRODUCT') {
+        await prisma.clientReward.update({
+            where: { id: reward.id },
+            data: { isUsed: true }
+        });
+    }
+
+    revalidatePath("/manager/loyalty");
+    return { success: true, reward };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }

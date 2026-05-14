@@ -221,20 +221,28 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                 <button 
                   onClick={() => setActiveTab('loyalty')}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                    activeTab === 'loyalty' ? "bg-pink-500 text-white shadow-lg shadow-pink-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary"
+                    "w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm transition-all relative overflow-hidden",
+                    activeTab === 'loyalty' ? "bg-pink-500 text-white shadow-lg shadow-pink-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary",
+                    !["PRO", "PLATINUM", "FREE", "TRIAL"].includes(restaurant?.plan) && "opacity-60"
                   )}
                 >
-                    <Gift className="w-4 h-4" /> Fidélisation
+                    <div className="flex items-center gap-3">
+                        <Gift className="w-4 h-4" /> Fidélisation
+                    </div>
+                    {!["PRO", "PLATINUM", "FREE", "TRIAL"].includes(restaurant?.plan) && <Lock className="w-3 h-3 opacity-50" />}
                 </button>
                 <button 
                   onClick={() => setActiveTab('whatsapp')}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-                    activeTab === 'whatsapp' ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary"
+                    "w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-sm transition-all relative overflow-hidden",
+                    activeTab === 'whatsapp' ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary",
+                    !["PRO", "PLATINUM", "FREE", "TRIAL"].includes(restaurant?.plan) && "opacity-60"
                   )}
                 >
-                    <MessageSquare className="w-4 h-4" /> WhatsApp API
+                    <div className="flex items-center gap-3">
+                        <MessageSquare className="w-4 h-4" /> WhatsApp API
+                    </div>
+                    {!["PRO", "PLATINUM", "FREE", "TRIAL"].includes(restaurant?.plan) && <Lock className="w-3 h-3 opacity-50" />}
                 </button>
             </div>
 
@@ -481,28 +489,28 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                               {[
                                   {
                                       name: "Standard",
-                                      price: "30",
+                                      price: "45",
                                       icon: <Star className="w-5 h-5" />,
-                                      badge: "Meilleure offre",
-                                      features: ["Menu digital illimité", "QR Codes illimités", "Gestion des commandes", "Impression thermique", "Tableau de bord analytique"],
+                                      badge: "Essentiel",
+                                      features: ["Menu digital illimité", "QR Codes illimités", "Gestion des commandes", "Impression thermique", "Gestion des STOCKS incluse"],
                                       gradient: "from-blue-600/10 to-indigo-700/10",
                                       border: "border-blue-500/20"
                                   },
                                   {
                                       name: "Pro",
-                                      price: "55",
+                                      price: "75",
                                       icon: <Crown className="w-5 h-5" />,
-                                      badge: "Populaire",
-                                      features: ["Tout du plan Standard", "Gestion de stock avancée", "Multi-utilisateurs illimités", "White Label (Logo)", "Support 24/7"],
+                                      badge: "Plus Populaire",
+                                      features: ["Tout du plan Standard", "SYSTÈME DE FIDÉLISATION", "MARKETING WHATSAPP", "Statistiques avancées", "Support 24/7"],
                                       gradient: "from-violet-600/10 to-purple-800/10",
                                       border: "border-violet-500/20"
                                   },
                                   {
                                       name: "Platinum",
-                                      price: "99",
+                                      price: "150",
                                       icon: <Globe className="w-5 h-5" />,
-                                      badge: "Enterprise",
-                                      features: ["Tout du plan Pro", "Multi-Établissements (5 filiales)", "Statistiques Globales", "Stocks Multi-sites", "Conseiller dédié"],
+                                      badge: "Multi-Sites",
+                                      features: ["Tout du plan Pro", "MULTI-ÉTABLISSEMENTS", "Accès Super-Admin (Impersonation)", "Audit de sécurité", "Conseiller dédié"],
                                       gradient: "from-emerald-600/10 to-teal-800/10",
                                       border: "border-emerald-500/20"
                                   }
@@ -738,7 +746,22 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
 
                 {activeTab === 'loyalty' && (
                   <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="bg-card border border-border rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl">
+                    {!["PRO", "PLATINUM", "FREE", "TRIAL"].includes(restaurant?.plan) ? (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-12 text-center flex flex-col items-center">
+                            <div className="w-20 h-20 bg-pink-500/10 rounded-full flex items-center justify-center mb-6">
+                                <Lock className="w-10 h-10 text-pink-500" />
+                            </div>
+                            <h3 className="text-2xl font-black italic uppercase text-white mb-2 underline decoration-pink-500 decoration-4 underline-offset-4">Fonctionnalité Verrouillée</h3>
+                            <p className="text-zinc-500 max-w-sm mb-8 font-medium">Le système de fidélisation automatique est réservé aux plans <span className="text-white font-bold">PRO</span> et <span className="text-white font-bold">PLATINUM</span>.</p>
+                            <button 
+                                onClick={() => setActiveTab('subscription')}
+                                className="bg-pink-500 hover:bg-pink-600 text-white font-black px-8 py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-pink-500/20"
+                            >
+                                Passer au plan PRO (75$)
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-card border border-border rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl">
                           <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/5 blur-[100px] rounded-full" />
                           <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 text-foreground flex items-center gap-3 relative z-10">
                               <Gift className="w-8 h-8 text-pink-500" /> Programme de Fidélité
@@ -811,13 +834,30 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                   Enregistrer la configuration
                               </SubmitButton>
                           </form>
-                    </div>
+                        </div>
+                    )}
                   </div>
                 )}
 
-                {activeTab === 'whatsapp' && (
-                  <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl">
+                 {activeTab === 'whatsapp' && (
+                   <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                    {!["PRO", "PLATINUM", "FREE", "TRIAL"].includes(restaurant?.plan) ? (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-12 text-center flex flex-col items-center">
+                            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
+                                <Lock className="w-10 h-10 text-emerald-500" />
+                            </div>
+                            <h3 className="text-2xl font-black italic uppercase text-white mb-2 underline decoration-emerald-500 decoration-4 underline-offset-4">WhatsApp Verrouillé</h3>
+                            <p className="text-zinc-500 max-w-sm mb-8 font-medium">L'envoi de reçus et notifications par WhatsApp est réservé aux plans <span className="text-white font-bold">PRO</span> et <span className="text-white font-bold">PLATINUM</span>.</p>
+                            <button 
+                                onClick={() => setActiveTab('subscription')}
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-8 py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-emerald-500/20"
+                            >
+                                Passer au plan PRO (75$)
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl">
                           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
                           <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 text-foreground flex items-center gap-3 relative z-10">
                               <MessageSquare className="w-8 h-8 text-emerald-500" /> Intégration WhatsApp
@@ -935,17 +975,19 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                 </button>
                               </div>
                           </form>
-                    </div>
+                        </div>
 
-                    <div className="bg-card border border-border rounded-3xl p-6 flex items-start gap-4">
-                       <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                       <div className="space-y-1">
-                          <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none mb-1">Configuration Meta Required</p>
-                          <p className="text-[11px] text-zinc-500 leading-relaxed">
-                            N'oubliez pas d'approuver vos modèles de messages (**Templates**) sur le portail Meta for Developers avant de les utiliser. Les noms de modèles attendus par SmartResto sont : `order_ready` et `digital_receipt`.
-                          </p>
-                       </div>
-                    </div>
+                        <div className="bg-card border border-border rounded-3xl p-6 flex items-start gap-4">
+                           <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                           <div className="space-y-1">
+                              <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none mb-1">Configuration Meta Required</p>
+                              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                                N'oubliez pas d'approuver vos modèles de messages (**Templates**) sur le portail Meta for Developers avant de les utiliser. Les noms de modèles attendus par SmartResto sont : `order_ready` et `digital_receipt`.
+                              </p>
+                           </div>
+                        </div>
+                        </>
+                    )}
                   </div>
                 )}
             </div>

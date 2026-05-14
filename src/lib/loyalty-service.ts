@@ -118,14 +118,20 @@ export const LoyaltyService = {
     return clientReward;
   },
 
-  // 4. Validation Code Promo (Check Jours + Utilisation)
-  async validatePromoCode(promoCode: string, restaurantId: string) {
+  // 4. Validation Code Promo (Check Jours + Utilisation + Appartenance)
+  async validatePromoCode(promoCode: string, restaurantId: string, phone: string) {
     const reward = await prisma.clientReward.findUnique({
-      where: { promoCode }
+      where: { promoCode },
+      include: { customer: true }
     });
 
     if (!reward || reward.restaurantId !== restaurantId) {
       return { valid: false, error: "Code promo invalide." };
+    }
+
+    // Vérifier si le code appartient bien à ce numéro de téléphone
+    if (reward.customer.phone !== phone) {
+      return { valid: false, error: "Ce code ne vous appartient pas." };
     }
 
     if (reward.isUsed) {

@@ -380,8 +380,13 @@ export async function confirmOrderPayment(orderId: string, method: string) {
     // Déduction des stocks automatique en fonction de la recette
     await deductStockForOrder(orderId, order.restaurantId);
     
-    // Points de fidélité et Reçu WhatsApp
-    if (order.phone) {
+    // Points de fidélité et Reçu WhatsApp (Uniquement PRO et PLATINUM)
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: order.restaurantId },
+      select: { plan: true }
+    });
+
+    if (order.phone && restaurant && (restaurant.plan === "PRO" || restaurant.plan === "PLATINUM" || restaurant.plan === "FREE" || restaurant.plan === "TRIAL")) {
       const customer = await LoyaltyService.addPoints(order.phone, order.restaurantId, order.totalUsd, orderId);
       
       if (customer) {

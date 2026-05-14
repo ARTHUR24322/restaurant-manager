@@ -1,8 +1,8 @@
 "use client"
 
 import { useCartStore } from "@/store/cartStore";
-import { ShoppingCart, X, Plus, Minus, CreditCard, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { ShoppingCart, X, Plus, Minus, CreditCard, Loader2, Ticket, Phone, Trash2, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createCommande } from "@/lib/actions";
@@ -15,6 +15,10 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastOrderId, setLastOrderId] = useState<string | undefined>();
+  const [promoCode, setPromoCode] = useState("");
+  const [promoPhone, setPromoPhone] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
   
   const searchParams = useSearchParams();
   const tableNumber = searchParams.get("table") || "Inconnue";
@@ -25,12 +29,46 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const baseTotalUsd = getTotalUsd(exchangeRate);
   
   // Promo Logic
-  const savedPromo = typeof window !== 'undefined' ? localStorage.getItem('sr_applied_promo') : null;
-  const appliedPromo = savedPromo ? JSON.parse(savedPromo) : null;
+  useEffect(() => {
+    const saved = localStorage.getItem('sr_applied_promo');
+    if (saved) setAppliedPromo(JSON.parse(saved));
+  }, []);
+
   const discountPercent = appliedPromo?.discountValue || 0;
   const discountAmount = (baseTotalUsd * discountPercent) / 100;
   const totalUsd = baseTotalUsd - discountAmount;
   const totalCdf = totalUsd * exchangeRate;
+
+  const handleApplyPromo = async () => {
+    if (!promoCode || !promoPhone) {
+      toast.error("Veuillez saisir le code et votre numéro.");
+      return;
+    }
+    setIsVerifyingPromo(true);
+    try {
+      const { validateAndApplyPromo } = await import("@/lib/actions-loyalty");
+      const res = await validateAndApplyPromo(restaurantId || "", promoCode, promoPhone);
+      if (res.success) {
+        toast.success(`Réduction de ${res.reward.discountValue}% appliquée !`);
+        setAppliedPromo(res.reward);
+        localStorage.setItem('sr_applied_promo', JSON.stringify(res.reward));
+        setPromoCode("");
+        setPromoPhone("");
+      } else {
+        toast.error(res.error || "Code ou numéro invalide.");
+      }
+    } catch(e) {
+      toast.error("Erreur de connexion.");
+    } finally {
+      setIsVerifyingPromo(false);
+    }
+  };
+
+  const removePromo = () => {
+    setAppliedPromo(null);
+    localStorage.removeItem('sr_applied_promo');
+    toast.info("Code promo retiré.");
+  };
 
   const handleConfirmOrder = async () => {
     setIsSubmitting(true);
@@ -206,78 +244,118 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
         </div>
 
         {/* Pied : Totaux et Action */}
-        <div className="p-6 bg-zinc-900/80 rounded-b-[2.5rem] md:rounded-b-[2.5rem] border-t border-white/5">
+        <div className="p-6 bg-zinc-950 rounded-b-[2.5rem] md:rounded-b-[2.5rem] border-t border-white/5">
           
-          <div className="mb-6 space-y-4">
-             <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  id="promo-input"
-                  placeholder="CODE PROMO" 
-                  className="flex-1 text-[10px] font-black uppercase bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all"
-                  disabled={isSubmitting}
-                />
-                <button 
-                  onClick={async () => {
-                    const input = (document.getElementById('promo-input') as HTMLInputElement).value;
-                    if (!input) return;
-                    setIsSubmitting(true);
-                    try {
-                      const { validateAndApplyPromo } = await import("@/lib/actions-loyalty");
-                      const res = await validateAndApplyPromo(restaurantId || "", input);
-                      if (res.success) {
-                        toast.success(`Réduction de ${res.reward.discountValue}% appliquée !`);
-                        localStorage.setItem('sr_applied_promo', JSON.stringify(res.reward));
-                        // On force un re-render via un état interne ou on utilise le store
-                        window.location.reload(); // Simple solution pour l'instant
-                      } else {
-                        toast.error(res.error || "Code invalide.");
-                      }
-                    } catch(e) {}
-                    setIsSubmitting(false);
-                  }}
-                  className="px-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-xl text-[10px] font-black uppercase"
-                >
-                  Appliquer
-                </button>
-             </div>
+          <div className="mb-8 space-y-6">
+            {/* --- LOYALTY & PROMO SECTION --- */}
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 overflow-hidden relative">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full" />
+               
+               <h3 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-4 flex items-center gap-2">
+                  <Ticket className="w-3 h-3 text-primary" /> Loyalty & Rewards
+               </h3>
+
+               {appliedPromo ? (
+                 <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center gap-3">
+                       <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                       <div>
+                          <p className="text-white text-xs font-black uppercase tracking-widest">{appliedPromo.promoCode}</p>
+                          <p className="text-emerald-500 text-[10px] font-bold">Réduction de {appliedPromo.discountValue}% appliquée</p>
+                       </div>
+                    </div>
+                    <button 
+                      onClick={removePromo}
+                      className="p-2 hover:bg-emerald-500/10 text-emerald-500 rounded-xl transition-colors"
+                    >
+                       <Trash2 className="w-4 h-4" />
+                    </button>
+                 </div>
+               ) : (
+                 <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-2">
+                        <div className="relative">
+                            <input 
+                              type="text" 
+                              placeholder="CODE PROMO" 
+                              value={promoCode}
+                              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                              className="w-full text-xs font-bold uppercase bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all pr-10"
+                            />
+                            <Ticket className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
+                        </div>
+                        <div className="relative">
+                            <input 
+                              type="tel" 
+                              placeholder="VOTRE NUMÉRO (POUR VÉRIFIER)" 
+                              value={promoPhone}
+                              onChange={(e) => setPromoPhone(e.target.value)}
+                              className="w-full text-xs font-bold bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all pr-10 font-mono"
+                            />
+                            <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
+                        </div>
+                    </div>
+                    <button 
+                      onClick={handleApplyPromo}
+                      disabled={isVerifyingPromo || !promoCode || !promoPhone}
+                      className="w-full bg-zinc-100 hover:bg-white disabled:opacity-30 text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] py-3.5 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      {isVerifyingPromo ? <Loader2 className="w-3 h-3 animate-spin" /> : "Vérifier & Appliquer"}
+                    </button>
+                 </div>
+               )}
+            </div>
 
             <textarea 
               placeholder="Une note spéciale ? (Allergie, extra...)" 
-              className="w-full text-sm bg-black/40 border border-white/10 rounded-2xl p-4 resize-none focus:ring-1 focus:ring-primary h-20 text-white placeholder:text-zinc-600 outline-none transition-all"
+              className="w-full text-sm bg-black/40 border border-white/10 rounded-3xl p-5 resize-none focus:ring-1 focus:ring-primary h-24 text-white placeholder:text-zinc-700 outline-none transition-all shadow-inner"
               disabled={isSubmitting}
             />
           </div>
 
-          <div className="space-y-2 mb-6">
-              {discountAmount > 0 && (
-                <div className="flex justify-between items-center text-emerald-500 text-xs font-bold uppercase tracking-widest pb-1 border-b border-white/5 mb-1">
-                  <span>Réduction {discountPercent}%</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+          <div className="space-y-4 mb-8 bg-zinc-900 border border-white/5 rounded-[2rem] p-6">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                  <span>Sous-total</span>
+                  <span>${baseTotalUsd.toFixed(2)}</span>
                 </div>
-              )}
-              <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                <span className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Total USD</span>
-                <span className="font-black text-2xl text-white">${totalUsd.toFixed(2)}</span>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between items-center text-emerald-500 text-[10px] font-black uppercase tracking-widest animate-in slide-in-from-left-2 duration-300">
+                    <span className="flex items-center gap-2">
+                       <CheckCircle2 className="w-3 h-3" /> Réduction Loyalty ({discountPercent}%)
+                    </span>
+                    <span>-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-600 font-medium">Taux indicatif: 1$ = {exchangeRate} FC</span>
-                <span className="font-bold text-zinc-500">{totalCdf.toLocaleString('fr-CD')} FC</span>
+              
+              <div className="h-px bg-white/5 w-full" />
+
+              <div className="flex justify-between items-end">
+                <span className="text-white text-sm font-black uppercase tracking-widest italic">Total à payer</span>
+                <div className="flex flex-col items-end">
+                    <span className="font-black text-3xl text-primary drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]">${totalUsd.toFixed(2)}</span>
+                    <span className="text-[10px] font-bold text-zinc-500 mt-1 font-mono tracking-tighter">{totalCdf.toLocaleString('fr-CD')} FC</span>
+                </div>
               </div>
           </div>
 
           <button 
             onClick={handleConfirmOrder}
             disabled={isSubmitting}
-            className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-black font-black uppercase tracking-widest py-4 rounded-2xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg shadow-primary/20 text-sm"
+            className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-black font-black uppercase tracking-[0.2em] py-5 rounded-[2rem] flex items-center justify-center gap-4 transition-all active:scale-[0.98] shadow-2xl shadow-primary/20 text-xs"
           >
             {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-                <CreditCard className="w-5 h-5" />
+                <CheckCircle2 className="w-5 h-5" />
             )}
-            {isSubmitting ? "Traitement..." : "Confirmer la Commande"}
+            {isSubmitting ? "Enregistrement..." : "Confirmer ma Commande"}
           </button>
+
+          <p className="text-[9px] text-zinc-600 text-center mt-6 font-black uppercase tracking-widest italic">
+            Paiement sécurisé au comptoir ou à table
+          </p>
         </div>
       </div>
     </>
