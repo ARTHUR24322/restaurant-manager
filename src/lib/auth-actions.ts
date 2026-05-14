@@ -58,11 +58,11 @@ export async function ensureManager(targetRestoId?: string) {
   if (payload.role === "MANAGER") {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: payload.restoId },
-      select: { sessionVersion: true }
+      select: { sessionVersion: true, active: true }
     });
-    if (!restaurant || restaurant.sessionVersion !== payload.version) {
+    if (!restaurant || !restaurant.active || restaurant.sessionVersion !== payload.version) {
       cookies().delete("session");
-      throw new Error("Session expirée (déconnectée par un autre appareil)");
+      throw new Error("Session expirée ou établissement inactif");
     }
   }
   
@@ -495,7 +495,8 @@ export async function impersonateRestaurant(restoId: string) {
     const session = await encrypt({
       restoId: restaurant.id,
       email: restaurant.email,
-      role: "MANAGER"
+      role: "MANAGER",
+      version: restaurant.sessionVersion
     });
 
     cookies().set("session", session, {

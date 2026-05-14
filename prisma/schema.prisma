@@ -122,19 +122,20 @@ model MouvementStock {
 }
 
 model Plat {
-  id           String         @id @default(cuid())
-  nom          String
-  description  String?
-  prixUsd      Float
-  devise       String         @default("USD")
-  image        String
-  categorie    String
-  disponible   Boolean        @default(true)
-  restaurantId String
-  items        CommandeItem[]
-  options      Option[]
-  recetteItems RecetteItem[]
-  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  nom             String
+  description     String?
+  prixUsd         Float
+  devise          String         @default("USD")
+  image           String
+  categorie       String
+  disponible      Boolean        @default(true)
+  isLoyaltyReward Boolean        @default(false)
+  restaurantId    String
+  items           CommandeItem[]
+  options         Option[]
+  recetteItems    RecetteItem[]
+  restaurant      Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
   @@index([restaurantId])
 }

@@ -37,7 +37,7 @@ import {
     CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant, getAllSubscriptionLogs } from "@/lib/admin-actions";
+import { createRestaurant, getAllRestaurants, toggleSubscription, updateRestaurant, deleteRestaurant, getAllSubscriptionLogs, renewSubscription } from "@/lib/admin-actions";
 import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
 import { getAllDemandes, approveDemande, rejectDemande } from "@/lib/demande-actions";
@@ -144,6 +144,7 @@ export default function SuperAdminPage() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings'>('dashboard');
     const [subscriptionLogs, setSubscriptionLogs] = useState<any[]>([]);
     const [supportMessages, setSupportMessages] = useState<any[]>([]);
+    const [renewLoadingId, setRenewLoadingId] = useState<string | null>(null);
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -666,7 +667,7 @@ export default function SuperAdminPage() {
                                                         </div>
                                                     </div>
                                                     
-                                                    <div className="flex items-center gap-8">
+                                                    <div className="flex items-center gap-4">
                                                         <div className="text-right">
                                                             <p className="text-[10px] font-black text-zinc-500 uppercase">Expire le</p>
                                                             <p className="text-sm font-black text-white tracking-tighter">{new Date(resto.subscriptionEnd).toLocaleDateString()}</p>
@@ -680,6 +681,25 @@ export default function SuperAdminPage() {
                                                             <span className="text-[18px] font-black leading-none">{daysLeft}</span>
                                                             <span className="text-[8px] font-black uppercase">Jours</span>
                                                         </div>
+                                                        <button
+                                                            disabled={renewLoadingId === resto.id}
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                setRenewLoadingId(resto.id);
+                                                                const res = await renewSubscription(resto.id, 30);
+                                                                setRenewLoadingId(null);
+                                                                if (res.success) {
+                                                                    toast.success(`${resto.nom} réabonné pour 30 jours !`);
+                                                                    fetchRestos();
+                                                                } else {
+                                                                    toast.error(res.error || "Erreur");
+                                                                }
+                                                            }}
+                                                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-2.5 rounded-2xl text-[9px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-emerald-900/30 disabled:opacity-50 whitespace-nowrap"
+                                                        >
+                                                            {renewLoadingId === resto.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                                            Réabonner (30j)
+                                                        </button>
                                                     </div>
                                                 </div>
                                             );

@@ -8,7 +8,7 @@ import {
   Minus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getLoyaltyCustomers, getLoyaltyCustomerDetails, redeemLoyaltyPoints } from "@/lib/actions";
+import { getLoyaltyCustomers, getLoyaltyCustomerDetails, redeemLoyaltyPoints, getRandomRewardProducts, redeemLoyaltyGift } from "@/lib/actions";
 import { getManagerSession } from "@/lib/manager-actions";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -24,6 +24,7 @@ export default function LoyaltyCustomersPage({ searchParams }: { searchParams: {
   const [customerDetails, setCustomerDetails] = useState<any>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [redeemLoading, setRedeemLoading] = useState(false);
+  const [giftProducts, setGiftProducts] = useState<any[] | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -74,6 +75,36 @@ export default function LoyaltyCustomersPage({ searchParams }: { searchParams: {
       }
     } else {
       toast.error(result.error || "Erreur");
+    }
+    setRedeemLoading(false);
+  };
+
+  const handleLoadGifts = async (customerId: string) => {
+    setRedeemLoading(true);
+    const result = await getRandomRewardProducts(restaurantId);
+    setRedeemLoading(false);
+    if (result.success && result.products.length > 0) {
+      setGiftProducts(result.products);
+    } else {
+      setGiftProducts([]);
+    }
+  };
+
+  const handleRedeemGift = async (customerId: string, platId: string) => {
+    setRedeemLoading(true);
+    const result = await redeemLoyaltyGift(restaurantId, customerId, platId);
+    if (result.success) {
+      toast.success(`🎁 Cadeau "${result.giftName}" offert avec succès !`);
+      setGiftProducts(null);
+      await fetchCustomers(restaurantId);
+      // Refresh details
+      const updated = await getLoyaltyCustomerDetails(restaurantId, customerId);
+      if (updated.success) {
+        setCustomerDetails(updated.customer);
+        setSelectedCustomer(updated.customer);
+      }
+    } else {
+      toast.error(result.error || "Erreur lors de l'échange.");
     }
     setRedeemLoading(false);
   };
@@ -275,12 +306,12 @@ export default function LoyaltyCustomersPage({ searchParams }: { searchParams: {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div
             className="absolute inset-0 bg-background/90 backdrop-blur-md"
-            onClick={() => { setSelectedCustomer(null); setCustomerDetails(null); }}
+            onClick={() => { setSelectedCustomer(null); setCustomerDetails(null); setGiftProducts(null); }}
           />
           <div className="relative bg-card border border-border shadow-2xl rounded-[2.5rem] p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto transform animate-in zoom-in-95 slide-in-from-bottom-6 duration-300">
             {/* Close */}
             <button
-              onClick={() => { setSelectedCustomer(null); setCustomerDetails(null); }}
+              onClick={() => { setSelectedCustomer(null); setCustomerDetails(null); setGiftProducts(null); }}
               className="absolute top-6 right-6 p-2 rounded-xl bg-secondary hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
             >
               <X className="w-4 h-4" />
@@ -330,22 +361,67 @@ export default function LoyaltyCustomersPage({ searchParams }: { searchParams: {
                   </div>
                 </div>
 
-                {/* Redeem Button */}
+                {/* Redeem Gift Section */}
                 {config && customerDetails.points >= config.rewardThreshold && (
-                  <button
-                    onClick={() => handleRedeem(customerDetails.id, config.rewardThreshold)}
-                    disabled={redeemLoading}
-                    className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-pink-500/20 text-sm uppercase tracking-widest disabled:opacity-50"
-                  >
-                    {redeemLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                  <div className="space-y-3">
+                    {!giftProducts ? (
+                      <button
+                        onClick={() => handleLoadGifts(customerDetails.id)}
+                        disabled={redeemLoading}
+                        className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-pink-500/20 text-sm uppercase tracking-widest disabled:opacity-50"
+                      >
+                        {redeemLoading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <>
+                            <Gift className="w-5 h-5" />
+                            Convertir {config.rewardThreshold} pts → Cadeau
+                          </>
+                        )}
+                      </button>
+                    ) : giftProducts.length === 0 ? (
+                      <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-4 text-center">
+                        <p className="text-xs font-bold text-orange-500">Aucun produit cadeau configuré dans le menu.</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Allez dans Gestion Menu et activez le bouton 🎁 sur les plats éligibles.</p>
+                      </div>
                     ) : (
-                      <>
-                        <Gift className="w-5 h-5" />
-                        Échanger {config.rewardThreshold} pts → Cadeau
-                      </>
+                      <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300">
+                        <p className="text-[10px] font-black text-pink-500 uppercase tracking-widest text-center">
+                          🎁 Le client choisit UN cadeau parmi :
+                        </p>
+                        <div className={cn(
+                          "grid gap-3",
+                          giftProducts.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                        )}>
+                          {giftProducts.map((product: any) => (
+                            <button
+                              key={product.id}
+                              onClick={() => handleRedeemGift(customerDetails.id, product.id)}
+                              disabled={redeemLoading}
+                              className="group bg-secondary/50 border-2 border-border hover:border-pink-500/50 rounded-2xl p-4 text-center transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 relative overflow-hidden"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-b from-pink-500/0 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <div className="relative z-10">
+                                <div className="w-16 h-16 rounded-2xl bg-secondary border border-border overflow-hidden mx-auto mb-3 group-hover:shadow-lg group-hover:shadow-pink-500/10 transition-shadow">
+                                  <img src={product.image} alt={product.nom} className="w-full h-full object-cover" />
+                                </div>
+                                <p className="font-black text-sm text-foreground group-hover:text-pink-500 transition-colors">{product.nom}</p>
+                                <p className="text-[10px] text-muted-foreground font-bold mt-1">
+                                  {product.devise === "USD" ? "$" : ""}{product.prixUsd?.toFixed(2)} {product.devise === "FC" ? "FC" : ""}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => setGiftProducts(null)}
+                          className="w-full text-[10px] text-muted-foreground font-bold uppercase tracking-widest py-2 hover:text-foreground transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      </div>
                     )}
-                  </button>
+                  </div>
                 )}
 
                 {/* Transaction History */}

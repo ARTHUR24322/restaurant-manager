@@ -171,22 +171,72 @@ export async function getManagerAnalytics(restaurantId: string, period: "day" | 
         const growth = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
 
         // 3. Top Plats (Période Actuelle)
-        const dishStats: Record<string, { count: number, price: number }> = {};
+        const dishStats: Record<string, { count: number, price: number, totalCost: number }> = {};
+        let totalEstimatedCost = 0;
+
+        // On charge les recettes pour le calcul du profit (si dispo)
+        const platsWithRecettes = await prisma.plat.findMany({
+            where: { restaurantId },
+            include: { recetteItems: { include: { article: true } } }
+        });
+
+        const platCosts: Record<string, number> = {};
+        platsWithRecettes.forEach(p => {
+            let cost = 0;
+            p.recetteItems.forEach(ri => {
+                cost += (ri.quantite * (ri.article.prixAchat || 0));
+            });
+            platCosts[p.id] = cost;
+        });
+
         currentOrders.forEach(order => {
             order.items.forEach(item => {
                 const name = item.plat.nom;
-                if (!dishStats[name]) dishStats[name] = { count: 0, price: item.plat.prixUsd };
+                const cost = (platCosts[item.platId] || 0) * item.quantite;
+                totalEstimatedCost += cost;
+
+                if (!dishStats[name]) dishStats[name] = { count: 0, price: item.plat.prixUsd, totalCost: 0 };
                 dishStats[name].count += item.quantite;
+                dishStats[name].totalCost += cost;
             });
         });
 
         const topDishes = Object.entries(dishStats)
-            .map(([name, stats]) => ({ name, orders: stats.count, price: stats.price }))
+            .map(([name, stats]) => ({ 
+                name, 
+                orders: stats.count, 
+                price: stats.price,
+                profit: (stats.price * stats.count) - stats.totalCost
+            }))
             .sort((a, b) => b.orders - a.orders)
             .slice(0, 5);
 
-        // 4. Données Graphique (Derniers 7 jours si jour/week, ou 4 dernières semaines si mois)
-        // Simplification pour le graphique hebdo standard par jour
+        // 4. Heures de Pointe (Peak Hours)
+        const peakHours = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }));
+        currentOrders.forEach(o => {
+            const hour = new Date(o.createdAt).getHours();
+            peakHours[hour].count++;
+        });
+
+        // 5. Répartition des Paiements
+        const payments = {
+            cash: currentOrders.filter(o => o.paiementStatus === "PAID_CASH").length,
+            mobile: currentOrders.filter(o => o.paiementStatus === "PAID_MOBILE").length,
+        };
+        const totalPaid = payments.cash + payments.mobile;
+        const paymentDistribution = [
+            { label: "Cash", value: totalPaid > 0 ? Math.round((payments.cash / totalPaid) * 100) : 50, color: "bg-emerald-500" },
+            { label: "Mobile", value: totalPaid > 0 ? Math.round((payments.mobile / totalPaid) * 100) : 50, color: "bg-indigo-500" }
+        ];
+
+        // 6. Statistiques Clients (Fidélité)
+        const uniquePhones = new Set(currentOrders.map(o => o.phone).filter(Boolean));
+        const customerStats = {
+            totalUnique: uniquePhones.size,
+            returning: currentOrders.filter(o => o.phone).length - uniquePhones.size // Approximation
+        };
+
+        // 7. Données Graphique (Derniers 7 jours)
         const chartData = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
@@ -208,9 +258,13 @@ export async function getManagerAnalytics(restaurantId: string, period: "day" | 
             success: true,
             totalRevenue,
             orderCount,
+            totalEstimatedProfit: totalRevenue - totalEstimatedCost,
             growth,
             topDishes,
-            chartData
+            chartData,
+            peakHours,
+            paymentDistribution,
+            customerStats
         };
     } catch (error) {
         console.error("Manager Analytics Error:", error);

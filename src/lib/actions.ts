@@ -223,7 +223,11 @@ export async function createCommande(data: {
     });
 
     let calculatedTotal = 0;
-    data.cartItems.forEach((item: any) => {
+    for (const item of data.cartItems) {
+      if (!item.quantite || item.quantite <= 0) {
+        throw new Error("La quantité doit être supérieure à 0");
+      }
+      
       const plat = plats.find(p => p.id === item.plat.id);
       if (plat) {
         const itemPriceUsd = plat.devise === "FC" 
@@ -231,7 +235,7 @@ export async function createCommande(data: {
           : plat.prixUsd;
         calculatedTotal += itemPriceUsd * item.quantite;
       }
-    });
+    }
 
     // Create the order with nested items creation
     const order = await prisma.commande.create({
@@ -336,10 +340,13 @@ export async function confirmOrderPayment(orderId: string, method: string) {
   try {
     const order = await prisma.commande.findUnique({
       where: { id: orderId },
-      select: { restaurantId: true }
+      select: { restaurantId: true, statut: true }
     });
 
     if (!order) throw new Error("Commande introuvable");
+    if (order.statut === "COMPLETED" || order.statut === "CANCELLED") {
+      return { success: false, error: "Cette commande est déjà traitée." };
+    }
 
     // Vérification de l'autorisation
     await ensureManager(order.restaurantId);
@@ -675,6 +682,173 @@ export async function redeemLoyaltyPoints(restaurantId: string, customerId: stri
     return { success: true };
   } catch (error) {
     console.error("Error redeeming points:", error);
+    return { success: false, error: "Erreur lors de l'échange." };
+  }
+}
+
+// -----------------------------
+// CONVERSION POINTS → CADEAU PRODUIT
+// -----------------------------
+
+export async function toggleLoyaltyReward(platId: string, restaurantId: string) {
+  try {
+    await ensureManager(restaurantId);
+
+    const plat = await prisma.plat.findUnique({ where: { id: platId } });
+    if (!plat || plat.restaurantId !== restaurantId) {
+      return { success: false, error: "Plat introuvable." };
+    }
+
+    await prisma.plat.update({
+      where: { id: platId },
+      data: { isLoyaltyReward: !plat.isLoyaltyReward }
+    });
+
+    revalidatePath("/manager/menu");
+    revalidateTag(`menu-${restaurantId}`);
+    return { success: true, isLoyaltyReward: !plat.isLoyaltyReward };
+  } catch (error) {
+    console.error("Error toggling loyalty reward:", error);
+    return { success: false, error: "Erreur." };
+  }
+}
+
+export async function getRandomRewardProducts(restaurantId: string) {
+  try {
+    const allRewards = await prisma.plat.findMany({
+      where: {
+        restaurantId,
+        isLoyaltyReward: true,
+        disponible: true
+      },
+      select: {
+        id: true,
+        nom: true,
+        image: true,
+        prixUsd: true,
+        devise: true,
+        categorie: true
+      }
+    });
+
+    if (allRewards.length === 0) {
+      return { success: false, products: [], error: "Aucun produit cadeau configuré par le restaurant." };
+    }
+
+    // Shuffle and pick 2 (or less if only 1 available)
+    const shuffled = allRewards.sort(() => Math.random() - 0.5);
+    const picked = shuffled.slice(0, Math.min(2, shuffled.length));
+
+    return { success: true, products: picked };
+  } catch (error) {
+    console.error("Error getting reward products:", error);
+    return { success: false, products: [], error: "Erreur serveur." };
+  }
+}
+
+export async function redeemLoyaltyGift(
+  restaurantId: string,
+  customerId: string,
+  chosenPlatId: string
+) {
+  try {
+    const config = await prisma.loyaltyConfig.findUnique({
+      where: { restaurantId }
+    });
+    if (!config) return { success: false, error: "Config introuvable." };
+
+    const customer = await prisma.loyaltyCustomer.findUnique({
+      where: { id: customerId }
+    });
+    if (!customer || customer.restaurantId !== restaurantId) {
+      return { success: false, error: "Client introuvable." };
+    }
+    if (customer.points < config.rewardThreshold) {
+      return { success: false, error: "Points insuffisants." };
+    }
+
+    const plat = await prisma.plat.findUnique({
+      where: { id: chosenPlatId }
+    });
+    if (!plat || plat.restaurantId !== restaurantId || !plat.isLoyaltyReward) {
+      return { success: false, error: "Produit cadeau invalide." };
+    }
+
+    // Deduct points
+    await prisma.loyaltyCustomer.update({
+      where: { id: customerId },
+      data: { points: { decrement: config.rewardThreshold } }
+    });
+
+    // Log transaction
+    await prisma.loyaltyTransaction.create({
+      data: {
+        customerId,
+        type: "REDEEM",
+        points: -config.rewardThreshold,
+        note: `🎁 Cadeau : ${plat.nom} (${config.rewardThreshold} pts)`
+      }
+    });
+
+    revalidatePath("/manager/loyalty");
+    return { success: true, giftName: plat.nom };
+  } catch (error) {
+    console.error("Error redeeming gift:", error);
+    return { success: false, error: "Erreur lors de l'échange." };
+  }
+}
+
+export async function redeemLoyaltyGiftByPhone(
+  restaurantId: string,
+  phone: string,
+  chosenPlatId: string
+) {
+  try {
+    const config = await prisma.loyaltyConfig.findUnique({
+      where: { restaurantId }
+    });
+    if (!config) return { success: false, error: "Config introuvable." };
+
+    const customer = await prisma.loyaltyCustomer.findUnique({
+      where: {
+        phone_restaurantId: {
+          phone,
+          restaurantId
+        }
+      }
+    });
+    if (!customer) {
+      return { success: false, error: "Client introuvable." };
+    }
+    if (customer.points < config.rewardThreshold) {
+      return { success: false, error: "Points insuffisants." };
+    }
+
+    const plat = await prisma.plat.findUnique({
+      where: { id: chosenPlatId }
+    });
+    if (!plat || plat.restaurantId !== restaurantId || !plat.isLoyaltyReward) {
+      return { success: false, error: "Produit cadeau invalide." };
+    }
+
+    await prisma.loyaltyCustomer.update({
+      where: { id: customer.id },
+      data: { points: { decrement: config.rewardThreshold } }
+    });
+
+    await prisma.loyaltyTransaction.create({
+      data: {
+        customerId: customer.id,
+        type: "REDEEM",
+        points: -config.rewardThreshold,
+        note: `🎁 Cadeau : ${plat.nom} (${config.rewardThreshold} pts)`
+      }
+    });
+
+    revalidatePath("/manager/loyalty");
+    return { success: true, giftName: plat.nom, newPoints: customer.points - config.rewardThreshold };
+  } catch (error) {
+    console.error("Error redeeming gift by phone:", error);
     return { success: false, error: "Erreur lors de l'échange." };
   }
 }

@@ -356,3 +356,58 @@ export async function checkIsMainAccount(id: string) {
         return false;
     }
 }
+
+/**
+ * Action Super-Admin : Réabonnement d'un restaurant
+ * Remet subscriptionEnd à 30 jours à partir de maintenant
+ * et enregistre un SubscriptionLog
+ */
+export async function renewSubscription(restaurantId: string, durationDays: number = 30) {
+    try {
+        await ensureSuperAdmin();
+
+        const resto = await (prisma as any).restaurant.findUnique({
+            where: { id: restaurantId },
+            select: { id: true, nom: true, plan: true, monthlyPrice: true, active: true }
+        });
+
+        if (!resto) return { success: false, error: "Restaurant introuvable." };
+
+        const newEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+
+        // Mettre à jour la date d'expiration + s'assurer que le compte est actif
+        await (prisma as any).restaurant.update({
+            where: { id: restaurantId },
+            data: { 
+                subscriptionEnd: newEnd,
+                active: true
+            }
+        });
+
+        // Enregistrer dans les logs d'abonnement
+        await (prisma as any).subscriptionLog.create({
+            data: {
+                restaurantId,
+                oldPlan: resto.plan,
+                newPlan: resto.plan,
+                type: "RENEWAL",
+                amount: resto.monthlyPrice || 0,
+                monthlyPrice: resto.monthlyPrice || 0
+            }
+        });
+
+        // Notification au restaurant
+        await createNotification({
+            restaurantId,
+            title: "Abonnement Renouvelé ✅",
+            message: `Votre abonnement ${resto.plan} a été renouvelé pour ${durationDays} jours. Nouvelle expiration : ${newEnd.toLocaleDateString('fr-FR')}.`,
+            type: "SUCCESS"
+        });
+
+        revalidatePath("/super-admin");
+        return { success: true, newEnd: newEnd.toISOString() };
+    } catch (error: any) {
+        console.error("[SaaS-Server] Erreur renewSubscription:", error);
+        return { success: false, error: error.message || "Erreur lors du réabonnement." };
+    }
+}

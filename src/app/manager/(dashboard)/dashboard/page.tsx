@@ -57,30 +57,72 @@ const DAILY_SALES = [
 
 // --- Mini Components ---
 
-const StatCard = ({ title, value, icon: Icon, trend, prefix = "$" }: any) => (
-  <div className="bg-card rounded-2xl p-6 shadow-sm border border-border/50 hover:shadow-md transition-shadow">
-    <div className="flex justify-between items-start mb-4">
+const StatCard = ({ title, value, icon: Icon, trend, prefix = "$", subtitle }: any) => (
+  <div className="bg-card rounded-2xl p-6 shadow-sm border border-border/50 hover:shadow-md transition-shadow relative overflow-hidden group">
+    <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full -mr-12 -mt-12 group-hover:bg-primary/10 transition-colors" />
+    <div className="flex justify-between items-start mb-4 relative z-10">
       <div className="p-2 bg-primary/10 rounded-xl">
         <Icon className="w-6 h-6 text-primary" />
       </div>
-      {trend && (
+      {trend !== undefined && (
         <span className={cn(
           "flex items-center text-xs font-bold px-2 py-1 rounded-full",
-          trend > 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
+          trend > 0 ? "bg-emerald-500/10 text-emerald-500" : trend < 0 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
         )}>
-          {trend > 0 ? <ChevronUp className="w-3 h-3 mr-0.5" /> : <ChevronDown className="w-3 h-3 mr-0.5" />}
+          {trend > 0 ? <ChevronUp className="w-3 h-3 mr-0.5" /> : trend < 0 ? <ChevronDown className="w-3 h-3 mr-0.5" /> : null}
           {Math.abs(trend)}%
         </span>
       )}
     </div>
-    <div className="space-y-1">
+    <div className="space-y-1 relative z-10">
       <p className="text-sm font-medium text-muted-foreground">{title}</p>
       <h3 className="text-2xl font-bold tracking-tight">
         {prefix}{typeof value === 'number' ? value.toLocaleString() : value}
       </h3>
+      {subtitle && <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{subtitle}</p>}
     </div>
   </div>
 );
+
+const PeakHoursChart = ({ data }: { data: { hour: number, count: number }[] }) => {
+    if (!data || data.length === 0) return null;
+    const maxCount = Math.max(...data.map(d => d.count), 1);
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-end justify-between h-32 gap-1 px-2">
+                {data.map((item, idx) => {
+                    const heightPercent = (item.count / maxCount) * 100;
+                    const isVeryBusy = item.count === maxCount && item.count > 0;
+                    
+                    return (
+                        <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                            <div 
+                                className={cn(
+                                    "w-full rounded-t-sm transition-all duration-500",
+                                    isVeryBusy ? "bg-primary" : "bg-primary/20 group-hover:bg-primary/40"
+                                )}
+                                style={{ height: `${heightPercent}%` }}
+                            />
+                            {item.count > 0 && (
+                                <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity bottom-full mb-1 z-20">
+                                    <span className="text-[8px] bg-popover px-1 rounded border border-border">{item.count}</span>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="flex justify-between px-2 text-[8px] font-black text-muted-foreground uppercase tracking-widest">
+                <span>00h</span>
+                <span>06h</span>
+                <span>12h</span>
+                <span>18h</span>
+                <span>23h</span>
+            </div>
+        </div>
+    );
+};
 
 const CustomBarChart = ({ data }: any) => {
   if (!data || data.length === 0) return null;
@@ -171,21 +213,32 @@ const CustomBarChart = ({ data }: any) => {
 const PieChartPlaceholder = ({ data }: any) => (
   <div className="space-y-4 py-4">
     <div className="flex items-center justify-center py-6">
-      <div className="relative w-40 h-40 rounded-full border-[12px] border-indigo-500/10 flex items-center justify-center">
-         <div className="absolute inset-[-12px] rounded-full border-[12px] border-emerald-500 border-l-transparent border-b-transparent transform rotate-12" />
-         <div className="absolute inset-[-12px] rounded-full border-[12px] border-indigo-500 border-t-transparent border-r-transparent border-b-transparent transform -rotate-45" />
+      <div className="relative w-40 h-40 rounded-full border-[12px] border-secondary flex items-center justify-center">
+         {/* Simple segment visualization for the top 2 if they exist */}
+         {data[0] && (
+           <div 
+             className="absolute inset-[-12px] rounded-full border-[12px] border-emerald-500 border-l-transparent border-b-transparent transform rotate-45" 
+             style={{ opacity: data[0].value / 100 }}
+           />
+         )}
+         {data[1] && (
+           <div 
+             className="absolute inset-[-12px] rounded-full border-[12px] border-indigo-500 border-t-transparent border-r-transparent border-b-transparent transform -rotate-45"
+             style={{ opacity: data[1].value / 100 }}
+           />
+         )}
          <div className="text-center">
-            <p className="text-2xl font-bold">100%</p>
+            <p className="text-2xl font-black italic tracking-tighter">100%</p>
             <p className="text-[10px] text-muted-foreground font-bold">PAIEMENTS</p>
          </div>
       </div>
     </div>
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       {data.map((item: any, idx: number) => (
-        <div key={idx} className="flex flex-col items-center">
+        <div key={idx} className="flex flex-col items-center p-2 rounded-xl bg-secondary/30 border border-border/50">
           <div className={cn("w-2 h-2 rounded-full mb-1", item.color)} />
-          <span className="text-[10px] font-bold">{item.label}</span>
-          <span className="text-xs text-muted-foreground">{item.value}%</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+          <span className="text-lg font-black text-white italic">{item.value}%</span>
         </div>
       ))}
     </div>
@@ -426,29 +479,31 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
       {/* KPI Cards Dynamiques */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
-          title="Chiffre d'Affaires Réel"
+          title="Chiffre d'Affaires"
           value={totalPaidRevenue}
           trend={growthRate}
           icon={DollarSign}
         />
         <StatCard 
-          title="Revenu Prévisionnel"
-          value={potentialRevenue}
+          title="Profit Estimé"
+          value={analytics?.totalEstimatedProfit || 0}
           trend={0}
-          icon={Activity}
+          subtitle="Basé sur les prix d'achat"
+          icon={TrendingUp}
           prefix="$"
         />
         <StatCard 
-          title="Clients/Tables Actives"
-          value={activeClients}
+          title="Fidélisation Clients"
+          value={analytics?.customerStats?.totalUnique || 0}
+          subtitle={`${analytics?.customerStats?.returning || 0} clients fidélisés`}
           icon={Users}
           prefix=""
         />
         <StatCard 
-          title="Commandes Clôturées"
-          value={closedCount}
-          icon={TrendingUp}
-          prefix=""
+          title="Ticket Moyen"
+          value={avgTicket}
+          icon={Activity}
+          prefix="$"
         />
       </div>
 
@@ -603,31 +658,56 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
         {/* Main Sales Chart */}
         <div className="lg:col-span-2 bg-card rounded-3xl p-8 shadow-sm border border-border/50">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold flex items-center gap-2">
+            <h3 className="text-lg font-bold flex items-center gap-2 text-white italic tracking-tighter">
               <Calendar className="w-5 h-5 text-indigo-500" /> Flux de Ventes (Hebdo)
             </h3>
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Total Payé: {totalPaidRevenue.toFixed(2)} USD</span>
+            <div className="flex items-center gap-4">
+               <span className="text-xs font-black text-muted-foreground uppercase tracking-widest hidden md:block">Volume: {closedCount} commandes</span>
+               <div className="h-4 w-px bg-border" />
+               <span className="text-xs font-black text-primary uppercase tracking-widest">{totalPaidRevenue.toFixed(2)} USD</span>
+            </div>
           </div>
           <CustomBarChart data={dynamicDailyChart} />
-          <div className="mt-8 pt-8 border-t border-border flex items-center justify-between bg-primary/5 p-4 rounded-2xl">
-              <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">Résumé Auto</p>
-                <p className="text-sm font-medium mt-1">
-                  La performance actuelle est {growthRate >= 0 ? 'en hausse' : 'en baisse'} de <span className={cn("font-bold", growthRate >= 0 ? "text-emerald-500" : "text-destructive")}>{Math.abs(growthRate).toFixed(1)}%</span> par rapport à la période précédente.
-                </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-8 border-t border-border">
+              <div className="bg-primary/5 p-6 rounded-[2rem] border border-primary/10">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Tendance Performance</p>
+                    {growthRate >= 0 ? <ChevronUp className="w-4 h-4 text-emerald-500" /> : <ChevronDown className="w-4 h-4 text-destructive" />}
+                  </div>
+                  <p className="text-xs font-medium leading-relaxed">
+                    Performance {growthRate >= 0 ? 'en hausse' : 'en baisse'} de <span className={cn("font-black italic", growthRate >= 0 ? "text-emerald-500" : "text-destructive")}>{Math.abs(growthRate).toFixed(1)}%</span> par rapport à la période précédente.
+                  </p>
               </div>
-              {growthRate >= 0 ? <ChevronUp className="w-5 h-5 text-emerald-500" /> : <ChevronDown className="w-5 h-5 text-destructive" />}
+
+              <div className="bg-emerald-500/5 p-6 rounded-[2rem] border border-emerald-500/10">
+                  <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">Heures de Pointe</p>
+                  <PeakHoursChart data={analytics?.peakHours || []} />
+              </div>
           </div>
         </div>
 
         {/* Payments Breakdown */}
         <div className="bg-card rounded-3xl p-8 shadow-sm border border-border/50 flex flex-col">
-          <h3 className="text-lg font-bold flex items-center gap-2 mb-2">
+          <h3 className="text-lg font-bold flex items-center gap-2 mb-2 text-white italic tracking-tighter">
              <CreditCard className="w-5 h-5 text-primary" /> Modes de Paiement
           </h3>
-          <p className="text-sm text-muted-foreground mb-6 italic">Basé sur les transactions clôturées ({filter === 'day' ? 'jour' : 'mois'})</p>
-          <div className="flex-1 flex items-center justify-center py-12 text-zinc-500 italic text-sm border-2 border-dashed border-border rounded-2xl">
-              Analyse des modes bientôt disponible
+          <p className="text-[10px] font-black text-muted-foreground mb-6 uppercase tracking-widest">Répartition des encaissements</p>
+          
+          <div className="flex-1">
+             <PieChartPlaceholder data={analytics?.paymentDistribution || []} />
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-border">
+             <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-2xl">
+                <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center">
+                   <Smartphone className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div>
+                   <p className="text-xs font-bold">Paiement Mobile</p>
+                   <p className="text-[10px] text-muted-foreground">Privilégié à {(analytics?.paymentDistribution?.[1]?.value || 0)}%</p>
+                </div>
+             </div>
           </div>
         </div>
 
@@ -669,7 +749,12 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
                       <td className="py-4 px-4 text-center font-medium">{dish.orders}</td>
                       <td className="py-4 px-4 text-center font-medium">${dish.price}</td>
                       <td className="py-4 pl-4 text-right">
-                         <span className="text-xs font-bold text-emerald-500">Stable</span>
+                         <span className={cn(
+                           "text-[10px] font-black uppercase px-2 py-1 rounded-lg",
+                           dish.profit > 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
+                         )}>
+                           +{dish.profit.toFixed(1)}$ Profit
+                         </span>
                       </td>
                     </tr>
                   ))

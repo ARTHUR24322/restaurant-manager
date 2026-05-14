@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useState } from "react";
-import { Trash2, UtensilsCrossed, BookOpen, Edit2 } from "lucide-react";
+import { Trash2, UtensilsCrossed, BookOpen, Edit2, Gift } from "lucide-react";
 import { type Plat } from "@/types";
-import { deletePlat } from "@/lib/actions";
+import { deletePlat, toggleLoyaltyReward } from "@/lib/actions";
 import { ConfirmModal } from "./ConfirmModal";
 import { RecipeModal } from "./RecipeModal";
 import { EditPlatModal } from "./EditPlatModal";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface MenuTableProps {
   plats: Plat[];
@@ -25,6 +26,14 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [editPlat, setEditPlat] = useState<Plat | null>(null);
 
+  // Local state tracking for loyalty reward toggles
+  const [rewardStates, setRewardStates] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    plats.forEach(p => { initial[p.id] = !!p.isLoyaltyReward; });
+    return initial;
+  });
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   const handleDeleteClick = (plat: Plat) => {
     setSelectedPlat(plat);
     setShowConfirm(true);
@@ -33,6 +42,26 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
   const handleEditClick = (plat: Plat) => {
     setEditPlat(plat);
     setShowEdit(true);
+  };
+
+  const handleToggleReward = async (plat: Plat) => {
+    setTogglingId(plat.id);
+    try {
+      const result = await toggleLoyaltyReward(plat.id, restaurantId);
+      if (result.success) {
+        setRewardStates(prev => ({ ...prev, [plat.id]: !!result.isLoyaltyReward }));
+        toast.success(
+          result.isLoyaltyReward
+            ? `🎁 "${plat.nom}" est maintenant un cadeau fidélité !`
+            : `"${plat.nom}" retiré des cadeaux fidélité.`
+        );
+      } else {
+        toast.error(result.error || "Erreur");
+      }
+    } catch {
+      toast.error("Erreur serveur");
+    }
+    setTogglingId(null);
   };
 
   const handleConfirmDelete = async () => {
@@ -65,66 +94,95 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
               <th className="px-6 py-4">Plat</th>
               <th className="px-6 py-4">Catégorie</th>
               <th className="px-6 py-4">Prix</th>
+              <th className="px-6 py-4 text-center">Cadeau</th>
               <th className="px-6 py-4 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/50">
             {plats.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
+                <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                   <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 opacity-20" />
                   <p>Aucun plat dans votre menu pour le moment.</p>
                 </td>
               </tr>
             ) : (
-              plats.map((plat) => (
-                <tr key={plat.id} className="hover:bg-secondary/20 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden border border-border shrink-0">
-                        <img src={plat.image} alt={plat.nom} className="w-full h-full object-cover" />
+              plats.map((plat) => {
+                const isReward = rewardStates[plat.id] ?? !!plat.isLoyaltyReward;
+                const isToggling = togglingId === plat.id;
+
+                return (
+                  <tr key={plat.id} className="hover:bg-secondary/20 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden border border-border shrink-0 relative">
+                          <img src={plat.image} alt={plat.nom} className="w-full h-full object-cover" />
+                          {isReward && (
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center shadow-lg shadow-pink-500/40 border-2 border-card">
+                              <Gift className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-foreground">{plat.nom}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{plat.description}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-sm text-foreground">{plat.nom}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{plat.description}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[10px] font-bold px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20">
+                        {plat.categorie}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-sm text-foreground">
+                      {plat.devise === "USD" ? "$" : ""}{plat.prixUsd.toFixed(2)} {plat.devise === "FC" ? "FC" : ""}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => handleToggleReward(plat)}
+                          disabled={isToggling}
+                          className={cn(
+                            "p-2 rounded-xl transition-all active:scale-95 border",
+                            isReward
+                              ? "bg-pink-500/10 text-pink-500 border-pink-500/30 hover:bg-pink-500/20 shadow-sm shadow-pink-500/10"
+                              : "bg-secondary/50 text-muted-foreground border-border hover:bg-secondary hover:text-foreground",
+                            isToggling && "opacity-50 animate-pulse"
+                          )}
+                          title={isReward ? "Retirer du programme cadeau" : "Ajouter comme cadeau fidélité"}
+                        >
+                          <Gift className="w-4 h-4" />
+                        </button>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20">
-                      {plat.categorie}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-bold text-sm text-foreground">
-                    {plat.devise === "USD" ? "$" : ""}{plat.prixUsd.toFixed(2)} {plat.devise === "FC" ? "FC" : ""}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => handleEditClick(plat)}
-                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-primary/20"
-                        title="Modifier"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => { setRecipePlat(plat); setShowRecipe(true); }}
-                        className="p-2 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors border border-transparent hover:border-indigo-500/20"
-                        title="Gérer la recette"
-                      >
-                        <BookOpen className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteClick(plat)}
-                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-transparent hover:border-destructive/20"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => handleEditClick(plat)}
+                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors border border-transparent hover:border-primary/20"
+                          title="Modifier"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => { setRecipePlat(plat); setShowRecipe(true); }}
+                          className="p-2 text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors border border-transparent hover:border-indigo-500/20"
+                          title="Gérer la recette"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteClick(plat)}
+                          className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors border border-transparent hover:border-destructive/20"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -157,3 +215,4 @@ export function MenuTable({ plats, restaurantId }: MenuTableProps) {
     </>
   );
 }
+
