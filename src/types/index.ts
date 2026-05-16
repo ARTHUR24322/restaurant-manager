@@ -23,6 +23,7 @@ export interface Plat {
   options: Option[];
   stockQuantity?: number;
   trackStock?: boolean;
+  disponible: boolean;
   isLoyaltyReward?: boolean;
   restaurantId: string;
 }

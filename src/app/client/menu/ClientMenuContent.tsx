@@ -277,7 +277,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       {/* Grille de Plats Moderne */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {filteredPlats.map((plat) => {
-          const isOutOfStock = plat.trackStock && (plat.stockQuantity || 0) <= 0;
+          const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
 
           return (
             <div 

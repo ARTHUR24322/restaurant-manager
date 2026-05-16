@@ -50,16 +50,27 @@ export const getCachedPlats = (restaurantId: string) =>
 
       return plats.map(plat => {
         let isAvailable = plat.disponible;
-        // Vérification dynamique du stock
-        if (isAvailable && plat.recetteItems && plat.recetteItems.length > 0) {
+        const trackStock = plat.recetteItems && plat.recetteItems.length > 0;
+        let stockQuantity = 999; 
+
+        if (trackStock) {
           for (const recette of plat.recetteItems) {
-            if (recette.article && recette.article.stockActuel < recette.quantite) {
-              isAvailable = false;
-              break; // Rupture d'un des ingrédients => Plat en rupture
+            if (recette.article) {
+              const possibleAmount = Math.floor(recette.article.stockActuel / recette.quantite);
+              if (possibleAmount < stockQuantity) {
+                stockQuantity = possibleAmount;
+              }
             }
           }
+          if (stockQuantity <= 0) isAvailable = false;
         }
-        return { ...plat, disponible: isAvailable };
+
+        return { 
+          ...plat, 
+          disponible: isAvailable,
+          trackStock,
+          stockQuantity: trackStock ? stockQuantity : undefined
+        };
       });
     },
     [`menu-${restaurantId}`],

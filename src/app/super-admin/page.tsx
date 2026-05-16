@@ -50,7 +50,8 @@ import {
     deleteRestaurant, 
     getAllSubscriptionLogs, 
     renewSubscription,
-    getSuperAdminPageData
+    getSuperAdminPageData,
+    getSystemDiagnostic
 } from "@/lib/admin-actions";
 import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
@@ -156,11 +157,13 @@ export default function SuperAdminPage() {
     const [pin, setPin] = useState("");
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings' | 'diagnostic'>('dashboard');
     const [monitoringData, setMonitoringData] = useState<any>(null);
     const [subscriptionLogs, setSubscriptionLogs] = useState<any[]>([]);
     const [supportMessages, setSupportMessages] = useState<any[]>([]);
     const [renewLoadingId, setRenewLoadingId] = useState<string | null>(null);
+    const [diagnosticData, setDiagnosticData] = useState<any>(null);
+    const [diagLoading, setDiagLoading] = useState(false);
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -239,6 +242,18 @@ export default function SuperAdminPage() {
         window.addEventListener('pageshow', handlePageShow);
         return () => window.removeEventListener('pageshow', handlePageShow);
     }, []);
+
+    useEffect(() => {
+        if (activeTab === 'diagnostic') {
+            const fetchDiag = async () => {
+                setDiagLoading(true);
+                const res = await getSystemDiagnostic();
+                if (res.success) setDiagnosticData(res.data);
+                setDiagLoading(false);
+            };
+            fetchDiag();
+        }
+    }, [activeTab]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -459,6 +474,7 @@ export default function SuperAdminPage() {
                         { id: 'recuperation', label: 'Récupération', icon: <KeyRound className="w-4 h-4" />, count: recoveryRequests.filter(r => r.statut === "EN_ATTENTE").length },
                         { id: 'messages', label: 'Messages', icon: <Mail className="w-4 h-4" />, count: supportMessages.filter(m => m.statut === "NON_LU").length },
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
+                        { id: 'diagnostic', label: 'Diagnostic', icon: <Activity className="w-4 h-4" /> },
                         { id: 'settings', label: 'System', icon: <Settings className="w-4 h-4" /> },
                     ].map((tab) => (
                         <button
@@ -1228,6 +1244,138 @@ export default function SuperAdminPage() {
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'diagnostic' && (
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10">
+                        <div className="flex justify-between items-center mb-10">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase flex items-center gap-2">
+                                    <ShieldCheck className="w-8 h-8 text-indigo-500" /> Diagnostic Système
+                                </h3>
+                                <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1">État de santé en temps réel de l'infrastructure</p>
+                            </div>
+                            <button 
+                                onClick={async () => {
+                                    setDiagLoading(true);
+                                    const res = await getSystemDiagnostic();
+                                    if (res.success) setDiagnosticData(res.data);
+                                    setDiagLoading(false);
+                                    toast.success("Diagnostic actualisé");
+                                }}
+                                disabled={diagLoading}
+                                className="bg-zinc-800 p-4 rounded-2xl border border-zinc-700 text-white hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                <RefreshCw className={cn("w-5 h-5", diagLoading && "animate-spin")} />
+                            </button>
+                        </div>
+
+                        {diagLoading && !diagnosticData ? (
+                            <div className="flex flex-col items-center justify-center py-32 opacity-50">
+                                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Analyse en cours...</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Base de données */}
+                                <div className="bg-zinc-950/50 p-8 rounded-3xl border border-zinc-800 hover:border-indigo-500/30 transition-all group">
+                                    <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-6 tracking-widest flex items-center gap-2">
+                                        <Layers className="w-4 h-4 text-indigo-500" /> Base de données
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-400 font-medium">Status</span>
+                                            <span className="text-emerald-500 font-black uppercase italic">{diagnosticData?.database?.status}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-400 font-medium">Latence</span>
+                                            <span className="text-white font-black italic">{diagnosticData?.database?.latency}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-400 font-medium">Provider</span>
+                                            <span className="text-zinc-500 font-bold uppercase text-[10px]">{diagnosticData?.database?.provider}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Système Runtime */}
+                                <div className="bg-zinc-950/50 p-8 rounded-3xl border border-zinc-800 hover:border-primary/30 transition-all group">
+                                    <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-6 tracking-widest flex items-center gap-2">
+                                        <Settings className="w-4 h-4 text-primary" /> Serveur Runtime
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-400 font-medium">Uptime</span>
+                                            <span className="text-white font-black italic">{diagnosticData?.server?.uptime}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-400 font-medium">Version Node</span>
+                                            <span className="text-white font-black italic">{diagnosticData?.server?.nodeVersion}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-zinc-400 font-medium">Plateforme</span>
+                                            <span className="text-zinc-500 font-bold uppercase text-[10px]">{diagnosticData?.server?.platform}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Volume des données */}
+                                <div className="md:col-span-2 bg-zinc-950/20 p-8 rounded-[2.5rem] border border-zinc-800/50">
+                                    <h4 className="text-[10px] font-black text-zinc-500 uppercase mb-8 tracking-widest flex items-center gap-2">
+                                        <BarChart3 className="w-4 h-4 text-emerald-500" /> Volume Global des Objets
+                                    </h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                        {[
+                                            { label: 'Restaurants', val: diagnosticData?.counts?.restaurants, color: 'text-white' },
+                                            { label: 'Commandes', val: diagnosticData?.counts?.commandes, color: 'text-emerald-500' },
+                                            { label: 'Articles', val: diagnosticData?.counts?.articles, color: 'text-amber-500' },
+                                            { label: 'Visites', val: diagnosticData?.counts?.visites, color: 'text-indigo-500' },
+                                            { label: 'Notifications', val: diagnosticData?.counts?.notifications, color: 'text-pink-500' },
+                                        ].map((c, i) => (
+                                            <div key={i} className="text-center">
+                                                <p className="text-[8px] font-black text-zinc-600 uppercase mb-1">{c.label}</p>
+                                                <p className={cn("text-2xl font-black italic", c.color)}>{c.val || 0}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Mémoire et Variables */}
+                                <div className="bg-zinc-950/50 p-8 rounded-3xl border border-zinc-800">
+                                    <h5 className="text-[9px] font-black text-zinc-500 uppercase mb-4 tracking-widest italic">Analyse Mémoire</h5>
+                                    <div className="space-y-2">
+                                        <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mb-4">
+                                            <div 
+                                                className="bg-primary h-full transition-all duration-1000" 
+                                                style={{ width: `${Math.round((diagnosticData?.server?.memory?.usedRaw / diagnosticData?.server?.memory?.totalRaw) * 100) || 0}%` }} 
+                                            />
+                                        </div>
+                                        <div className="flex justify-between text-[10px] uppercase font-bold">
+                                            <span className="text-zinc-600">Utilisé: {diagnosticData?.server?.memory?.used}</span>
+                                            <span className="text-zinc-600">Total: {diagnosticData?.server?.memory?.allocated}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-zinc-950/50 p-8 rounded-3xl border border-zinc-800">
+                                    <h5 className="text-[9px] font-black text-zinc-500 uppercase mb-4 tracking-widest italic">Variables d'Environnement</h5>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {Object.entries(diagnosticData?.env || {}).map(([key, val]: [string, any]) => (
+                                            <div key={key} className="flex flex-col gap-1">
+                                                <span className="text-[8px] text-zinc-600 font-bold uppercase">{key}</span>
+                                                <span className={cn(
+                                                    "text-[9px] font-black px-2 py-0.5 rounded-md w-fit",
+                                                    val === 'DÉFINI' || val === 'COMPLET' ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                                                )}>{val}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

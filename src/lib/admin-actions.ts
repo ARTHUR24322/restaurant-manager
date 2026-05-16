@@ -453,3 +453,69 @@ export async function getSuperAdminPageData() {
         return { success: false, error: e.message };
     }
 }
+
+/**
+ * Diagnostic complet du système pour le Super-Admin
+ */
+export async function getSystemDiagnostic() {
+    try {
+        await ensureSuperAdmin();
+        
+        // 1. Diagnostic de la base de données
+        const dbStart = Date.now();
+        await (prisma as any).$queryRaw`SELECT 1`;
+        const dbLatency = Date.now() - dbStart;
+
+        // 2. Statistiques de volume par table
+        const [restos, orders, articles, visits, notifications] = await Promise.all([
+            (prisma as any).restaurant.count(),
+            (prisma as any).commande.count(),
+            (prisma as any).articleStock.count(),
+            (prisma as any).visite.count(),
+            (prisma as any).notification.count()
+        ]);
+
+        // 3. Infos Système / Runtime
+        const memory = process.memoryUsage();
+        const uptime = process.uptime();
+
+        return {
+            success: true,
+            data: {
+                database: {
+                    status: "OPÉRATIONNEL",
+                    latency: `${dbLatency}ms`,
+                    provider: "PostgreSQL (Supabase)",
+                },
+                counts: {
+                    restaurants: restos,
+                    commandes: orders,
+                    articles: articles,
+                    visites: visits,
+                    notifications: notifications
+                },
+                server: {
+                    nodeVersion: process.version,
+                    platform: process.platform,
+                    memory: {
+                        used: `${Math.round(memory.heapUsed / 1024 / 1024)} MB`,
+                        allocated: `${Math.round(memory.heapTotal / 1024 / 1024)} MB`,
+                        rss: `${Math.round(memory.rss / 1024 / 1024)} MB`,
+                        usedRaw: memory.heapUsed,
+                        totalRaw: memory.heapTotal
+                    },
+                    uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
+                },
+                env: {
+                    DATABASE_URL: process.env.DATABASE_URL ? "DÉFINI" : "MANQUANT",
+                    DIRECT_URL: process.env.DIRECT_URL ? "DÉFINI" : "MANQUANT",
+                    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? "DÉFINI" : "MANQUANT",
+                    WHATSAPP_CONFIG: process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID ? "COMPLET" : "INCOMPLET",
+                }
+            }
+        };
+    } catch (e: any) {
+        console.error("[Diagnostic] Erreur:", e);
+        return { success: false, error: e.message };
+    }
+}
