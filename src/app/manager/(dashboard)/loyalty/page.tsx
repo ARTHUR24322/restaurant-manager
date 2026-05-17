@@ -95,7 +95,7 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
     if (result.success) {
       setCustomers(result.customers);
       setConfig(result.config);
-      setPlan(result.plan);
+      setPlan(result.plan || 'STANDARD');
     }
     // Charger le catalogue via notre nouvelle action
     const loyaltyInfo = await getClientLoyalty(id, "dummy"); // On détourne juste pour avoir le catalogue
@@ -138,9 +138,9 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
     const res = await redeemRewardAsManager(restaurantId, selectedCustomer.phone, catalogId);
     setIsRedeeming(false);
     
-    if (res.success) {
+    if (res.success && res.reward) {
       toast.success("Récompense accordée avec succès !");
-      const product = plats.find(p => p.id === res.reward.productId);
+      const product = plats.find(p => p.id === res.reward?.productId);
       setRedeemedReward({ ...res.reward, platName: product?.nom, platImage: product?.image });
       setSelectedCustomer(null);
       refreshData(restaurantId);

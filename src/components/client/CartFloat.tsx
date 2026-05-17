@@ -1,7 +1,7 @@
 "use client"
 
 import { useCartStore } from "@/store/cartStore";
-import { ShoppingCart, X, Plus, Minus, CreditCard, Loader2, Ticket, Phone, Trash2, CheckCircle2 } from "lucide-react";
+import { ShoppingCart, X, Plus, Minus, CreditCard, Loader2, Ticket, Phone, Trash2, CheckCircle2, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const [lastOrderId, setLastOrderId] = useState<string | undefined>();
   const [promoCode, setPromoCode] = useState("");
   const [promoPhone, setPromoPhone] = useState("");
+  const [isPromoOpen, setIsPromoOpen] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
   
@@ -48,7 +49,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
     try {
       const { validateAndApplyPromo } = await import("@/lib/actions-loyalty");
       const res = await validateAndApplyPromo(restaurantId || "", promoCode, promoPhone);
-      if (res.success) {
+      if (res.success && res.reward) {
         toast.success(`Réduction de ${res.reward.discountValue}% appliquée !`);
         setAppliedPromo(res.reward);
         localStorage.setItem('sr_applied_promo', JSON.stringify(res.reward));
@@ -246,17 +247,17 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
         {/* Pied : Totaux et Action */}
         <div className="p-6 bg-zinc-950 rounded-b-[2.5rem] md:rounded-b-[2.5rem] border-t border-white/5">
           
-          <div className="mb-8 space-y-6">
-            {/* --- LOYALTY & PROMO SECTION --- */}
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-5 overflow-hidden relative">
-               <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full" />
-               
-               <h3 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] mb-4 flex items-center gap-2">
-                  <Ticket className="w-3 h-3 text-primary" /> Loyalty & Rewards
-               </h3>
+          <div className="mb-6 space-y-4">
+            <textarea 
+              placeholder="Une note spéciale ? (Allergie, extra...)" 
+              className="w-full text-xs bg-black/40 border border-white/10 rounded-2xl p-4 resize-none focus:ring-1 focus:ring-primary h-14 text-white placeholder:text-zinc-700 outline-none transition-all shadow-inner"
+              disabled={isSubmitting}
+            />
 
+            {/* --- LOYALTY & PROMO SECTION --- */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative transition-all duration-300">
                {appliedPromo ? (
-                 <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl animate-in zoom-in-95 duration-200">
+                 <div className="flex items-center justify-between bg-emerald-500/10 p-4">
                     <div className="flex items-center gap-3">
                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                        <div>
@@ -272,45 +273,53 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
                     </button>
                  </div>
                ) : (
-                 <div className="space-y-3">
-                    <div className="grid grid-cols-1 gap-2">
-                        <div className="relative">
-                            <input 
-                              type="text" 
-                              placeholder="CODE PROMO" 
-                              value={promoCode}
-                              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                              className="w-full text-xs font-bold uppercase bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all pr-10"
-                            />
-                            <Ticket className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
+                 <>
+                   <button 
+                     onClick={() => setIsPromoOpen(!isPromoOpen)}
+                     className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+                   >
+                     <h3 className="text-[10px] font-black uppercase text-zinc-500 tracking-[0.2em] flex items-center gap-2">
+                        <Ticket className="w-3 h-3 text-primary" /> Avez-vous un code promo ?
+                     </h3>
+                     <ChevronDown className={cn("w-4 h-4 text-zinc-500 transition-transform duration-300", isPromoOpen ? "rotate-180" : "")} />
+                   </button>
+                   
+                   {isPromoOpen && (
+                     <div className="p-4 pt-0 space-y-3 animate-in slide-in-from-top-2 duration-300 border-t border-white/5 mt-2">
+                        <div className="grid grid-cols-1 gap-2">
+                            <div className="relative">
+                                <input 
+                                  type="text" 
+                                  placeholder="CODE PROMO" 
+                                  value={promoCode}
+                                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                  className="w-full text-xs font-bold uppercase bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all pr-10"
+                                />
+                                <Ticket className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
+                            </div>
+                            <div className="relative">
+                                <input 
+                                  type="tel" 
+                                  placeholder="VOTRE NUMÉRO" 
+                                  value={promoPhone}
+                                  onChange={(e) => setPromoPhone(e.target.value)}
+                                  className="w-full text-xs font-bold bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all pr-10 font-mono"
+                                />
+                                <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
+                            </div>
                         </div>
-                        <div className="relative">
-                            <input 
-                              type="tel" 
-                              placeholder="VOTRE NUMÉRO (POUR VÉRIFIER)" 
-                              value={promoPhone}
-                              onChange={(e) => setPromoPhone(e.target.value)}
-                              className="w-full text-xs font-bold bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-white placeholder:text-zinc-700 outline-none focus:ring-1 focus:ring-primary transition-all pr-10 font-mono"
-                            />
-                            <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-700" />
-                        </div>
-                    </div>
-                    <button 
-                      onClick={handleApplyPromo}
-                      disabled={isVerifyingPromo || !promoCode || !promoPhone}
-                      className="w-full bg-zinc-100 hover:bg-white disabled:opacity-30 text-black rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] py-3.5 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      {isVerifyingPromo ? <Loader2 className="w-3 h-3 animate-spin" /> : "Vérifier & Appliquer"}
-                    </button>
-                 </div>
+                        <button 
+                          onClick={handleApplyPromo}
+                          disabled={isVerifyingPromo || !promoCode || !promoPhone}
+                          className="w-full bg-primary hover:bg-primary/90 disabled:opacity-30 text-black rounded-xl text-[10px] font-black uppercase tracking-[0.1em] py-3 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          {isVerifyingPromo ? <Loader2 className="w-3 h-3 animate-spin" /> : "Appliquer"}
+                        </button>
+                     </div>
+                   )}
+                 </>
                )}
             </div>
-
-            <textarea 
-              placeholder="Une note spéciale ? (Allergie, extra...)" 
-              className="w-full text-sm bg-black/40 border border-white/10 rounded-3xl p-5 resize-none focus:ring-1 focus:ring-primary h-24 text-white placeholder:text-zinc-700 outline-none transition-all shadow-inner"
-              disabled={isSubmitting}
-            />
           </div>
 
           <div className="space-y-4 mb-8 bg-zinc-900 border border-white/5 rounded-[2rem] p-6">

@@ -23,7 +23,7 @@ export const exportToExcel = (data: any[], fileName: string, summary: any) => {
 };
 
 export const exportToPDF = (data: any[], fileName: string, title: string, summary: any) => {
-  const doc = jsPDF();
+  const doc = new jsPDF();
   
   // Header Style
   doc.setFillColor(31, 41, 55); // Zinc-900 like
@@ -74,7 +74,7 @@ export const exportToPDF = (data: any[], fileName: string, title: string, summar
 
   autoTable(doc, {
     head: [tableColumn],
-    body: tableRows,
+    body: tableRows as any[],
     startY: 105,
     styles: { fontSize: 8, cellPadding: 3 },
     headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255], fontStyle: 'bold' },
