@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { CheckCircle, ArrowRight, ShoppingBag, Gift, Phone, Loader2, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { assignPhoneToOrder } from "@/lib/actions";
 
@@ -12,6 +13,7 @@ interface OrderSuccessProps {
 }
 
 export function OrderSuccess({ isOpen, onClose, orderId }: OrderSuccessProps) {
+  const router = useRouter();
   const [phone, setPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [isLoyaltyLoading, setIsLoyaltyLoading] = useState(false);
@@ -210,7 +212,10 @@ export function OrderSuccess({ isOpen, onClose, orderId }: OrderSuccessProps) {
             </button>
             
             <button 
-                onClick={onClose}
+                onClick={() => {
+                  router.push(`/client/order-tracker?orderId=${orderId}&resto_id=${loyaltyStatus?.restaurantId || ""}`);
+                  onClose();
+                }}
                 className="w-full bg-secondary hover:bg-secondary/80 text-foreground font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-colors"
             >
                 Suivre ma commande

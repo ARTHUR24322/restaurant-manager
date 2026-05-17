@@ -269,6 +269,7 @@ model LoyaltyConfig {
   restaurantId    String     @unique
   pointsPerUsd    Int        @default(1)
   rewardThreshold Int        @default(100)
+  rewardDescription String?
   isActive        Boolean    @default(true)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -327,6 +328,7 @@ model ClientReward {
   type         String
   productId    String?
   promoCode    String?         @unique
+  discountValue Float?
   isUsed       Boolean         @default(false)
   allowedDays  String[]
   expiresAt    DateTime?

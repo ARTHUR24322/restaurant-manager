@@ -160,6 +160,20 @@ export function EditPlatModal({ isOpen, onClose, plat, restaurantId }: EditPlatM
             />
           </div>
 
+          <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+            <input 
+              type="checkbox" 
+              name="isLoyaltyReward" 
+              value="true"
+              id="edit-isLoyaltyReward"
+              defaultChecked={plat.isLoyaltyReward}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+            />
+            <label htmlFor="edit-isLoyaltyReward" className="text-xs font-bold text-primary flex items-center gap-1.5">
+               Éligible Cadeau Fidélité
+            </label>
+          </div>
+
           <div className="pt-4 flex gap-3">
             <button
               type="button"

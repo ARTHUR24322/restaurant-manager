@@ -48,6 +48,7 @@ export async function addPlat(formData: FormData) {
     const prixUsd = parseFloat(formData.get("prixUsd") as string);
     const devise = (formData.get("devise") as string) || "USD";
     const categorie = formData.get("categorie") as string;
+    const isLoyaltyReward = formData.get("isLoyaltyReward") === "true";
     let image = formData.get("image") as string;
     const imageFile = formData.get("imageFile") as any;
 
@@ -80,6 +81,7 @@ export async function addPlat(formData: FormData) {
         devise,
         categorie,
         image,
+        isLoyaltyReward,
         restaurantId,
         options: {
           create: optionsList.map(opt => ({
@@ -113,6 +115,7 @@ export async function updatePlat(formData: FormData) {
     const prixUsd = parseFloat(formData.get("prixUsd") as string);
     const devise = (formData.get("devise") as string) || "USD";
     const categorie = formData.get("categorie") as string;
+    const isLoyaltyReward = formData.get("isLoyaltyReward") === "true";
     let image = formData.get("image") as string;
     const imageFile = formData.get("imageFile") as any;
 
@@ -122,6 +125,7 @@ export async function updatePlat(formData: FormData) {
       prixUsd,
       devise,
       categorie,
+      isLoyaltyReward,
     };
 
     if (imageFile && imageFile.size > 0 && typeof imageFile.arrayBuffer === 'function') {
@@ -190,6 +194,35 @@ export async function deletePlat(formData: FormData) {
   } catch (error: any) {
     console.error("Error deleting plat:", error);
     throw error;
+  }
+}
+
+export async function getOrderDetails(orderId: string) {
+  try {
+    const order = await prisma.commande.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            plat: true
+          }
+        },
+        restaurant: true
+      }
+    });
+
+    if (!order) return { success: false, error: "Commande introuvable" };
+
+    // Get loyalty status if phone exists
+    let loyalty = null;
+    if (order.phone) {
+      loyalty = await getLoyaltyStatus(order.restaurantId, order.phone);
+    }
+
+    return { success: true, order, loyalty };
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    return { success: false, error: "Erreur serveur" };
   }
 }
 
@@ -481,7 +514,8 @@ export async function cancelOrder(orderId: string) {
 export async function getLoyaltyStatus(restaurantId: string, phone: string) {
   try {
     const config = await prisma.loyaltyConfig.findUnique({
-      where: { restaurantId }
+      where: { restaurantId },
+      include: { restaurant: { select: { plan: true } } }
     });
     
     const threshold = config?.rewardThreshold || 100;
@@ -498,7 +532,8 @@ export async function getLoyaltyStatus(restaurantId: string, phone: string) {
     return {
       points: customer?.points || 0,
       threshold,
-      rewardDescription: config?.rewardDescription || "Un cadeau offert !"
+      rewardDescription: config?.rewardDescription || "Un cadeau offert !",
+      plan: config?.restaurant?.plan || 'STANDARD'
     };
   } catch (error) {
     console.error("Error fetching loyalty status:", error);
@@ -620,13 +655,15 @@ export async function getLoyaltyCustomers(restaurantId: string) {
     });
 
     const config = await prisma.loyaltyConfig.findUnique({
-      where: { restaurantId }
+      where: { restaurantId },
+      include: { restaurant: { select: { plan: true } } }
     });
 
     return {
       success: true,
       customers,
-      config: config || { pointsPerUsd: 1, rewardThreshold: 100 }
+      config: config || { pointsPerUsd: 1, rewardThreshold: 100 },
+      plan: config?.restaurant?.plan || 'STANDARD'
     };
   } catch (error) {
     console.error("Error fetching loyalty customers:", error);
@@ -802,7 +839,7 @@ export async function redeemLoyaltyGift(
     });
 
     revalidatePath("/manager/loyalty");
-    return { success: true, giftName: plat.nom };
+    return { success: true, giftName: plat.nom, giftImage: plat.image };
   } catch (error) {
     console.error("Error redeeming gift:", error);
     return { success: false, error: "Erreur lors de l'échange." };

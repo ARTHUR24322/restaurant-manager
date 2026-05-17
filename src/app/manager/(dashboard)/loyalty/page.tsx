@@ -6,12 +6,15 @@ import {
   TrendingUp, Loader2, ChevronRight, X, 
   Star, Award, Clock, Ticket, Calendar,
   Plus, Trash2, Settings, PlusCircle, CheckCircle2,
-  AlertCircle, Utensils
+  AlertCircle, Utensils, Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import { 
   getLoyaltyCustomers, 
-  getLoyaltyCustomerDetails 
+  getLoyaltyCustomerDetails,
+  getRandomRewardProducts,
+  redeemLoyaltyGift 
 } from "@/lib/actions";
 import { 
   addToRewardCatalog, 
@@ -27,6 +30,7 @@ import { toast } from "sonner";
 import { SubmitButton } from "@/components/manager/SubmitButton";
 
 export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { resto_id?: string } }) {
+  const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   const [activeTab, setActiveTab] = useState<'customers' | 'catalog' | 'settings'>('customers');
   const [loading, setLoading] = useState(true);
@@ -34,6 +38,7 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
   const [catalog, setCatalog] = useState<any[]>([]);
   const [plats, setPlats] = useState<any[]>([]);
   const [config, setConfig] = useState<any>(null);
+  const [plan, setPlan] = useState<string>('STANDARD');
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +56,11 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
   const [allowedDays, setAllowedDays] = useState<string[]>(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemedReward, setRedeemedReward] = useState<any>(null);
+  
+  // Random Rewards State
+  const [randomProducts, setRandomProducts] = useState<any[]>([]);
+  const [isFetchingRandom, setIsFetchingRandom] = useState(false);
+  const [showRandomChoice, setShowRandomChoice] = useState(false);
 
   const daysOfWeek = [
     { id: "Monday", label: "Lun" },
@@ -85,6 +95,7 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
     if (result.success) {
       setCustomers(result.customers);
       setConfig(result.config);
+      setPlan(result.plan);
     }
     // Charger le catalogue via notre nouvelle action
     const loyaltyInfo = await getClientLoyalty(id, "dummy"); // On détourne juste pour avoir le catalogue
@@ -96,6 +107,10 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
 
   const handleAddReward = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (plan === 'STANDARD') {
+      toast.error("Veuillez passer en PRO pour gérer le catalogue.");
+      return;
+    }
     const res = await addToRewardCatalog(restaurantId, {
       type: rewardType,
       requiredPoints: reqPoints,
@@ -115,19 +130,54 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
   const handleRedeem = async (catalogId: string) => {
     if (!selectedCustomer) return;
     
+    if (plan === 'STANDARD') {
+      toast.error("Veuillez passer en PRO pour utiliser l'échange cadeau.");
+      return;
+    }
     setIsRedeeming(true);
     const res = await redeemRewardAsManager(restaurantId, selectedCustomer.phone, catalogId);
     setIsRedeeming(false);
     
     if (res.success) {
       toast.success("Récompense accordée avec succès !");
-      setRedeemedReward(res.reward);
-      // On ne ferme pas setSelectedCustomer(null) de suite pour laisser voir le code si besoin ?
-      // En fait on va fermer la sélection et montrer un autre état "succès"
+      const product = plats.find(p => p.id === res.reward.productId);
+      setRedeemedReward({ ...res.reward, platName: product?.nom, platImage: product?.image });
       setSelectedCustomer(null);
       refreshData(restaurantId);
     } else {
       toast.error(res.error || "Erreur lors de l'échange.");
+    }
+  };
+
+  const handleStartRandomRedeem = async () => {
+    setIsFetchingRandom(true);
+    if (plan === 'STANDARD') {
+      toast.error("Veuillez passer en PRO pour utiliser l'échange cadeau.");
+      return;
+    }
+    setIsFetchingRandom(true);
+    const res = await getRandomRewardProducts(restaurantId);
+    setIsFetchingRandom(false);
+    if (res.success) {
+      setRandomProducts(res.products);
+      setShowRandomChoice(true);
+    } else {
+      toast.error(res.error || "Erreur lors de la récupération des cadeaux.");
+    }
+  };
+
+  const handleConfirmRandomRedeem = async (platId: string) => {
+    setIsRedeeming(true);
+    const res = await redeemLoyaltyGift(restaurantId, selectedCustomer.id, platId);
+    setIsRedeeming(false);
+    if (res.success) {
+      toast.success(`Cadeau "${res.giftName}" accordé !`);
+      setRedeemedReward({ type: 'PRODUCT', platName: res.giftName, platImage: res.giftImage });
+      setShowRandomChoice(false);
+      setSelectedCustomer(null);
+      refreshData(restaurantId);
+    } else {
+      toast.error(res.error || "Erreur.");
     }
   };
 
@@ -148,6 +198,29 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Plan Restriction Banner */}
+      {plan === 'STANDARD' && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-[2rem] p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden shadow-2xl">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px] rounded-full" />
+           <div className="flex items-center gap-6 relative z-10">
+              <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20 rotate-3">
+                 <Crown className="w-8 h-8 text-black" />
+              </div>
+              <div>
+                 <h2 className="text-xl font-black uppercase italic tracking-tighter text-amber-500">Fonctionnalité PRO</h2>
+                 <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest max-w-lg leading-relaxed">
+                    Le programme de fidélité avancé (points, cadeaux, codes promo) est réservé aux comptes <span className="text-white">PRO</span> et <span className="text-white">PLATINUM</span>.
+                 </p>
+              </div>
+           </div>
+           <button 
+             onClick={() => router.push('/manager/pricing')}
+             className="bg-amber-500 text-black font-black px-8 py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-amber-500/20 relative z-10"
+           >
+              Passer en PRO
+           </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -545,11 +618,49 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
                </div>
 
                <div className="space-y-4">
-                  <h3 className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2 mb-4">
-                     <Award className="w-4 h-4" /> Récompenses Éligibles
+                  <h3 className="text-xs font-black uppercase text-muted-foreground tracking-widest flex items-center justify-between gap-2 mb-4">
+                     <div className="flex items-center gap-2">
+                        <Award className="w-4 h-4" /> Récompenses Éligibles
+                     </div>
+                     <span className="text-[10px] font-bold text-pink-500">Seuil : {config?.rewardThreshold || 100} pts</span>
                   </h3>
 
                   <div className="grid grid-cols-1 gap-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                     {/* Random Reward Option (sur demande du client) */}
+                     <div className={cn(
+                        "p-6 rounded-3xl border-2 border-dashed flex items-center justify-between transition-all",
+                        selectedCustomer.points >= (config?.rewardThreshold || 100)
+                          ? "bg-pink-500/5 border-pink-500/30"
+                          : "bg-card border-border opacity-50"
+                     )}>
+                        <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 rounded-2xl bg-pink-500/20 text-pink-500 flex items-center justify-center">
+                              <Sparkles className="w-6 h-6" />
+                           </div>
+                           <div>
+                              <p className="text-lg font-black italic uppercase tracking-tighter text-white">Échange Surprise 🎁</p>
+                              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Choisir entre 2 cadeaux au hasard</p>
+                           </div>
+                        </div>
+                        <button 
+                          onClick={handleStartRandomRedeem}
+                          disabled={selectedCustomer.points < (config?.rewardThreshold || 100) || isFetchingRandom}
+                          className={cn(
+                            "px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all",
+                            selectedCustomer.points >= (config?.rewardThreshold || 100)
+                              ? "bg-pink-500 text-white hover:scale-105" 
+                              : "bg-zinc-800 text-zinc-600"
+                          )}
+                        >
+                           {isFetchingRandom ? <Loader2 className="w-3 h-3 animate-spin" /> : "Découvrir"}
+                        </button>
+                     </div>
+
+                     <div className="flex items-center gap-4 py-2">
+                        <div className="h-px flex-1 bg-border" />
+                        <span className="text-[10px] font-black text-muted-foreground uppercase">Ou Catalogue fixe</span>
+                        <div className="h-px flex-1 bg-border" />
+                     </div>
                      {catalog.map((item) => {
                         const canAfford = selectedCustomer.points >= item.requiredPoints;
                         return (
@@ -602,9 +713,60 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
            </div>
         </div>
       )}
+
+      {/* --- RANDOM CHOICE MODAL --- */}
+      {showRandomChoice && (
+        <div className="fixed inset-0 bg-background/95 backdrop-blur-2xl z-[120] flex items-center justify-center p-4">
+           <div className="bg-card border-zinc-800 border-2 rounded-[3.5rem] p-10 max-w-2xl w-full shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/10 blur-[100px] rounded-full" />
+               
+               <button 
+                onClick={() => setShowRandomChoice(false)}
+                className="absolute top-8 right-8 p-2 text-muted-foreground hover:text-white transition-colors"
+               >
+                <X className="w-6 h-6" />
+               </button>
+
+               <div className="text-center mb-10">
+                  <div className="w-16 h-16 bg-pink-500/20 text-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                     <Gift className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">Le hasard a choisi...</h2>
+                  <p className="text-zinc-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-2">Le client peut choisir un seul produit parmi les deux</p>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {randomProducts.map((p, idx) => (
+                     <div key={p.id} className="group bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-6 flex flex-col items-center text-center hover:border-pink-500/50 transition-all hover:-translate-y-2">
+                        <div className="w-24 h-24 rounded-3xl bg-secondary mb-4 overflow-hidden border border-border">
+                           <img src={p.image} className="w-full h-full object-cover" alt={p.nom} />
+                        </div>
+                        <p className="text-xs font-black text-pink-500 uppercase tracking-widest mb-1">{p.categorie}</p>
+                        <h4 className="text-xl font-black italic text-white uppercase tracking-tighter mb-6">{p.nom}</h4>
+                        
+                        <button 
+                          onClick={() => handleConfirmRandomRedeem(p.id)}
+                          disabled={isRedeeming}
+                          className="w-full bg-white text-black font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest hover:bg-pink-500 hover:text-white transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                           {isRedeeming ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Choisir ce cadeau"}
+                        </button>
+                     </div>
+                  ))}
+               </div>
+
+               {randomProducts.length === 0 && (
+                  <div className="text-center py-20">
+                     <p className="text-muted-foreground font-black uppercase text-xs">Aucun produit cadeau disponible pour le moment.</p>
+                  </div>
+               )}
+           </div>
+        </div>
+      )}
+
       {/* --- REDEMPTION SUCCESS MODAL --- */}
       {redeemedReward && (
-        <div className="fixed inset-0 bg-background/90 backdrop-blur-2xl z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-2xl z-[130] flex items-center justify-center p-4">
            <div className="bg-card border-emerald-500/30 border-2 rounded-[3.5rem] p-12 max-w-lg w-full shadow-2xl text-center relative overflow-hidden animate-in zoom-in-95 duration-300">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full" />
                 
@@ -612,13 +774,15 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
                     <CheckCircle2 className="w-12 h-12" />
                 </div>
 
-                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">Échange Réussi !</h2>
-                <p className="text-zinc-500 font-medium mb-8">La récompense a été générée et les points ont été déduits.</p>
+                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">ÉCHANGE RÉUSSI !</h2>
+                <p className="text-zinc-500 font-medium mb-8 uppercase text-[10px] font-black tracking-[0.2em]">
+                  {redeemedReward.platName ? `PRODUIT ACCORDÉ : ${redeemedReward.platName}` : "LA RÉCOMPENSE A ÉTÉ GÉNÉRÉE."}
+                </p>
 
                 {redeemedReward.type === 'PROMO_CODE' ? (
                     <div className="space-y-6">
                         <div className="p-8 bg-zinc-900 border-2 border-dashed border-emerald-500/30 rounded-3xl relative group">
-                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">Code Promo Unique</p>
+                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">CODE PROMO UNIQUE</p>
                             <p className="text-5xl font-black text-white italic tracking-widest font-mono group-hover:scale-110 transition-transform cursor-copy" onClick={() => {
                                 navigator.clipboard.writeText(redeemedReward.promoCode);
                                 toast.success("Code copié !");
@@ -635,18 +799,24 @@ export default function LoyaltyAdvancedPage({ searchParams }: { searchParams: { 
                         </div>
                     </div>
                 ) : (
-                    <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-3xl">
-                         <Utensils className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-                         <p className="text-sm font-black text-white uppercase italic">Produit Gratuit Accordé</p>
+                    <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-3xl group">
+                         {redeemedReward.platImage ? (
+                            <div className="w-24 h-24 rounded-2xl overflow-hidden mx-auto mb-6 border-2 border-emerald-500/20 shadow-xl group-hover:scale-110 transition-transform duration-500">
+                                <img src={redeemedReward.platImage} className="w-full h-full object-cover" alt={redeemedReward.platName} />
+                            </div>
+                         ) : (
+                            <Utensils className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                         )}
+                         <p className="text-sm font-black text-white uppercase italic">{redeemedReward.platName || "Produit Gratuit Accordé"}</p>
                          <p className="text-[10px] text-zinc-500 mt-2 font-bold uppercase tracking-widest italic">Le produit a été marqué comme servi au comptoir.</p>
                     </div>
                 )}
 
                 <button 
                   onClick={() => setRedeemedReward(null)}
-                  className="w-full bg-white text-black font-black py-5 rounded-[2rem] mt-10 hover:bg-zinc-200 transition-all active:scale-95 shadow-xl shadow-white/5 uppercase tracking-widest text-[10px]"
+                  className="w-full bg-white text-black font-black py-5 rounded-[2rem] mt-10 hover:bg-zinc-200 transition-all active:scale-95 shadow-xl shadow-white/5 uppercase tracking-[0.3em] text-[10px]"
                 >
-                    Terminer
+                    TERMINER
                 </button>
            </div>
         </div>

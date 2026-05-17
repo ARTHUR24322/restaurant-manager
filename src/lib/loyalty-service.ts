@@ -4,10 +4,14 @@ export const LoyaltyService = {
   // 1. Ajouter des points (Multi-tenant)
   async addPoints(phone: string, restaurantId: string, amountUsd: number, commandeId?: string) {
     const config = await prisma.loyaltyConfig.findUnique({
-      where: { restaurantId }
+      where: { restaurantId },
+      include: { restaurant: { select: { plan: true } } }
     });
     
     if (!config || !config.isActive) return null;
+
+    // Restriction Plan Standard
+    if (config.restaurant.plan === 'STANDARD') return null;
 
     const pointsToEarn = Math.floor(amountUsd * config.pointsPerUsd);
     
@@ -73,6 +77,15 @@ export const LoyaltyService = {
        throw new Error("Récompense non trouvée ou non autorisée pour ce restaurant.");
     }
 
+    const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { plan: true }
+    });
+
+    if (restaurant?.plan === 'STANDARD') {
+        throw new Error("Le programme de fidélité nécessite un plan PRO ou PLATINUM.");
+    }
+
     const customer = await prisma.loyaltyCustomer.findUnique({
       where: { phone_restaurantId: { phone, restaurantId } }
     });
@@ -100,6 +113,7 @@ export const LoyaltyService = {
         type: rewardItem.type,
         productId: rewardItem.productId,
         promoCode,
+        discountValue: rewardItem.discountValue,
         allowedDays: rewardItem.allowedDays,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours
       }
@@ -127,6 +141,15 @@ export const LoyaltyService = {
 
     if (!reward || reward.restaurantId !== restaurantId) {
       return { valid: false, error: "Code promo invalide." };
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { plan: true }
+    });
+
+    if (restaurant?.plan === 'STANDARD') {
+        return { valid: false, error: "Le programme de fidélité n'est pas actif pour ce restaurant." };
     }
 
     // Vérifier si le code appartient bien à ce numéro de téléphone

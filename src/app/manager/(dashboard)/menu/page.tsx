@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { getPlats, addPlat } from "@/lib/actions";
-import { Plus } from "lucide-react";
+import { Plus, Gift } from "lucide-react";
 import { type Plat } from "@/types";
 import { getManagerSession } from "@/lib/manager-actions";
 import { MenuTable } from "@/components/manager/MenuTable";
@@ -141,6 +141,19 @@ export default async function ManagerMenuPage({ searchParams }: { searchParams: 
                   placeholder="Ex: Pimenté, Moyen, Pas pimenté" 
                   className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none text-sm text-foreground" 
                 />
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                <input 
+                  type="checkbox" 
+                  name="isLoyaltyReward" 
+                  value="true"
+                  id="isLoyaltyReward"
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                />
+                <label htmlFor="isLoyaltyReward" className="text-xs font-bold text-primary flex items-center gap-1.5">
+                  <Gift className="w-3.5 h-3.5" /> Éligible Cadeau Fidélité
+                </label>
               </div>
 
               <SubmitButton loadingText="Ajout en cours...">
