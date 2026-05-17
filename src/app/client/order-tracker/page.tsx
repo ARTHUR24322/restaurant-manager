@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   CheckCircle2, UtensilsCrossed, Truck, Star, Info, 
@@ -11,7 +11,7 @@ import { getOrderDetails } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
-export default function OrderTrackerPage() {
+function OrderTrackerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get('orderId');
@@ -292,5 +292,18 @@ export default function OrderTrackerPage() {
         </div>
       </nav>
     </div>
+  );
+}
+
+export default function OrderTrackerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">Chargement...</p>
+      </div>
+    }>
+      <OrderTrackerContent />
+    </Suspense>
   );
 }
