@@ -5,12 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function safeJsonParse(str: string | null, fallback: any = null) {
+export function safeJsonParse<T>(str: string | null, fallback: T): T {
   if (!str) return fallback;
   try {
-    return JSON.parse(str);
-  } catch (e) {
-    console.error("JSON Parse Error:", e);
+    return JSON.parse(str) as T;
+  } catch {
     return fallback;
   }
 }

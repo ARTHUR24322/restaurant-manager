@@ -1,3 +1,5 @@
+import { type Commande } from "@/types";
+
 /**
  * SmartResto — Thermal Printer Utility
  * 
@@ -7,6 +9,13 @@
 
 
 const PAPER_WIDTH = "80mm";
+
+interface PrinterItem {
+  quantite: number | string;
+  plat?: { nom?: string; prixUsd?: number | string };
+  selectedOptions?: { detail?: string[] };
+  options?: string;
+}
 
 function openPrintWindow(htmlContent: string) {
   if (typeof window === "undefined") return;
@@ -119,14 +128,15 @@ function formatCurrency(amount: number): string {
 
 // ─── RECEIPT (Caisse) ────────────────────────────────────────────
 
-export function printReceipt(order: any, restaurantName: string = "SmartResto", telephone: string = "") {
+export function printReceipt(order: Commande, restaurantName: string = "SmartResto", telephone: string = "") {
   const taux = order.tauxChange || 2800;
-  const itemsHtml = order.items?.map((item: any) => `
+  const itemsHtml = (order as any).items?.map((item: PrinterItem) => {
+    return `
     <div class="item-row">
-      <div class="item-name"><span class="bold">${item.quantite}x</span> ${(item.plat?.nom || "Article").toUpperCase()}</div>
-      <div class="right">${formatCurrency((item.plat?.prixUsd || 0) * item.quantite)}</div>
+      <div class="item-name"><span class="bold">${item.quantite}x</span> ${(String(item.plat?.nom || "Article")).toUpperCase()}</div>
+      <div class="right">${formatCurrency(Number(item.plat?.prixUsd || 0) * Number(item.quantite))}</div>
     </div>
-  `).join("") || `<div class="item-row"><div>Dégustation</div><div>${formatCurrency(order.totalUsd)}</div></div>`;
+  `}).join("") || `<div class="item-row"><div>Dégustation</div><div>${formatCurrency(order.totalUsd)}</div></div>`;
 
   const orderIdSuffix = order.id ? order.id.toString().slice(-4).toUpperCase() : "0000";
 
@@ -182,8 +192,8 @@ export function printReceipt(order: any, restaurantName: string = "SmartResto", 
 
 // ─── KITCHEN TICKET (Cuisine) ────────────────────────────────────
 
-export function printKitchenTicket(order: any) {
-  const itemsHtml = order.items?.map((item: any) => {
+export function printKitchenTicket(order: Commande) {
+  const itemsHtml = (order as any).items?.map((item: PrinterItem) => {
     let opts = [];
     if (item.selectedOptions?.detail) {
       opts = item.selectedOptions.detail;
@@ -191,7 +201,7 @@ export function printKitchenTicket(order: any) {
       try {
         const parsed = JSON.parse(item.options);
         opts = parsed.detail || [];
-      } catch (e) {}
+      } catch { }
     }
     
     const optsHtml = opts.length > 0 ? `<div class="tiny" style="margin-left: 38px; margin-bottom: 4px; font-style: italic;">- ${opts.join(", ")}</div>` : "";
@@ -248,11 +258,11 @@ export function printKitchenTicket(order: any) {
 
 // ─── INVOICE (Dashboard / Facture) ───────────────────────────────
 
-export function printInvoice(order: any, restaurantName: string = "SmartResto", telephone: string = "") {
+export function printInvoice(order: Commande, restaurantName: string = "SmartResto", telephone: string = "") {
   const tva = order.totalUsd * 0.16;
   const totalCdf = order.totalUsd * (order.tauxChange || 2800);
 
-  const itemsHtml = order.items?.map((item: any) => {
+  const itemsHtml = (order as any).items?.map((item: PrinterItem) => {
     let opts = [];
     if (item.selectedOptions?.detail) {
       opts = item.selectedOptions.detail;
@@ -260,7 +270,7 @@ export function printInvoice(order: any, restaurantName: string = "SmartResto", 
       try {
         const parsed = JSON.parse(item.options);
         opts = parsed.detail || [];
-      } catch (e) {}
+      } catch { }
     }
     
     const optsHtml = opts.length > 0 ? `<div class="tiny" style="margin-left: 4px; font-style: italic; margin-bottom: 4px;">- ${opts.join(", ")}</div>` : "";
@@ -268,7 +278,7 @@ export function printInvoice(order: any, restaurantName: string = "SmartResto", 
     return `
       <div class="item-row">
         <div class="item-name">${item.quantite}x ${item.plat?.nom || "Article"}</div>
-        <div class="right">${formatCurrency((item.plat?.prixUsd || 0) * item.quantite)}</div>
+        <div class="right">${formatCurrency(Number(item.plat?.prixUsd || 0) * Number(item.quantite))}</div>
       </div>
       ${optsHtml}
     `;

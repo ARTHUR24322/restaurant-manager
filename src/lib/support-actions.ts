@@ -15,7 +15,7 @@ export async function submitSupportMessage(data: {
       return { success: false, error: "Les champs Nom, Email et Message sont requis." };
     }
 
-    const newMessage = await (prisma as any).supportMessage.create({
+    const newMessage = await prisma.supportMessage.create({
       data: {
         nom: data.nom,
         email: data.email,
@@ -29,9 +29,10 @@ export async function submitSupportMessage(data: {
 
     revalidatePath("/super-admin");
     return { success: true, id: newMessage.id };
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur serveur";
     console.error("[Support] Erreur submission:", error);
-    return { success: false, error: error.message || "Erreur serveur." };
+    return { success: false, error: message };
   }
 }
 
@@ -39,7 +40,7 @@ export async function getAllSupportMessages() {
   try {
     // Note: ensureSuperAdmin checking is omitted here for simplicity 
     // but should be added in a real production environment or if used directly in components.
-    const messages = await (prisma as any).supportMessage.findMany({
+    const messages = await prisma.supportMessage.findMany({
       orderBy: { createdAt: "desc" },
     });
     console.log(`[Support] ${messages.length} messages récupérés.`);
@@ -52,13 +53,13 @@ export async function getAllSupportMessages() {
 
 export async function markMessageRead(id: string) {
     try {
-        await (prisma as any).supportMessage.update({
+        await prisma.supportMessage.update({
             where: { id },
             data: { statut: "LU" }
         });
         revalidatePath("/super-admin");
         return { success: true };
-    } catch (e) {
+    } catch {
         return { success: false };
     }
 }

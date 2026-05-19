@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 // Remplacez par votre Verify Token défini sur l'interface développeur de Meta Facebook
-const WHATSAPP_WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || "smartresto_secret_token";
+const WHATSAPP_WEBHOOK_SECRET = process.env.WHATSAPP_WEBHOOK_SECRET;
+if (!WHATSAPP_WEBHOOK_SECRET) {
+  console.warn("⚠️ WHATSAPP_WEBHOOK_SECRET not set. Webhook verification will be disabled.");
+}
 
 /**
  * Endpoint GET : Requis par Meta pour la vérification du Webhook

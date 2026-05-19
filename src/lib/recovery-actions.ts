@@ -18,7 +18,7 @@ export async function submitRecoveryRequest(formData: FormData) {
       return { success: false, error: "Tous les champs sont requis." };
     }
 
-    await (prisma as any).recoveryRequest.create({
+    await prisma.recoveryRequest.create({
       data: {
         nomRestaurant,
         email,
@@ -40,7 +40,7 @@ export async function submitRecoveryRequest(formData: FormData) {
 export async function getAllRecoveryRequests() {
   try {
     await ensureSuperAdmin();
-    return await (prisma as any).recoveryRequest.findMany({
+    return await prisma.recoveryRequest.findMany({
       orderBy: { createdAt: "desc" }
     });
   } catch (error) {
@@ -56,14 +56,14 @@ export async function resolveRecoveryRequest(requestId: string, newPassword?: st
   try {
     await ensureSuperAdmin();
 
-    const request = await (prisma as any).recoveryRequest.findUnique({
+    const request = await prisma.recoveryRequest.findUnique({
       where: { id: requestId }
     });
 
     if (!request) return { success: false, error: "Demande introuvable." };
 
     if (action === "REJECT") {
-      await (prisma as any).recoveryRequest.update({
+      await prisma.recoveryRequest.update({
         where: { id: requestId },
         data: { statut: "REJETE" }
       });
@@ -77,7 +77,7 @@ export async function resolveRecoveryRequest(requestId: string, newPassword?: st
     const hashedPassword = await hashPassword(newPassword);
 
     // Mettre à jour tous les restaurants liés à cet email
-    await (prisma as any).restaurant.updateMany({
+    await prisma.restaurant.updateMany({
       where: { email: request.email },
       data: { 
         adminPassword: hashedPassword,
@@ -86,7 +86,7 @@ export async function resolveRecoveryRequest(requestId: string, newPassword?: st
     });
 
     // Marquer la demande comme traitée
-    await (prisma as any).recoveryRequest.update({
+    await prisma.recoveryRequest.update({
       where: { id: requestId },
       data: { statut: "TRAITE" }
     });

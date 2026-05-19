@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { decrypt } from "./encryption";
+import { type Commande } from "@/types";
 
 /**
  * Service WhatsApp Cloud API Multi-Tenant
@@ -37,7 +38,7 @@ async function getRestaurantWhatsAppConfig(restaurantId: string): Promise<WhatsA
 /**
  * Envoie un message via l'API WhatsApp Cloud (Meta)
  */
-async function sendMetaWhatsAppRequest(config: WhatsAppConfig, to: string, payload: any) {
+async function sendMetaWhatsAppRequest(config: WhatsAppConfig, to: string, payload: Record<string, unknown>) {
   const url = `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`;
   
   // Nettoyage et formatage E.164 (Fallback 243 RDC si format local)
@@ -85,7 +86,7 @@ export async function sendWhatsAppTemplate(
   to: string, 
   templateName: string, 
   languageCode: string = "fr",
-  components: any[] = []
+  components: unknown[] = []
 ) {
   const config = await getRestaurantWhatsAppConfig(restaurantId);
   if (!config) return { success: false, error: "WhatsApp non configuré ou désactivé pour ce restaurant." };
@@ -120,7 +121,7 @@ export async function sendWhatsAppText(restaurantId: string, to: string, message
 /**
  * NOTIFICATION : Commande Prête
  */
-export async function notifyOrderReady(order: any) {
+export async function notifyOrderReady(order: Commande) {
     if (!order.phone) return;
 
     return sendWhatsAppTemplate(
@@ -143,7 +144,7 @@ export async function notifyOrderReady(order: any) {
 /**
  * NOTIFICATION : Reçu Numérique après paiement
  */
-export async function sendDigitalReceipt(order: any) {
+export async function sendDigitalReceipt(order: Commande) {
     if (!order.phone) return;
 
     return sendWhatsAppTemplate(

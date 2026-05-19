@@ -5,7 +5,7 @@ import { type Plat, type CartItem } from "@/types";
 import { useCartStore } from "@/store/cartStore";
 import { 
   Plus, Info, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame, Search, ChevronRight,
-  Beef, Wine, Beer, GlassWater, IceCream, CupSoda, Cherry, ArrowRight
+  Beef, Wine, Beer, GlassWater, IceCream, CupSoda, Cherry, ArrowRight, Heart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlateOptionsModal } from "@/components/client/PlateOptionsModal";
@@ -97,17 +97,22 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     return matchCategory && matchSearch;
   });
 
-  const handleConfirmAdd = (selectedOptions: string[]) => {
-    if (!selectedPlat) return;
+  const addItemToCart = (plat: Plat, selectedOptions: string[] = []) => {
     const newItem: CartItem = {
       cartItemId: Math.random().toString(36).substring(7),
-      plat: selectedPlat,
+      plat: plat,
       quantite: 1,
       selectedOptions: { detail: selectedOptions }, 
     };
     addItem(newItem);
-    toast.success(`${selectedPlat.nom} ajouté ! 🛒`);
+    toast.success(`${plat.nom} ajouté ! 🛒`);
+  };
+
+  const handleConfirmAdd = (selectedOptions: string[]) => {
+    if (!selectedPlat) return;
+    addItemToCart(selectedPlat, selectedOptions);
     setSelectedPlat(null);
+    setIsOptionsOpen(false);
   };
 
   const formatPrice = (priceUsd: number) => {
@@ -224,26 +229,41 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       </div>
 
       {/* Product List */}
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-2 gap-4">
         {filteredPlats.map((plat) => {
           const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
 
           return (
             <div 
               key={plat.id} 
-              onClick={() => !isOutOfStock && (plat.hasOptions ? setIsOptionsOpen(true) : handleConfirmAdd([]))}
+              onClick={() => {
+                if (isOutOfStock) return;
+                const hasOptions = plat.options && plat.options.length > 0;
+                if (hasOptions) {
+                  setSelectedPlat(plat);
+                  setIsOptionsOpen(true);
+                } else {
+                  addItemToCart(plat);
+                }
+              }}
               className={cn(
-                "group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/20 transition-all duration-500 cursor-pointer flex items-center",
+                "group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col",
                 isOutOfStock && "opacity-50 grayscale"
               )}
             >
-              {/* Image Small Left */}
-              <div className="w-32 h-32 shrink-0 overflow-hidden relative">
+              {/* Image Full Width Top */}
+              <div className="aspect-square w-full shrink-0 overflow-hidden relative">
                  <img 
                    src={plat.image} 
                    alt={plat.nom}
                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                  />
+                 
+                 {/* Heart Icon Overlay */}
+                 <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
+                    <Heart className="w-3.5 h-3.5" />
+                 </div>
+
                  {isOutOfStock && (
                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                      <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
@@ -252,26 +272,23 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
               </div>
 
               {/* Content */}
-              <div className="flex-1 p-5 pr-6 flex flex-col justify-center gap-1">
-                 <div className="flex items-start justify-between">
-                    <h3 className="text-base font-black text-white group-hover:text-primary transition-colors leading-tight">
-                      {plat.nom}
-                    </h3>
-                    <span className="text-sm font-black text-white ml-4 whitespace-nowrap">
+              <div className="p-4 flex flex-col flex-1 gap-1">
+                  <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
+                    {plat.nom}
+                  </h3>
+                  
+                  <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
+                    {plat.description || "Une création culinaire unique par notre chef."}
+                  </p>
+                  
+                  <div className="flex items-center justify-between mt-auto pt-3">
+                    <span className="text-[13px] font-black text-primary">
                       {formatPrice(plat.prixUsd)}
                     </span>
-                 </div>
-                 <p className="text-[11px] text-zinc-500 leading-relaxed line-clamp-2 mt-1">
-                   {plat.description || "Une création culinaire unique par notre chef."}
-                 </p>
-                 
-                 <div className="flex items-center gap-2 mt-2">
-                    <div className="w-4 h-[1px] bg-zinc-800" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-primary transition-colors">
-                      Ajouter au panier
-                    </span>
-                    <Plus className="w-3 h-3 text-primary ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                 </div>
+                    <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                  </div>
               </div>
             </div>
           );

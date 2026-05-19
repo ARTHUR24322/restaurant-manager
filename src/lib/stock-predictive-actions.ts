@@ -63,8 +63,9 @@ export async function getPredictiveStockReport(restaurantId: string, daysWindow:
     });
 
     return { success: true, predictions };
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
     console.error("[Prediction] Error:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }

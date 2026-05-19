@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 export async function getNotifications(restaurantId: string) {
   try {
-    return await (prisma as any).notification.findMany({
+    return await prisma.notification.findMany({
       where: { restaurantId },
       orderBy: { createdAt: "desc" },
       take: 20
@@ -18,7 +18,7 @@ export async function getNotifications(restaurantId: string) {
 
 export async function markAsRead(id: string) {
   try {
-    await (prisma as any).notification.update({
+    await prisma.notification.update({
       where: { id },
       data: { read: true }
     });
@@ -31,7 +31,7 @@ export async function markAsRead(id: string) {
 
 export async function clearAllNotifications(restaurantId: string) {
     try {
-        await (prisma as any).notification.deleteMany({
+        await prisma.notification.deleteMany({
             where: { restaurantId }
         });
         revalidatePath("/manager/dashboard");
@@ -51,7 +51,7 @@ export async function createNotification(data: {
   type?: "INFO" | "WARNING" | "SUCCESS" | "URGENT";
 }) {
   try {
-    const notif = await (prisma as any).notification.create({
+    const notif = await prisma.notification.create({
       data: {
         restaurantId: data.restaurantId,
         title: data.title,
@@ -85,7 +85,7 @@ export async function checkSubscriptionAlerts(restaurantId: string) {
 
     // Cas 1 : Déjà expiré
     if (diffDays <= 0) {
-      const existing = await (prisma as any).notification.findFirst({
+      const existing = await prisma.notification.findFirst({
         where: {
           restaurantId,
           type: "URGENT",
@@ -107,7 +107,7 @@ export async function checkSubscriptionAlerts(restaurantId: string) {
 
     // Cas 2 : Expiration imminente (Moins de 3 jours) -> URGENT
     if (diffDays <= 3) {
-      const existing = await (prisma as any).notification.findFirst({
+      const existing = await prisma.notification.findFirst({
         where: {
           restaurantId,
           type: "URGENT",
@@ -126,7 +126,7 @@ export async function checkSubscriptionAlerts(restaurantId: string) {
     } 
     // Cas 3 : Expiration proche (Moins de 7 jours) -> WARNING
     else if (diffDays <= 7) {
-      const existing = await (prisma as any).notification.findFirst({
+      const existing = await prisma.notification.findFirst({
         where: {
           restaurantId,
           type: "WARNING",
@@ -143,7 +143,7 @@ export async function checkSubscriptionAlerts(restaurantId: string) {
         });
       }
     }
-  } catch (error) {
-    console.error("Error checking sub alerts:", error);
+  } catch (_error) {
+    console.error("Error checking sub alerts:", _error);
   }
 }

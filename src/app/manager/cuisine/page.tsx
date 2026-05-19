@@ -5,6 +5,7 @@ import {
   getRecentCommandes, 
   updateOrderStatus 
 } from "@/lib/actions";
+import { type Commande, type CartItem } from "@/types";
 import { getRestaurantById } from "@/lib/admin-actions";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -24,19 +25,19 @@ import { ConfirmModal } from "@/components/manager/ConfirmModal";
 export default function CuisinePage({ searchParams }: { searchParams: { resto_id?: string } }) {
   const router = useRouter();
   const [restoId, setRestoId] = useState<string>(searchParams.resto_id || "");
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
   const [finishingId, setFinishingId] = useState<string | null>(null);
   const { setTheme, theme } = useTheme();
 
   // --- ETAT MODALE ---
   const [showConfirm, setShowConfirm] = useState(false);
-  const [pendingOrder, setPendingOrder] = useState<any>(null);
+  const [pendingOrder, setPendingOrder] = useState<Commande | null>(null);
 
   const fetchProductionOrders = async (id: string) => {
-    const all = await getRecentCommandes(id);
+    const all = await getRecentCommandes(id) as unknown as Commande[];
     // On ne récupère QUE "PREPARING" pour que ça n'apparaisse pas avant la validation du Caissier ("SUBMITTED")
-    const production = all.filter((o: any) => o.statut === "PREPARING");
+    const production = all.filter((o) => o.statut === "PREPARING");
     setOrders(production);
     setLoading(false);
   };
@@ -54,7 +55,7 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
 
       const cached = sessionStorage.getItem(`resto_profile_${id}`);
       if (cached) {
-        const r = safeJsonParse(cached);
+        const r = safeJsonParse<any>(cached, null);
         if (!r) {
            sessionStorage.removeItem(`resto_profile_${id}`);
            return;
@@ -110,7 +111,7 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
     init();
   }, [searchParams.resto_id]);
 
-  const handleFinishRequest = (order: any) => {
+  const handleFinishRequest = (order: Commande) => {
     setPendingOrder(order);
     setShowConfirm(true);
   };
@@ -210,14 +211,13 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
                <div className="bg-zinc-950 p-6 rounded-[2rem] border border-zinc-800/50">
                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Bon de Commande</p>
                   <ul className="space-y-4">
-                     {order.items?.length > 0 ? order.items.map((item: any, idx: number) => {
-                        let selectedOpts = [];
+                     {order.items && order.items.length > 0 ? (order.items as unknown as CartItem[]).map((item, idx: number) => {
+                        let selectedOpts: string[] = [];
                         try {
-                          if (item.options) {
-                            const parsed = safeJsonParse(item.options);
-                            selectedOpts = parsed?.detail || [];
+                          if (item.selectedOptions && typeof item.selectedOptions === "object" && (item.selectedOptions as any).detail) {
+                            selectedOpts = (item.selectedOptions as any).detail;
                           }
-                        } catch (e) {}
+                        } catch { }
 
                         return (
                           <li key={idx} className="flex flex-col gap-2 border-b border-zinc-800/20 pb-4 last:border-0 last:pb-0">

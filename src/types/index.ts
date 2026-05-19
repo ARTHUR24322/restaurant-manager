@@ -39,6 +39,7 @@ export interface Commande {
   id: string;
   table: string;
   client?: string;
+  phone?: string;
   statut: CommandeStatut;
   noteSpeciale?: string;
   totalUsd: number;

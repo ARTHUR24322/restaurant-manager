@@ -31,7 +31,7 @@ export async function getInventory(restaurantId: string) {
 /**
  * Créer un nouvel article
  */
-export async function createArticle(restaurantId: string, data: any) {
+export async function createArticle(restaurantId: string, data: Record<string, unknown> & { nom: string, stockActuel?: number, prixAchat?: number }) {
   try {
     await ensureManager(restaurantId);
     const article = await prisma.articleStock.create({
@@ -137,7 +137,7 @@ export async function getSuppliers(restaurantId: string) {
 /**
  * Créer un emplacement
  */
-export async function createLocation(restaurantId: string, data: any) {
+export async function createLocation(restaurantId: string, data: Record<string, unknown> & { nom: string }) {
   try {
     await ensureManager(restaurantId);
     const loc = await prisma.emplacement.create({
@@ -153,7 +153,7 @@ export async function createLocation(restaurantId: string, data: any) {
 /**
  * Créer un fournisseur
  */
-export async function createSupplier(restaurantId: string, data: any) {
+export async function createSupplier(restaurantId: string, data: Record<string, unknown> & { nom: string }) {
   try {
     await ensureManager(restaurantId);
     const sup = await prisma.fournisseur.create({
@@ -210,15 +210,15 @@ export async function getInventoryStats(restaurantId: string) {
       where: { restaurantId }
     });
 
-    const totalValue = articles.reduce((acc: number, art: any) => acc + (art.stockActuel * art.prixAchat), 0);
-    const lowStockCount = articles.filter((art: any) => art.stockActuel <= art.stockMin).length;
+    const totalValue = articles.reduce((acc: number, art) => acc + (art.stockActuel * art.prixAchat), 0);
+    const lowStockCount = articles.filter((art) => art.stockActuel <= art.stockMin).length;
     
     return {
       totalItems: articles.length,
       totalValue,
       lowStockCount
     };
-  } catch (error) {
+  } catch (_error) {
     return { totalItems: 0, totalValue: 0, lowStockCount: 0 };
   }
 }
@@ -285,10 +285,6 @@ export async function deductStockForOrder(orderId: string, restaurantId: string)
   try {
     await ensureManager(restaurantId);
 
-    const checkOrder = await prisma.commande.findUnique({
-      where: { id: orderId }
-    });
-    
     // Si la commande n'existe pas ou c'est déjà déduit (on pourrait ajouter un flag if needed), ignorer.
     // Pour simplifier et éviter le double comptage, on déduit à la completion (qui en principe est appelée une fois).
 

@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export const exportToExcel = (data: any[], fileName: string, summary: any) => {
+export const exportToExcel = (data: Record<string, unknown>[], fileName: string, summary: { totalRevenue: number, orderCount: number, topDish: string }) => {
   // Création d'une feuille pour le résumé
   const summaryData = [
     ["RÉSUMÉ DU RAPPORT"],
@@ -22,7 +22,7 @@ export const exportToExcel = (data: any[], fileName: string, summary: any) => {
   XLSX.writeFile(wb, `${fileName}.xlsx`);
 };
 
-export const exportToPDF = (data: any[], fileName: string, title: string, summary: any) => {
+export const exportToPDF = (data: Record<string, unknown>[], fileName: string, title: string, summary: { totalRevenue: number, orderCount: number, topDish: string }) => {
   const doc = new jsPDF();
   
   // Header Style
@@ -84,7 +84,7 @@ export const exportToPDF = (data: any[], fileName: string, title: string, summar
   doc.save(`${fileName}.pdf`);
 };
 
-export const formatOrderForReport = (orders: any[]) => {
+export const formatOrderForReport = (orders: Record<string, any>[]) => {
   return orders.map(order => ({
     REF: order.id.substring(0, 6).toUpperCase(),
     INSTANT: new Date(order.createdAt).toLocaleTimeString('fr-FR'),
@@ -95,7 +95,7 @@ export const formatOrderForReport = (orders: any[]) => {
   }));
 };
 
-export const calculateSummary = (orders: any[]) => {
+export const calculateSummary = (orders: Record<string, any>[]) => {
   const totalRevenue = orders.reduce((acc, o) => acc + o.totalUsd, 0);
   const orderCount = orders.length;
   

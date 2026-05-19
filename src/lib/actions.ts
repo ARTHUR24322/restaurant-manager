@@ -12,15 +12,14 @@ import { notifyOrderReady, sendDigitalReceipt, sendWhatsAppTemplate } from "./wh
 import { LoyaltyService } from "./loyalty-service";
 
 // Utilitaire de diffusion Temps Réel (SSE)
-function broadcastToAll(type: string, data: any = {}) {
+function broadcastToAll(type: string, data: Record<string, unknown> = {}) {
   broadcastEvent(type, data);
 }
 
 export async function getRestaurantStatus(restaurantId: string) {
   try {
     return await getCachedRestaurant(restaurantId);
-  } catch (error: any) {
-    console.error("Error fetching restaurant status:", error);
+  } catch (_error) {
     return null;
   }
 }
@@ -29,8 +28,7 @@ export async function getPlats(restaurantId?: string) {
   try {
     if (!restaurantId) return [];
     return await getCachedPlats(restaurantId);
-  } catch (error: any) {
-    console.error("Error fetching plats:", error);
+  } catch (_error) {
     return [];
   }
 }
@@ -50,7 +48,7 @@ export async function addPlat(formData: FormData) {
     const categorie = formData.get("categorie") as string;
     const isLoyaltyReward = formData.get("isLoyaltyReward") === "true";
     let image = formData.get("image") as string;
-    const imageFile = formData.get("imageFile") as any;
+    const imageFile = formData.get("imageFile") as File | null;
 
     if (imageFile && imageFile.size > 0 && typeof imageFile.arrayBuffer === 'function') {
       const bytes = await imageFile.arrayBuffer();
@@ -96,7 +94,7 @@ export async function addPlat(formData: FormData) {
     revalidatePath("/manager/menu");
     revalidatePath("/client/menu");
     revalidateTag(`menu-${restaurantId}`);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error adding plat:", error);
     throw error;
   }
@@ -123,9 +121,9 @@ export async function updatePlat(formData: FormData) {
     const categorie = formData.get("categorie") as string;
     const isLoyaltyReward = formData.get("isLoyaltyReward") === "true";
     let image = formData.get("image") as string;
-    const imageFile = formData.get("imageFile") as any;
+    const imageFile = formData.get("imageFile") as File | null;
 
-    const data: any = {
+    const data: Record<string, unknown> = {
       nom,
       description,
       prixUsd,
@@ -233,7 +231,7 @@ export async function getOrderDetails(orderId: string) {
 }
 
 export async function createCommande(data: {
-  cartItems: any[];
+  cartItems: { plat: { id: string }, quantite: number | string, selectedOptions: Record<string, unknown> }[];
   tableNumber: string;
   customerName?: string;
   notes?: string;
@@ -254,7 +252,7 @@ export async function createCommande(data: {
     if (restoProfile?.tauxChange) exchangeRate = restoProfile.tauxChange;
     
     // 1. Recalculer le total côté serveur
-    const platIds = data.cartItems.map((item: any) => item.plat.id);
+    const platIds = data.cartItems.map((item) => item.plat.id);
     const plats = await prisma.plat.findMany({
       where: { 
         id: { in: platIds },
@@ -264,7 +262,7 @@ export async function createCommande(data: {
 
     let calculatedTotal = 0;
     for (const item of data.cartItems) {
-      const qte = parseInt(item.quantite, 10);
+      const qte = parseInt(String(item.quantite), 10);
       if (isNaN(qte) || qte <= 0) {
         throw new Error("Quantité invalide détectée dans le panier");
       }
@@ -304,9 +302,9 @@ export async function createCommande(data: {
         paiementStatus: "UNPAID",
         restaurantId: restaurantId,
         items: {
-          create: data.cartItems.map((item: any) => ({
-            platId: item.plat.id,
-            quantite: item.quantite,
+          create: data.cartItems.map((item) => ({
+            plat: { connect: { id: item.plat.id } },
+            quantite: Number(item.quantite),
             options: JSON.stringify(item.selectedOptions)
           }))
         }
@@ -383,9 +381,12 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     
     // NOUVEAU: Notification WhatsApp si la commande est prête
     if (newStatus === "READY") {
-      const fullOrder = await prisma.commande.findUnique({ where: { id: orderId } });
+      const fullOrder = await prisma.commande.findUnique({ 
+        where: { id: orderId },
+        include: { items: { include: { plat: true } } }
+      });
       if (fullOrder && fullOrder.phone) {
-        notifyOrderReady(fullOrder).catch((err: any) => console.error("WA Ready Error:", err));
+        notifyOrderReady(fullOrder as any).catch((err: any) => console.error("WA Ready Error:", err));
       }
     }
     
@@ -426,12 +427,17 @@ export async function confirmOrderPayment(orderId: string, method: string) {
     await deductStockForOrder(orderId, order.restaurantId);
     
     // Points de fidélité et Reçu WhatsApp (Uniquement PRO et PLATINUM)
+    const fullOrderForReceipt = await prisma.commande.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { plat: true } } }
+    });
+
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: order.restaurantId },
       select: { plan: true }
     });
 
-    if (order.phone && restaurant && (restaurant.plan === "PRO" || restaurant.plan === "PLATINUM" || restaurant.plan === "FREE" || restaurant.plan === "TRIAL")) {
+    if (order.phone && restaurant && fullOrderForReceipt && (restaurant.plan === "PRO" || restaurant.plan === "PLATINUM" || restaurant.plan === "FREE" || restaurant.plan === "TRIAL")) {
       const customer = await LoyaltyService.addPoints(order.phone, order.restaurantId, order.totalUsd, orderId);
       
       if (customer) {
@@ -475,7 +481,7 @@ export async function confirmOrderPayment(orderId: string, method: string) {
       }
 
       // Envoi du reçu numérique via WhatsApp
-      sendDigitalReceipt(order).catch((err: any) => console.error("WA Receipt Error:", err));
+      sendDigitalReceipt(fullOrderForReceipt as any).catch((err: any) => console.error("WA Receipt Error:", err));
     }
 
     revalidatePath("/manager/dashboard");
