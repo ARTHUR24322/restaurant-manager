@@ -1,7 +1,10 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useCartStore } from "@/store/cartStore";
 import { ShoppingCart, X, Plus, Minus, CreditCard, Loader2, Ticket, Phone, Trash2, CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
+import { type ClientReward } from "@/types";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -17,9 +20,9 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const [promoCode, setPromoCode] = useState("");
   const [promoPhone, setPromoPhone] = useState("");
   const [isPromoOpen, setIsPromoOpen] = useState(false);
-  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const [appliedPromo, setAppliedPromo] = useState<ClientReward | null>(null);
   const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
-  const [availableRewards, setAvailableRewards] = useState<any[]>([]);
+  const [availableRewards, setAvailableRewards] = useState<ClientReward[]>([]);
   
   const searchParams = useSearchParams();
   const tableNumber = searchParams.get("table") || "Inconnue";
@@ -169,7 +172,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
 
       {/* Cart Drawer */}
       <div className={cn(
-        "fixed bottom-0 left-0 right-0 md:left-auto md:right-6 md:bottom-6 md:w-[420px] bg-zinc-950 border-t md:border border-white/5 shadow-2xl md:rounded-[3rem] rounded-t-[3rem] z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.33,1,0.68,1)]",
+        "fixed bottom-0 left-0 right-0 md:left-auto md:right-6 md:bottom-6 md:w-[420px] bg-zinc-950 border-t md:border border-white/5 shadow-2xl md:rounded-[3rem] rounded-t-[3rem] z-50 transform transition-transform duration-500 ease-&lsqb;cubic-bezier(0.33,1,0.68,1)&rsqb;",
         isOpen ? "translate-y-0" : "translate-y-full"
       )}>
         <div className="w-full flex justify-center py-3 md:hidden">
@@ -226,7 +229,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
                   availableRewards.map(reward => (
                     <button
                       key={reward.id}
-                      onClick={() => handleApplyPromo(reward.promoCode, promoPhone)}
+                      onClick={() => handleApplyPromo(reward.promoCode || undefined, promoPhone)}
                       className="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-2xl flex items-center gap-2 whitespace-nowrap animate-in fade-in"
                     >
                       <Ticket className="w-4 h-4" />

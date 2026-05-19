@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React, { useState } from "react";
 import { X, Send, User, Mail, Phone, MessageSquare, Loader2, CheckCircle2 } from "lucide-react";

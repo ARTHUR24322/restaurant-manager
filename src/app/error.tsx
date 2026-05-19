@@ -27,7 +27,7 @@ export default function Error({
         </h2>
         
         <p className="text-zinc-500 text-sm font-medium mb-10 leading-relaxed">
-          L'interface a rencontré un problème technique. Pas d'inquiétude, vos données sont en sécurité.
+          L&apos;interface a rencontré un problème technique. Pas d&apos;inquiétude, vos données sont en sécurité.
         </p>
 
         <div className="space-y-4">

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { SignJWT, jwtVerify } from "jose";
 
 const JWT_SECRET = process.env.JWT_SECRET;

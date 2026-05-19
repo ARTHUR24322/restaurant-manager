@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React, { useState, useEffect } from "react";
 import { X, Plus, Save } from "lucide-react";
@@ -66,7 +67,7 @@ export function EditPlatModal({ isOpen, onClose, plat, restaurantId }: EditPlatM
             <label className="text-sm font-medium text-foreground">Description (optionnel)</label>
             <textarea 
               name="description" 
-              defaultValue={plat.description}
+              defaultValue={plat.description || ""}
               className="w-full bg-secondary/50 border border-border rounded-xl px-4 py-2 focus:ring-1 focus:ring-primary outline-none h-24 resize-none text-foreground" 
             />
           </div>

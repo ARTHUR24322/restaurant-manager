@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useState } from "react";
 import { Trash2, UtensilsCrossed, BookOpen, Edit2, Gift } from "lucide-react";

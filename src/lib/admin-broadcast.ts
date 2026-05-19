@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { prisma } from "./prisma";
@@ -20,7 +21,7 @@ export async function sendBroadcastNotification(data: {
 
     if (data.restaurantId) {
       // Envoyer à un restaurant spécifique (même s'il est inactif, l'admin peut vouloir lui parler)
-      const targetResto = await (prisma as any).restaurant.findUnique({
+      const targetResto = await prisma.restaurant.findUnique({
         where: { id: data.restaurantId },
         select: { id: true }
       });
@@ -30,7 +31,7 @@ export async function sendBroadcastNotification(data: {
       targetRestaurants = [targetResto];
     } else {
       // Broadcast Global (uniquement aux actifs)
-      targetRestaurants = await (prisma as any).restaurant.findMany({
+      targetRestaurants = await prisma.restaurant.findMany({
         where: { active: true },
         select: { id: true }
       });
@@ -47,7 +48,7 @@ export async function sendBroadcastNotification(data: {
       type: data.type || "INFO",
     }));
 
-    await (prisma as any).notification.createMany({
+    await prisma.notification.createMany({
       data: notifications
     });
 
@@ -55,8 +56,9 @@ export async function sendBroadcastNotification(data: {
     revalidatePath("/super-admin");
 
     return { success: true, count: targetRestaurants.length };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Broadcast Error:", error);
-    return { success: false, error: error.message || "Erreur lors de l'envoi du broadcast." };
+    const message = error instanceof Error ? error.message : "Erreur lors de l'envoi du broadcast.";
+    return { success: false, error: message };
   }
 }

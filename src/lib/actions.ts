@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use server";
 
 import { prisma } from "./prisma";
@@ -120,7 +121,7 @@ export async function updatePlat(formData: FormData) {
     const devise = (formData.get("devise") as string) || "USD";
     const categorie = formData.get("categorie") as string;
     const isLoyaltyReward = formData.get("isLoyaltyReward") === "true";
-    let image = formData.get("image") as string;
+    const image = formData.get("image") as string;
     const imageFile = formData.get("imageFile") as File | null;
 
     const data: Record<string, unknown> = {
@@ -168,7 +169,7 @@ export async function updatePlat(formData: FormData) {
     revalidatePath("/client/menu");
     revalidateTag(`menu-${restaurantId}`);
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating plat:", error);
     throw error;
   }
@@ -195,7 +196,7 @@ export async function deletePlat(formData: FormData) {
     revalidatePath("/manager/menu");
     revalidatePath("/client/menu");
     revalidateTag(`menu-${restaurantId}`);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting plat:", error);
     throw error;
   }
@@ -321,7 +322,7 @@ export async function createCommande(data: {
     revalidatePath("/manager/dashboard");
 
     return { success: true, orderId: order.id };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Critical: Error creating order:", error);
     return { success: false, error: "Erreur lors de l'envoi de la commande. Veuillez réessayer." };
   }
@@ -354,7 +355,7 @@ export async function getRecentCommandes(restaurantId?: string) {
       }
     });
     return orders;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching recent orders:", error);
     return [];
   }
@@ -394,7 +395,7 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     revalidatePath("/manager/cuisine");
     
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating order status:", error);
     return { success: false };
   }

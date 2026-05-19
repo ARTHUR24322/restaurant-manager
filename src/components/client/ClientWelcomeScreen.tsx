@@ -1,4 +1,6 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import React, { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";

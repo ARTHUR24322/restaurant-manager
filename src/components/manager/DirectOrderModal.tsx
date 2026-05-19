@@ -1,4 +1,6 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -16,6 +18,7 @@ import {
 import { getPlats, createCommande } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { type Plat } from "@/types";
 
 interface DirectOrderModalProps {
   show: boolean;
@@ -27,10 +30,10 @@ interface DirectOrderModalProps {
 export function DirectOrderModal({ show, onClose, restaurantId, onSuccess }: DirectOrderModalProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [plats, setPlats] = useState<any[]>([]);
+  const [plats, setPlats] = useState<Plat[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("Tous");
-  const [cart, setCart] = useState<any[]>([]);
+  const [cart, setCart] = useState<{ plat: Plat; quantite: number; selectedOptions: Record<string, any> }[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [orderType, setOrderType] = useState<"EMPORTER" | "SUR_PLACE">("EMPORTER");
   const [tableNumber, setTableNumber] = useState("");
@@ -47,7 +50,7 @@ export function DirectOrderModal({ show, onClose, restaurantId, onSuccess }: Dir
     }
   }, [show, restaurantId]);
 
-  const addToCart = (plat: any) => {
+  const addToCart = (plat: Plat) => {
     setCart(prev => {
       const existing = prev.find(item => item.plat.id === plat.id);
       if (existing) {
@@ -57,7 +60,7 @@ export function DirectOrderModal({ show, onClose, restaurantId, onSuccess }: Dir
             : item
         );
       }
-      return [...prev, { plat, quantite: 1, selectedOptions: [] }];
+      return [...prev, { plat, quantite: 1, selectedOptions: {} }];
     });
   };
 

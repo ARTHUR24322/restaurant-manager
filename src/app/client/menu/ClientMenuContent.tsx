@@ -1,11 +1,12 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useEffect } from "react";
 import { type Plat, type CartItem } from "@/types";
 import { useCartStore } from "@/store/cartStore";
 import { 
-  Plus, Info, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame, Search, ChevronRight,
-  Beef, Wine, Beer, GlassWater, IceCream, CupSoda, Cherry, ArrowRight, Heart
+  Plus, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame, Search,
+  Beef, Wine, Beer, CupSoda, IceCream, Heart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlateOptionsModal } from "@/components/client/PlateOptionsModal";
@@ -24,7 +25,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [selectedPlat, setSelectedPlat] = useState<Plat | null>(null);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
-  const [activeOrder, setActiveOrder] = useState<any>(null);
+  const [activeOrder, setActiveOrder] = useState<{ id: string; statut: string; table: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   const { addItem, submittedOrderIds } = useCartStore();
@@ -38,7 +39,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       }
       
       const all = await getRecentCommandes(restaurantId);
-      const myOrder = all.find((o: any) => 
+      const myOrder = all.find((o: { id: string; statut: string; table: string }) => 
         o.table === tableNumber && 
         o.statut !== "COMPLETED" && 
         submittedOrderIds.includes(o.id)
@@ -57,8 +58,8 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
               fetchMyOrder();
           }
         }
-      } catch (e) {
-        console.error("SSE Client JSON Error:", e);
+      } catch {
+        console.error("SSE Client JSON Error");
       }
     };
 
@@ -70,7 +71,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     };
   }, [restaurantId, tableNumber, submittedOrderIds]);
 
-  const categoryMap: Record<string, { label: string, icon: any }> = {
+  const categoryMap: Record<string, { label: string, icon: React.ElementType }> = {
     "ALL": { label: "Menu complet", icon: Utensils },
     "ENTREE": { label: "Entrées", icon: Soup },
     "PLAT": { label: "Plats", icon: Beef },

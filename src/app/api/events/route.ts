@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
     start(controller) {
       const encoder = new TextEncoder();
       
-      const sendEvent = (data: any) => {
+      const sendEvent = (data: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-        } catch (e) {
+        } catch {
           // Stream might be closed
         }
       };
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       const keepAlive = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: keep-alive\n\n`));
-        } catch (e) {
+        } catch {
           clearInterval(keepAlive);
         }
       }, 5000);

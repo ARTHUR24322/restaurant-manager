@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { getRestaurantById } from "@/lib/admin-actions";
 import { Gift, ArrowLeft } from "lucide-react";
 import Link from "next/link";

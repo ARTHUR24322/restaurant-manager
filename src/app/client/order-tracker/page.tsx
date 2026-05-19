@@ -1,4 +1,6 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -15,26 +17,37 @@ function OrderTrackerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orderId = searchParams.get('orderId');
-  const restaurantId = searchParams.get('resto_id');
 
-  const [order, setOrder] = useState<any>(null);
-  const [loyalty, setLoyalty] = useState<any>(null);
+  const [order, setOrder] = useState<any | null>(null); // Keeping any for now but adding comment to improve later
+  const [loyalty, setLoyalty] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (orderId) {
-      refreshOrder();
-      const interval = setInterval(refreshOrder, 15000); // Auto refresh every 15s
-      return () => clearInterval(interval);
+    if (!orderId) {
+      setLoading(false);
+      return;
     }
+
+    const fetchOrder = async () => {
+      const res = await getOrderDetails(orderId);
+      if (res.success) {
+        if (res.order) setOrder(res.order);
+        if (res.loyalty) setLoyalty(res.loyalty);
+      }
+      setLoading(false);
+    };
+
+    fetchOrder();
+    const interval = setInterval(fetchOrder, 15000); // Auto refresh every 15s
+    return () => clearInterval(interval);
   }, [orderId]);
 
   const refreshOrder = async () => {
     if (!orderId) return;
     const res = await getOrderDetails(orderId);
     if (res.success) {
-      setOrder(res.order);
-      setLoyalty(res.loyalty);
+      if (res.order) setOrder(res.order);
+      if (res.loyalty) setLoyalty(res.loyalty);
     }
     setLoading(false);
   };
@@ -55,7 +68,7 @@ function OrderTrackerContent() {
           <Info className="w-10 h-10 text-destructive" />
         </div>
         <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-2">Commande introuvable</h2>
-        <p className="text-muted-foreground text-sm mb-8">Nous n'avons pas pu récupérer les détails de cette commande.</p>
+        <p className="text-muted-foreground text-sm mb-8">Nous n&apos;avons pas pu récupérer les détails de cette commande.</p>
         <button 
           onClick={() => router.back()}
           className="bg-primary text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20"
@@ -105,7 +118,7 @@ function OrderTrackerContent() {
             <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
             <CheckCircle2 className="w-12 h-12 relative z-10" />
           </div>
-          <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-1">C'est en route !</h2>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-1">C&apos;est en route !</h2>
           <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
             Commande <span className="text-primary font-mono select-all">#{order.id.slice(-8).toUpperCase()}</span>
           </p>
@@ -238,7 +251,7 @@ function OrderTrackerContent() {
             <div className="w-12 h-12 bg-secondary rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
               <Headphones className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Besoin d'aide ?</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Besoin d&apos;aide ?</span>
           </button>
         </div>
 

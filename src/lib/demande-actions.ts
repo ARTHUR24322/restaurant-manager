@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { prisma } from "./prisma";
@@ -25,7 +26,7 @@ export async function submitSubscriptionRequest(data: {
     }
 
     // Vérifier si une demande en attente existe déjà pour ce restaurant précis
-    const existing = await (prisma as any).demandeAbonnement.findFirst({
+    const existing = await prisma.demandeAbonnement.findFirst({
       where: {
         email: data.email,
         nomRestaurant: data.nomRestaurant,
@@ -37,7 +38,7 @@ export async function submitSubscriptionRequest(data: {
       return { success: false, error: "Une demande est déjà en cours de traitement pour cet email." };
     }
 
-    const newDemande = await (prisma as any).demandeAbonnement.create({
+    const newDemande = await prisma.demandeAbonnement.create({
       data: {
         nomRestaurant: data.nomRestaurant,
         nomProprietaire: data.nomProprietaire,
@@ -64,7 +65,7 @@ export async function submitSubscriptionRequest(data: {
 export async function getAllDemandes() {
   try {
     await ensureSuperAdmin();
-    return await (prisma as any).demandeAbonnement.findMany({
+    return await prisma.demandeAbonnement.findMany({
       orderBy: { createdAt: "desc" },
     });
   } catch (error) {
@@ -79,7 +80,7 @@ export async function getAllDemandes() {
 export async function approveDemande(id: string, adminPassword: string) {
   try {
     await ensureSuperAdmin();
-    const demande = await (prisma as any).demandeAbonnement.findUnique({
+    const demande = await prisma.demandeAbonnement.findUnique({
       where: { id },
     });
 
@@ -100,14 +101,14 @@ export async function approveDemande(id: string, adminPassword: string) {
 
     // Vérifier si le restaurant existe déjà (même email ET même nom)
     // Si l'email existe mais pas le nom, c'est un nouvel établissement pour le même proprio (enfant)
-    const existingResto = await (prisma as any).restaurant.findFirst({
+    const existingResto = await prisma.restaurant.findFirst({
       where: { 
         email: demande.email,
         nom: demande.nomRestaurant
       }
     });
 
-    const motherResto = await (prisma as any).restaurant.findFirst({
+    const motherResto = await prisma.restaurant.findFirst({
       where: { email: demande.email },
       orderBy: { createdAt: 'asc' }
     });
@@ -121,7 +122,7 @@ export async function approveDemande(id: string, adminPassword: string) {
 
     // LIMITE SMARTRESTO SaaS : 5 enfants max (6 établissements au total par email)
     if (isChild) {
-        const count = await (prisma as any).restaurant.count({
+        const count = await prisma.restaurant.count({
             where: { email: demande.email }
         });
         if (count >= 6) {
@@ -138,7 +139,7 @@ export async function approveDemande(id: string, adminPassword: string) {
     if (existingResto) {
       // Mise à jour du restaurant existant
       const oldPlan = existingResto.plan;
-      resto = await (prisma as any).restaurant.update({
+      resto = await prisma.restaurant.update({
         where: { id: existingResto.id },
         data: {
           plan: demande.plan,
@@ -151,14 +152,14 @@ export async function approveDemande(id: string, adminPassword: string) {
 
       // Règle Métier : Désactivation des enfants si downgrade
       if (demande.plan !== "PLATINUM") {
-         const allRestosSameEmail = await (prisma as any).restaurant.findMany({
+         const allRestosSameEmail = await prisma.restaurant.findMany({
              where: { email: demande.email },
              orderBy: { createdAt: 'asc' },
              select: { id: true }
          });
          const isMain = allRestosSameEmail[0]?.id === existingResto.id;
          if (isMain) {
-             await (prisma as any).restaurant.updateMany({
+             await prisma.restaurant.updateMany({
                  where: { email: demande.email, id: { not: existingResto.id } },
                  data: { active: false }
              });
@@ -166,7 +167,7 @@ export async function approveDemande(id: string, adminPassword: string) {
       }
 
       // Logger le changement
-      await (prisma as any).subscriptionLog.create({
+      await prisma.subscriptionLog.create({
         data: {
           restaurantId: resto.id,
           oldPlan: oldPlan,
@@ -178,12 +179,12 @@ export async function approveDemande(id: string, adminPassword: string) {
       });
     } else {
       // Générer un slug unique
-      let baseSlug = slugify(demande.nomRestaurant);
+      const baseSlug = slugify(demande.nomRestaurant);
       let uniqueSlug = baseSlug;
       let counter = 1;
       
       while (true) {
-        const conflict = await (prisma as any).restaurant.findFirst({
+        const conflict = await prisma.restaurant.findFirst({
           where: { slug: uniqueSlug },
           select: { id: true }
         });
@@ -196,7 +197,7 @@ export async function approveDemande(id: string, adminPassword: string) {
       // Indexation du nom si c'est un enfant avec le même nom que la mère
       let finalNom = demande.nomRestaurant;
       if (isChild && motherResto.nom.toLowerCase() === demande.nomRestaurant.toLowerCase()) {
-          const count = await (prisma as any).restaurant.count({
+          const count = await prisma.restaurant.count({
               where: { email: demande.email }
           });
           finalNom = `${demande.nomRestaurant} ${count + 1}`;
@@ -206,7 +207,7 @@ export async function approveDemande(id: string, adminPassword: string) {
       const finalPassword = isChild ? "CHILD_PROT_" + Math.random().toString(36).substring(2, 10) : adminPassword;
       const hashedPassword = await hashPassword(finalPassword);
 
-      resto = await (prisma as any).restaurant.create({
+      resto = await prisma.restaurant.create({
         data: {
           nom: finalNom,
           slug: uniqueSlug,
@@ -222,7 +223,7 @@ export async function approveDemande(id: string, adminPassword: string) {
       });
 
       // Logger la création
-      await (prisma as any).subscriptionLog.create({
+      await prisma.subscriptionLog.create({
         data: {
           restaurantId: resto.id,
           oldPlan: null,
@@ -254,12 +255,12 @@ export async function approveDemande(id: string, adminPassword: string) {
       ];
 
       for (const p of initialPlats) {
-        await (prisma as any).plat.create({ data: p });
+        await prisma.plat.create({ data: p });
       }
     }
 
     // Mettre à jour le statut de la demande
-    await (prisma as any).demandeAbonnement.update({
+    await prisma.demandeAbonnement.update({
       where: { id },
       data: { statut: "APPROUVEE" },
     });
@@ -281,7 +282,7 @@ export async function approveDemande(id: string, adminPassword: string) {
 export async function rejectDemande(id: string) {
   try {
     await ensureSuperAdmin();
-    await (prisma as any).demandeAbonnement.update({
+    await prisma.demandeAbonnement.update({
       where: { id },
       data: { statut: "REFUSEE" },
     });

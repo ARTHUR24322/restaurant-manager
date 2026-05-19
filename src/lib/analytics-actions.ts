@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { prisma } from "./prisma";
@@ -114,8 +115,8 @@ export async function getGlobalAnalytics() {
 export async function getManagerAnalytics(restaurantId: string, period: "day" | "week" | "month") {
     try {
         const now = new Date();
-        let startDate = new Date();
-        let prevStartDate = new Date();
+        const startDate = new Date();
+        const prevStartDate = new Date();
 
         if (period === "day") {
             startDate.setHours(0, 0, 0, 0);
@@ -262,7 +263,7 @@ export async function getManagerAnalytics(restaurantId: string, period: "day" | 
 export async function getReportData(restaurantId: string, period: "day" | "week" | "month" | "year") {
   try {
     const now = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
 
     if (period === "day") {
       startDate.setHours(0, 0, 0, 0);

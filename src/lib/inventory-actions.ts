@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use server";
 
 import { prisma } from "./prisma";
@@ -56,8 +57,9 @@ export async function createArticle(restaurantId: string, data: Record<string, u
 
     revalidatePath("/manager/inventory");
     return { success: true, article };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: message };
   }
 }
 
@@ -113,8 +115,9 @@ export async function recordMovement(data: {
     revalidatePath("/manager/inventory");
     revalidateTag(`menu-${data.restaurantId}`);
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: message };
   }
 }
 
@@ -145,8 +148,9 @@ export async function createLocation(restaurantId: string, data: Record<string, 
     });
     revalidatePath("/manager/inventory");
     return { success: true, loc };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: message };
   }
 }
 
@@ -161,8 +165,9 @@ export async function createSupplier(restaurantId: string, data: Record<string, 
     });
     revalidatePath("/manager/inventory");
     return { success: true, sup };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: message };
   }
 }
 
@@ -178,8 +183,9 @@ export async function deleteLocation(id: string) {
     await prisma.emplacement.delete({ where: { id } });
     revalidatePath("/manager/inventory");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: message };
   }
 }
 
@@ -195,8 +201,9 @@ export async function deleteSupplier(id: string) {
     await prisma.fournisseur.delete({ where: { id } });
     revalidatePath("/manager/inventory");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: message };
   }
 }
 
@@ -273,8 +280,9 @@ export async function updateRecipe(platId: string, restaurantId: string, items: 
 
     revalidatePath("/manager/menu");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: message };
   }
 }
 
@@ -348,8 +356,9 @@ export async function deductStockForOrder(orderId: string, restaurantId: string)
 
     revalidateTag(`menu-${restaurantId}`);
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
     console.error("[Stock Deduction] Error:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: message };
   }
 }

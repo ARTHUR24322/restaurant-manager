@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-white">

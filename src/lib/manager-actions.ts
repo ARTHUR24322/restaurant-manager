@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use server";
 
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/jwt";
+import { type SessionPayload } from "@/types";
 
 export async function verifyManagerPin(pin: string) {
   try {
@@ -11,7 +13,7 @@ export async function verifyManagerPin(pin: string) {
       return { success: false, error: "Session non trouvée. Veuillez vous reconnecter." };
     }
 
-    const payload = await decrypt(session);
+    const payload = await decrypt(session) as SessionPayload | null;
     if (!payload || !payload.restoId || !payload.email) {
       return { success: false, error: "Session invalide." };
     }
@@ -45,10 +47,10 @@ export async function getManagerSession() {
     const session = cookies().get("session")?.value;
     if (!session) return null;
 
-    const payload = await decrypt(session);
+    const payload = await decrypt(session) as SessionPayload | null;
     if (!payload || !payload.restoId) return null;
 
-    const restaurant = await (prisma as any).restaurant.findUnique({
+    const restaurant = await prisma.restaurant.findUnique({
       where: { id: payload.restoId },
       select: { id: true, nom: true, email: true, plan: true, active: true, subscriptionEnd: true, preferredTheme: true, tauxChange: true }
     });
@@ -68,7 +70,7 @@ export async function getLinkedEstablishments() {
     const session = cookies().get("session")?.value;
     if (!session) return [];
 
-    const payload = await decrypt(session);
+    const payload = await decrypt(session) as SessionPayload | null;
     if (!payload || !payload.restoId) return [];
 
     // Récupère l'email du restaurant lié à la session

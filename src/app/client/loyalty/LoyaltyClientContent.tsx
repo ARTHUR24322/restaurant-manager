@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Phone, Star, Gift, Ticket, Loader2, 
-  ChevronRight, Calendar, ArrowRight, CheckCircle2,
-  AlertCircle, X, Clock
+  ArrowRight,
+  AlertCircle, Clock, Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getClientLoyalty, claimRewardAction } from "@/lib/actions-loyalty";
@@ -22,7 +22,31 @@ export default function LoyaltyClientContent({
   const [loading, setLoading] = useState(false);
   const [claiming, setClaiming] = useState(false);
   
-  const [loyaltyData, setLoyaltyData] = useState<any>(null);
+  interface LoyaltyReward {
+    id: string;
+    type: 'PROMO_CODE' | 'PRODUCT';
+    promoCode?: string;
+    allowedDays: string[];
+    discountValue?: number;
+  }
+
+  interface LoyaltyCatalogItem {
+    id: string;
+    type: 'PROMO_CODE' | 'PRODUCT';
+    requiredPoints: number;
+    discountValue?: number;
+  }
+
+  interface LoyaltyData {
+    success: boolean;
+    points: number;
+    totalEarned: number;
+    myRewards: LoyaltyReward[];
+    catalog: LoyaltyCatalogItem[];
+    error?: string;
+  }
+  
+  const [loyaltyData, setLoyaltyData] = useState<LoyaltyData | null>(null);
 
   const daysLabels: Record<string, string> = {
     "Monday": "Lundi",
@@ -40,7 +64,7 @@ export default function LoyaltyClientContent({
     setLoading(true);
     const res = await getClientLoyalty(restaurantId, phone);
     if (res.success) {
-      setLoyaltyData(res);
+      setLoyaltyData(res as LoyaltyData);
       setIsLoggedIn(true);
     } else {
       toast.error("Une erreur est survenue.");
@@ -56,7 +80,7 @@ export default function LoyaltyClientContent({
       toast.success("Récompense débloquée ! Retrouvez-la dans 'Mes Cadeaux'");
       // Refresh
       const updated = await getClientLoyalty(restaurantId, phone);
-      setLoyaltyData(updated);
+      setLoyaltyData(updated as LoyaltyData);
     } else {
       toast.error(res.error || "Erreur");
     }
@@ -147,7 +171,7 @@ export default function LoyaltyClientContent({
                <Ticket className="w-3 h-3" /> Mes privilèges actifs ({myRewards.length})
             </h4>
             <div className="space-y-3">
-               {myRewards.map((reward: any) => (
+               {myRewards.map((reward) => (
                   <div key={reward.id} className="bg-zinc-900 border-2 border-primary/20 rounded-3xl p-5 relative overflow-hidden group shadow-xl">
                       <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full" />
                       
@@ -184,8 +208,8 @@ export default function LoyaltyClientContent({
                             </div>
                          ) : (
                             <div className="w-full">
-                               <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-xl p-3 text-center">
-                                  <p className="text-xs font-black uppercase italic">Dites "SmartReward" à la caisse 🍔</p>
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-xl p-3 text-center">
+                                  <p className="text-xs font-black uppercase italic">Dites &quot;SmartReward&quot; à la caisse 🍔</p>
                                   <p className="text-[9px] opacity-70 mt-1 uppercase font-bold tracking-widest">ID: {reward.id.slice(-6).toUpperCase()}</p>
                                 </div>
                             </div>
@@ -204,7 +228,7 @@ export default function LoyaltyClientContent({
          </h4>
          
          <div className="space-y-3">
-            {catalog.map((item: any) => {
+            {catalog.map((item) => {
                const isLocked = currentPoints < item.requiredPoints;
                return (
                   <div key={item.id} className={cn(

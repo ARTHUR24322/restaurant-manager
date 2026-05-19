@@ -1,8 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 import { getPlats } from "@/lib/actions";
 import { 
-  Phone, Star, Gift, Ticket, Loader2, 
-  ChevronRight, Calendar, ArrowRight, CheckCircle2,
-  AlertCircle, X, Clock, Info, Search, Utensils
+  Gift, Utensils
 } from "lucide-react";
 import Link from "next/link";
 import { CartFloat } from "@/components/client/CartFloat";

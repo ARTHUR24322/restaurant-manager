@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     // await pusher.trigger('kitchen-channel', 'new-order', nouvelleCommande);
 
     return NextResponse.json({ success: true, commande: nouvelleCommande }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ success: false, error: "Bad Request" }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

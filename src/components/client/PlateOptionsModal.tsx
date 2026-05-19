@@ -1,11 +1,13 @@
 "use client"
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useState } from 'react';
 import { X, Check, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { type Plat, type Option } from "@/types";
 
 interface PlateOptionsModalProps {
-  plat: any;
+  plat: Plat | null;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (selectedOptions: string[]) => void;
@@ -49,7 +51,7 @@ export function PlateOptionsModal({ plat, isOpen, onClose, onConfirm }: PlateOpt
                 <p className="text-xs font-bold uppercase tracking-widest text-primary">Options disponibles</p>
                 {plat.options?.length > 0 ? (
                     <div className="grid grid-cols-1 gap-2">
-                        {plat.options.map((opt: any) => (
+                        {plat.options.map((opt: Option) => (
                             <button
                                 key={opt.id}
                                 onClick={() => toggleOption(opt.nom)}

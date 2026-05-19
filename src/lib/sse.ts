@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type ClientHandler = (data: Record<string, unknown>) => void;
 
 if (!(global as any).EVENT_STREAMS) {

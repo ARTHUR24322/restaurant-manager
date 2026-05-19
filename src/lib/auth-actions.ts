@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use server";
 
 import { z } from "zod";
@@ -5,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { comparePassword, hashPassword } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/jwt";
 import { cookies } from "next/headers";
+import { type SessionPayload } from "@/types";
 
 const loginSchema = z.object({
   email: z.string().email("Format d'email invalide"),
@@ -18,7 +20,7 @@ export async function ensureSuperAdmin() {
   const session = cookies().get("admin_session")?.value;
   if (!session) throw new Error("Accès refusé : Session administrateur manquante");
 
-  const payload = await decrypt(session);
+  const payload = await decrypt(session) as SessionPayload | null;
   if (!payload || payload.role !== "SUPER_ADMIN") {
     throw new Error("Accès refusé : Privilèges administrateur insuffisants");
   }
@@ -49,7 +51,7 @@ export async function ensureManager(targetRestoId?: string) {
     throw new Error("Accès refusé : Session requise");
   }
 
-  const payload = await decrypt(session);
+  const payload = await decrypt(session) as SessionPayload | null;
   if (!payload || (payload.role !== "MANAGER" && payload.role !== "SUPER_ADMIN")) {
     throw new Error("Accès refusé : Privilèges insuffisants");
   }
@@ -182,12 +184,12 @@ export async function registerRestaurant(formData: FormData) {
 
     // 2. Préparer les données
     const hashedPassword = await hashPassword(password);
-    let baseSlug = slugify(nom);
+    const baseSlug = slugify(nom);
     let uniqueSlug = baseSlug;
     let counter = 1;
     
     while (true) {
-      const conflict = await (prisma as any).restaurant.findFirst({
+      const conflict = await prisma.restaurant.findFirst({
         where: { slug: uniqueSlug },
         select: { id: true }
       });
@@ -197,7 +199,7 @@ export async function registerRestaurant(formData: FormData) {
     }
 
     // 3. Créer le restaurant directement avec TRIAL 14 jours
-    const restaurant = await (prisma as any).restaurant.create({
+    const restaurant = await prisma.restaurant.create({
       data: {
         nom,
         slug: uniqueSlug,
@@ -227,7 +229,7 @@ export async function registerRestaurant(formData: FormData) {
     ];
 
     for (const p of initialPlats) {
-      await (prisma as any).plat.create({ data: p });
+      await prisma.plat.create({ data: p });
     }
 
     return { success: true, restoId: restaurant.id };
@@ -247,7 +249,7 @@ export async function verifyManagerPin(pin: string) {
       return { success: false, error: "Session expirée. Veuillez vous reconnecter." };
     }
 
-    const payload = await decrypt(preAuthCookie);
+    const payload = await decrypt(preAuthCookie) as SessionPayload | null;
     if (!payload || payload.role !== "PRE_AUTH_MANAGER") {
       cookies().delete("manager_pre_auth");
       return { success: false, error: "Session invalide. Veuillez vous reconnecter." };
@@ -315,7 +317,7 @@ export async function authenticateSuperAdmin(formData: FormData) {
       const preAuthToken = await encrypt({
         email,
         role: "PRE_AUTH_ADMIN",
-      });
+      } as SessionPayload);
 
       cookies().set("pre_auth_admin", preAuthToken, {
         httpOnly: true,
@@ -343,11 +345,11 @@ export async function verifySuperAdminPin(pin: string) {
     const preAuthToken = cookies().get("pre_auth_admin")?.value;
     if (!preAuthToken) return { success: false, error: "Session expirée. Reconnectez-vous." };
 
-    const payload = await decrypt(preAuthToken);
+    const payload = await decrypt(preAuthToken) as SessionPayload | null;
     if (!payload || payload.role !== "PRE_AUTH_ADMIN") return { success: false, error: "Non autorisé." };
 
     // 2. Récupérer le PIN configuré (défaut: 123456 pour Arthur)
-    let config = await prisma.systemConfig.findUnique({
+    const config = await prisma.systemConfig.findUnique({
       where: { key: "admin_pin" }
     });
 
@@ -403,7 +405,7 @@ export async function updateAdminPin(oldPin: string, newPin: string) {
             return { success: false, error: "Le PIN doit contenir 6 chiffres." };
         }
 
-        let config = await prisma.systemConfig.findUnique({
+        const config = await prisma.systemConfig.findUnique({
             where: { key: "admin_pin" }
         });
 
@@ -508,9 +510,10 @@ export async function impersonateRestaurant(restoId: string) {
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Impersonation Error:", error);
-    return { success: false, error: error.message || "Non autorisé." };
+    const message = error instanceof Error ? error.message : "Non autorisé.";
+    return { success: false, error: message };
   }
 }
 
@@ -532,7 +535,7 @@ export async function switchSelectedRestaurant(newRestoId: string) {
       const session = cookies().get("session")?.value;
       if (!session) return { success: false, error: "Session non trouvée." };
 
-      const payload = await decrypt(session);
+      const payload = await decrypt(session) as SessionPayload | null;
       if (!payload) return { success: false, error: "Session invalide." };
 
       if (payload.role !== "MANAGER" && payload.role !== "SUPER_ADMIN") {

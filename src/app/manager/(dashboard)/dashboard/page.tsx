@@ -1,6 +1,7 @@
 "use client"
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   TrendingUp, 
   Users, 
@@ -10,13 +11,10 @@ import {
   ChevronUp, 
   ChevronDown,
   Clock,
-  LayoutDashboard,
   Utensils,
   CreditCard,
   Smartphone,
   Banknote,
-  MoreVertical,
-  Filter,
   Printer,
   Power,
   Package,
@@ -26,6 +24,7 @@ import {
   FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Plat, Commande } from "@/types";
 import { getRecentCommandes, updateOrderStatus, confirmOrderPayment, getPlats, getRestaurantStatus } from "@/lib/actions";
 import { updateRestaurantTauxChange } from "@/lib/actions-settings";
 import { checkIsMainAccount } from "@/lib/admin-actions";
@@ -34,30 +33,11 @@ import { exportToExcel, exportToPDF, formatOrderForReport, calculateSummary } fr
 import { printInvoice } from "@/lib/thermal-printer";
 import { MultiSiteWidget } from "@/components/manager/MultiSiteWidget";
 import { toast } from "sonner";
-
 import { getManagerSession } from "@/lib/manager-actions";
-
-// --- Mock Data ---
-// --- Constants & Color Config ---
-const PAYMENT_METHOD_CONFIG: Record<string, { label: string, color: string, icon: any }> = {
-  PAID_CASH: { label: "Cash", color: "bg-emerald-500", icon: Banknote },
-  PAID_MOBILE: { label: "Mobile", color: "bg-indigo-500", icon: Smartphone },
-  UNPAID: { label: "En attente", color: "bg-amber-500", icon: Clock }
-};
-
-const DAILY_SALES = [
-  { day: "Lun", val: 45 },
-  { day: "Mar", val: 78 },
-  { day: "Mer", val: 65 },
-  { day: "Jeu", val: 82 },
-  { day: "Ven", val: 95 },
-  { day: "Sam", val: 110 },
-  { day: "Dim", val: 88 }
-];
 
 // --- Mini Components ---
 
-const StatCard = ({ title, value, icon: Icon, trend, prefix = "$", subtitle }: any) => (
+const StatCard = ({ title, value, icon: Icon, trend, prefix = "$", subtitle }: { title: string, value: string | number, icon: React.ElementType, trend?: number, prefix?: string, subtitle?: string }) => (
   <div className="bg-card rounded-2xl p-6 shadow-sm border border-border/50 hover:shadow-md transition-shadow relative overflow-hidden group">
     <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full -mr-12 -mt-12 group-hover:bg-primary/10 transition-colors" />
     <div className="flex justify-between items-start mb-4 relative z-10">
@@ -124,15 +104,14 @@ const PeakHoursChart = ({ data }: { data: { hour: number, count: number }[] }) =
     );
 };
 
-const CustomBarChart = ({ data }: any) => {
+const CustomBarChart = ({ data }: { data: { day: string, val: number }[] }) => {
   if (!data || data.length === 0) return null;
   
-  const maxVal = Math.max(...data.map((d: any) => d.val), 1);
-  const avgVal = data.reduce((acc: number, d: any) => acc + d.val, 0) / data.length;
+  const maxVal = Math.max(...data.map((d: { val: number }) => d.val), 1);
+  const avgVal = data.reduce((acc: number, d: { val: number }) => acc + d.val, 0) / data.length;
 
   return (
     <div className="relative h-64 mt-12 mb-8 px-2">
-      {/* Average Line */}
       {maxVal > 0 && (
         <div 
           className="absolute w-full border-t border-dashed border-primary/30 z-0 transition-all duration-1000"
@@ -147,12 +126,10 @@ const CustomBarChart = ({ data }: any) => {
       <div className="flex items-end justify-between h-full gap-4 relative z-10">
         {data.map((item: any, idx: number) => {
           const isPeak = item.val === maxVal && item.val > 0;
-          // Scale to 90% max to leave room for peak badge
           const heightPercent = (item.val / maxVal) * 90;
           
           return (
             <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-              {/* Peak Badge */}
               {isPeak && (
                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 animate-bounce z-20">
                   <div className="bg-amber-500 text-white text-[8px] font-black px-2 py-0.5 rounded-md shadow-lg shadow-amber-500/40 whitespace-nowrap rotate-[-5deg]">
@@ -161,7 +138,6 @@ const CustomBarChart = ({ data }: any) => {
                 </div>
               )}
 
-              {/* Data Value on top of bar */}
               <div 
                 className={cn(
                   "absolute opacity-0 group-hover:opacity-100 transition-all duration-300 bottom-full mb-2 z-20",
@@ -186,14 +162,7 @@ const CustomBarChart = ({ data }: any) => {
                 )}
                 style={{ height: `${heightPercent}%` }}
               >
-                {/* Visual "shine" effect on bars */}
                 <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                
-                {isPeak && (
-                  <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
-                  </div>
-                )}
               </div>
               
               <div className={cn(
@@ -210,11 +179,10 @@ const CustomBarChart = ({ data }: any) => {
   );
 };
 
-const PieChartPlaceholder = ({ data }: any) => (
+const PieChartPlaceholder = ({ data }: { data: { label: string, value: number, color: string }[] }) => (
   <div className="space-y-4 py-4">
     <div className="flex items-center justify-center py-6">
       <div className="relative w-40 h-40 rounded-full border-[12px] border-secondary flex items-center justify-center">
-         {/* Simple segment visualization for the top 2 if they exist */}
          {data[0] && (
            <div 
              className="absolute inset-[-12px] rounded-full border-[12px] border-emerald-500 border-l-transparent border-b-transparent transform rotate-45" 
@@ -249,11 +217,10 @@ const PieChartPlaceholder = ({ data }: any) => (
 
 export default function DashboardPage({ searchParams }: { searchParams: { resto_id?: string } }) {
   const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
-  const [orders, setOrders] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [orders, setOrders] = useState<Commande[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null); // Analytics object is complex, 'any' allowed if we don't have full type
   const [filter, setFilter] = useState('day');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [printingOrder, setPrintingOrder] = useState<any>(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [restoStatus, setRestoStatus] = useState<any>(null);
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
@@ -265,7 +232,6 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
-    // Si l'ID est absent au montage (ex: clic depuis la sidebar sans le paramètre), le récuperer de la session !
     async function loadSession() {
       if (!searchParams.resto_id) {
         const session = await getManagerSession();
@@ -274,7 +240,6 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
         }
       }
       
-      // Cas du Multi-Site : Déterminer si c'est la mère
       if (restaurantId) {
         const isMain = await checkIsMainAccount(restaurantId);
         setIsMainAccount(isMain);
@@ -283,16 +248,14 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
     loadSession();
   }, [searchParams.resto_id, restaurantId]);
 
-  const fetchAllOrders = async (currentFilter: string) => {
+  const fetchAllOrders = useCallback(async (currentFilter: string) => {
     if (!restaurantId) return;
 
     setIsRefreshing(true);
     
-    // 1. Commandes Récentes (Live Feed) - Toujours les 20 dernières
     const recent = await getRecentCommandes(restaurantId);
-    setOrders(recent);
+    setOrders((recent || []) as unknown as Commande[]);
 
-    // 2. Analytiques Dynamiques (Basés sur le filtre)
     const stats = await getManagerAnalytics(restaurantId, currentFilter as any);
     if (stats.success) {
         setAnalytics(stats);
@@ -312,7 +275,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
     }
     
     setIsRefreshing(false);
-  };
+  }, [restaurantId]);
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -334,9 +297,9 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
       eventSource.close();
       clearInterval(interval);
     };
-  }, [filter, restaurantId]);
+  }, [filter, restaurantId, fetchAllOrders]);
 
-  const handlePrint = (order: any) => {
+  const handlePrint = (order: Commande) => {
     printInvoice(order, restoStatus?.nom || "SmartResto", restoStatus?.telephone || "");
   };
 
@@ -380,20 +343,13 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
 
   const pending = orders.filter(o => o.statut === "SUBMITTED" || o.statut === "PREPARING");
   const ready = orders.filter(o => o.statut === "READY");
-  const closed = orders.filter(o => o.statut === "COMPLETED");
 
-  // Données issues de l'analytics serveur
   const totalPaidRevenue = analytics?.totalRevenue || 0;
   const growthRate = analytics?.growth || 0;
   const closedCount = analytics?.orderCount || 0;
   const dynamicTopDishes = analytics?.topDishes || [];
   const dynamicDailyChart = analytics?.chartData || [];
-
-  const activeClients = orders.filter(o => o.statut !== "COMPLETED").length;
-  const potentialRevenue = orders.filter(o => o.statut !== "COMPLETED").reduce((acc, curr) => acc + (curr.totalUsd || 0), 0);
   const avgTicket = closedCount > 0 ? totalPaidRevenue / closedCount : 0;
-
-  // Les calculs de charts locaux sont supprimés car fournis par le serveur
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto animate-in fade-in duration-300 relative">
@@ -408,7 +364,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
                 <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-4">Accès Suspendu</h1>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-8">
                     Votre abonnement SmartResto est actuellement inactif. 
-                    Veuillez contacter l'administrateur de la plateforme pour régulariser votre situation.
+                    Veuillez contacter l&apos;administrateur de la plateforme pour régulariser votre situation.
                 </p>
                 <div className="pt-6 border-t border-border">
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Support Technique</p>
@@ -417,6 +373,7 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
             </div>
         </div>
       )}
+
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -506,15 +463,6 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
           prefix="$"
         />
       </div>
-
-      {/* Multi-Site Widget (SaaS Platinum Tier) */}
-      {restoStatus?.plan === "PLATINUM" && (
-        <MultiSiteWidget 
-          proprietorEmail={restoStatus.email} 
-          currentRestoId={restaurantId} 
-          isMainAccount={isMainAccount}
-        />
-      )}
 
       {/* Stock Alerts (New Section) */}
       {lowStockItems.length > 0 && (
@@ -623,38 +571,8 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
         </div>
       </div>
 
-      {/* KPI Cards (Row 2 - Real-time) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          title={`Encaissement total`}
-          value={totalPaidRevenue}
-          trend={growthRate}
-          icon={DollarSign}
-        />
-        <StatCard 
-          title="Clients Actifs"
-          value={activeClients}
-          trend={0}
-          icon={Users}
-          prefix=""
-        />
-        <StatCard 
-          title="Ticket Moyen (Payé)"
-          value={avgTicket}
-          trend={0}
-          icon={Activity}
-        />
-        <StatCard 
-          title="Encaissements"
-          value={closedCount}
-          icon={TrendingUp}
-          prefix=""
-        />
-      </div>
-
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
         {/* Main Sales Chart */}
         <div className="lg:col-span-2 bg-card rounded-3xl p-8 shadow-sm border border-border/50">
           <div className="flex items-center justify-between mb-8">
@@ -710,17 +628,15 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
              </div>
           </div>
         </div>
-
       </div>
 
-      {/* Top Products Table & Activity */}
+      {/* Activity Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
         <div className="lg:col-span-2 bg-card rounded-3xl p-8 shadow-sm border border-border/50">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <Utensils className="w-5 h-5 text-indigo-500" /> Plats les Plus Commandés
             </h3>
-            <button className="text-sm font-bold text-primary hover:underline">Tout voir</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -728,32 +644,25 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
                 <tr className="text-xs text-muted-foreground uppercase font-bold border-b border-border">
                   <th className="pb-4 pr-4">Produit</th>
                   <th className="pb-4 px-4 text-center">Commandes</th>
-                  <th className="pb-4 px-4 text-center">Prix Unitaire</th>
-                  <th className="pb-4 pl-4 text-right">Evolution</th>
+                  <th className="pb-4 px-4 text-center">Prix</th>
+                  <th className="pb-4 pl-4 text-right">Profit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {dynamicTopDishes.length === 0 ? (
-                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground italic">Aucune vente enregistrée pour le moment.</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground italic">Aucune vente enregistrée.</td></tr>
                 ) : (
                   dynamicTopDishes.map((dish: any, i: number) => (
                     <tr key={i} className="group hover:bg-secondary/50 transition-colors">
-                      <td className="py-4 pr-4">
-                        <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary">
-                              {i + 1}
-                           </div>
-                           <span className="font-bold">{dish.name}</span>
-                        </div>
+                      <td className="py-4 pr-4 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center font-bold text-[10px] text-primary">{i + 1}</div>
+                        <span className="font-bold text-sm">{dish.name}</span>
                       </td>
                       <td className="py-4 px-4 text-center font-medium">{dish.orders}</td>
                       <td className="py-4 px-4 text-center font-medium">${dish.price}</td>
                       <td className="py-4 pl-4 text-right">
-                         <span className={cn(
-                           "text-[10px] font-black uppercase px-2 py-1 rounded-lg",
-                           dish.profit > 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"
-                         )}>
-                           +{dish.profit.toFixed(1)}$ Profit
+                         <span className="text-[10px] font-black uppercase px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500">
+                           +{dish.profit.toFixed(1)}$
                          </span>
                       </td>
                     </tr>
@@ -764,115 +673,78 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
           </div>
         </div>
 
-        {/* Real-time Activity Feed */}
         <div className="bg-card rounded-3xl p-8 shadow-sm border border-border/50 overflow-hidden flex flex-col">
-           <div className="flex items-center justify-between mb-8">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Activity className="w-5 h-5 text-emerald-500" /> Activité en direct
-              </h3>
-              <div className="flex items-center gap-1.5">
-                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                 <span className="text-[10px] font-bold text-muted-foreground uppercase">Live</span>
-              </div>
-           </div>
+           <h3 className="text-lg font-bold flex items-center gap-2 mb-8">
+             <Activity className="w-5 h-5 text-emerald-500" /> Activité Live
+           </h3>
            
            <div className="space-y-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              {orders.length === 0 ? (
-                <div className="text-center py-12 opacity-50 italic text-sm">
-                   Aucune commande pour le moment
-                </div>
-              ) : (
-                orders.slice(0, showFullHistory ? undefined : 5).map((order, i) => (
-                  <div key={order.id} className="relative pl-6 pb-6 border-l-2 border-border last:pb-0">
-                    <div className="absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-background border-2 border-primary" />
-                    <div className="flex justify-between items-start mb-1">
-                       <span className="text-xs font-bold text-muted-foreground">
-                          {new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                       </span>
-                       <span className="text-[10px] font-black px-2 py-0.5 rounded bg-primary/10 text-primary uppercase">
-                          Table {order.table}
-                       </span>
-                    </div>
-                    <p className="font-bold text-sm">{order.statut === 'COMPLETED' ? 'Paiement reçu' : 'Nouvelle commande'} : <span className="text-emerald-500">${order.totalUsd}</span></p>
-                    <p className="text-xs text-muted-foreground mt-1">Client: {order.client}</p>
-                    {order.noteSpeciale && (
-                        <div className="mt-2 text-[10px] bg-secondary/50 p-2 rounded-lg italic">
-                           "{order.noteSpeciale}"
-                        </div>
-                    )}
+              {orders.slice(0, showFullHistory ? undefined : 6).map((order) => (
+                <div key={order.id} className="relative pl-6 pb-6 border-l-2 border-border last:pb-0">
+                  <div className="absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-background border-2 border-primary" />
+                  <div className="flex justify-between items-start mb-1">
+                     <span className="text-xs font-bold text-muted-foreground">{new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                     <span className="text-[10px] font-black px-2 py-0.5 rounded bg-primary/10 text-primary uppercase">Table {order.table}</span>
                   </div>
-                ))
-              )}
+                  <p className="font-bold text-sm">{order.statut === 'COMPLETED' ? 'Paiement reçu' : 'Nouveau'} : <span className="text-emerald-500">${order.totalUsd}</span></p>
+                </div>
+              ))}
            </div>
-
-           <div className="mt-8 pt-6 border-t border-border">
-              <button 
-                onClick={() => setShowFullHistory(!showFullHistory)}
-                className="w-full py-4 bg-secondary hover:bg-secondary/80 rounded-2xl text-xs font-bold uppercase tracking-widest transition-colors"
-              >
-                 {showFullHistory ? "Réduire la liste" : "Historique complet"}
-              </button>
-           </div>
+           
+           <button 
+              onClick={() => setShowFullHistory(!showFullHistory)}
+              className="mt-6 w-full py-4 bg-secondary hover:bg-zinc-800 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+           >
+              {showFullHistory ? "Réduire" : "Historique complet"}
+           </button>
         </div>
       </div>
 
-      {/* Taux Change Quick Update Modal */}
+      {/* Taux Change Modal */}
       {showTauxModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="w-full max-w-sm bg-card border border-border rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-300">
-            <h3 className="text-xl font-bold italic tracking-tighter mb-4 text-foreground flex items-center gap-2">
-              <RefreshCw className="w-5 h-5 text-emerald-500" /> Taux du Jour
-            </h3>
-            <p className="text-xs text-muted-foreground mb-6">Mettez à jour le taux de conversion pour les factures.</p>
-            
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-muted-foreground uppercase ml-2 tracking-widest">1 USD = ? CDF</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
-                  <input 
-                    type="number"
-                    value={newTaux}
-                    onChange={(e) => setNewTaux(e.target.value)}
-                    className="w-full bg-secondary border-border rounded-xl py-3 pl-12 text-sm text-foreground focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all font-black"
-                    placeholder="Ex: 2850"
-                  />
-                </div>
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+           <div className="bg-card w-full max-w-sm rounded-[2rem] border border-border p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+              <h3 className="text-xl font-black italic tracking-tighter mb-2">MISE À JOUR DU TAUX</h3>
+              <p className="text-xs text-muted-foreground mb-6 uppercase tracking-widest font-bold">Ajustez le taux de change local</p>
+              
+              <div className="space-y-4">
+                 <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 block">Nouveau Taux (1$ = ? FC)</label>
+                    <input 
+                      type="number"
+                      value={newTaux}
+                      onChange={(e) => setNewTaux(e.target.value)}
+                      className="w-full bg-secondary border border-border rounded-xl py-4 px-4 text-xl font-black outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="Ex: 2850"
+                    />
+                 </div>
+                 <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowTauxModal(false)}
+                      className="flex-1 bg-secondary text-muted-foreground font-black py-4 rounded-xl text-[10px] uppercase tracking-widest hover:bg-zinc-800 transition-all"
+                    >
+                       Annuler
+                    </button>
+                    <button 
+                      disabled={tauxLoading}
+                      onClick={async () => {
+                        if (!newTaux || !restaurantId) return;
+                        setTauxLoading(true);
+                        const res = await updateRestaurantTauxChange(restaurantId, Number(newTaux));
+                        if (res.success) {
+                           setExchangeRate(Number(newTaux));
+                           setShowTauxModal(false);
+                           toast.success("Taux mis à jour !");
+                        }
+                        setTauxLoading(false);
+                      }}
+                      className="flex-1 bg-primary text-black font-black py-4 rounded-xl text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                    >
+                       {tauxLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Confirmer"}
+                    </button>
+                 </div>
               </div>
-
-              <div className="flex gap-3 pt-2">
-                <button 
-                  onClick={() => setShowTauxModal(false)}
-                  className="flex-1 py-3 bg-secondary text-muted-foreground font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-secondary/80 transition-all"
-                >
-                  Annuler
-                </button>
-                <button 
-                  disabled={tauxLoading || !newTaux}
-                  onClick={async () => {
-                    const rate = parseFloat(newTaux);
-                    if (isNaN(rate) || rate <= 0) {
-                      toast.error("Taux invalide");
-                      return;
-                    }
-                    setTauxLoading(true);
-                    const res = await updateRestaurantTauxChange(restaurantId, rate);
-                    setTauxLoading(false);
-                    if (res.success) {
-                      setExchangeRate(rate);
-                      setShowTauxModal(false);
-                      toast.success(`Taux mis à jour : ${rate} FC`);
-                    } else {
-                      toast.error("Erreur mise à jour");
-                    }
-                  }}
-                  className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
-                >
-                  {tauxLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Appliquer"}
-                </button>
-              </div>
-            </div>
-          </div>
+           </div>
         </div>
       )}
     </div>

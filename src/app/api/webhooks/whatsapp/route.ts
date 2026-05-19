@@ -13,12 +13,11 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
-  const challenge = url.searchParams.get("hub.challenge");
 
   if (mode && token) {
     if (mode === "subscribe" && token === WHATSAPP_WEBHOOK_SECRET) {
-      console.log("🟢 WEBHOOK_VERIFIED");
-      return new NextResponse(challenge, { status: 200 });
+      const challenge = url.searchParams.get("hub.challenge") as string;
+      return new Response(challenge, { status: 200 });
     } else {
       console.error("🔴 WEBHOOK_VERIFICATION_FAILED");
       return new NextResponse("Forbidden", { status: 403 });
@@ -37,7 +36,8 @@ export async function POST(request: Request) {
 
     // Vérifier s'il s'agit d'un événement WhatsApp API
     if (body.object === "whatsapp_business_account") {
-      body.entry?.forEach((entry: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      body.entry?.forEach((entry: { changes?: Array<{ value: any }> }) => {
         const changes = entry.changes?.[0]?.value;
         if (!changes) return;
 
@@ -56,10 +56,9 @@ export async function POST(request: Request) {
         // 2. Réception d'un message entrant (Un client répond au bot)
         if (changes.messages) {
           const message = changes.messages[0];
-          const phoneNumber = message.from; // Numéro du client
-          const waId = changes.metadata.phone_number_id; // Votre ID (utile en multi-tenant)
-          
-          console.log(`[WhatsApp Inbound] Nouveau message de ${phoneNumber}:`, message.text?.body || message.type);
+          const phone = message.from; // Numéro du client
+          console.log(`[WhatsApp Inbound] Nouveau message de ${phone}:`, message.text?.body || message.type);
+          // waId (changes.metadata.phone_number_id) could be used for multi-tenant mapping if needed
 
           // Piste d'amélioration: Si un client répond, on pourrait enregistrer 
           // le message dans sa commande ou envoyer une réponse automatique.

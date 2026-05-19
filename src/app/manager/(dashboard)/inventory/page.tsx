@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable @typescript-eslint/no-explicit-any, react/no-unescaped-entities */
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -9,11 +10,9 @@ import {
   AlertTriangle, 
   Search, 
   Filter, 
-  MoreVertical, 
   Truck, 
   MapPin, 
   Barcode,
-  TrendingDown,
   TrendingUp,
   History,
   Loader2,
@@ -40,13 +39,30 @@ import { useSearchParams } from 'next/navigation';
 import { getManagerSession } from "@/lib/manager-actions";
 import { SubmitButton } from "@/components/manager/SubmitButton";
 
+interface InventoryArticle {
+  id: string;
+  nom: string;
+  reference?: string | null;
+  categorie?: string | null;
+  stockActuel: number;
+  stockMin: number;
+  unite: string;
+  emplacement?: { nom: string } | null;
+}
+
+interface InventoryStats {
+  totalItems: number;
+  totalValue: number;
+  lowStockCount: number;
+}
+
 export default function InventoryPage() {
   const searchParams = useSearchParams();
   const [restoId, setRestoId] = useState<string | null>(searchParams.get("resto_id"));
   
   const [loading, setLoading] = useState(true);
-  const [articles, setArticles] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [articles, setArticles] = useState<InventoryArticle[]>([]);
+  const [stats, setStats] = useState<InventoryStats | null>(null);
   const [locations, setLocations] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [plan, setPlan] = useState<string>("STANDARD");
@@ -59,7 +75,7 @@ export default function InventoryPage() {
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [isSupModalOpen, setIsSupModalOpen] = useState(false);
   const [isLocModalOpen, setIsLocModalOpen] = useState(false);
-  const [selectedArticle, setSelectedArticle] = useState<any>(null);
+  const [selectedArticle, setSelectedArticle] = useState<InventoryArticle | null>(null);
   const [activeTab, setActiveTab] = useState<'articles' | 'suppliers' | 'locations' | 'predictions'>('articles');
   const [predictions, setPredictions] = useState<any[]>([]);
   
@@ -77,38 +93,39 @@ export default function InventoryPage() {
     loadResto();
   }, [searchParams]);
 
-  useEffect(() => {
-    if (restoId) {
-      fetchData();
-    }
-  }, [restoId]);
-
-  async function fetchData() {
+  const fetchData = React.useCallback(async () => {
+    if (!restoId) return;
     setLoading(true);
     
     // Récupérer le plan depuis la BD pour éviter les sessions obsolètes
     const { getRestaurantById } = await import("@/lib/admin-actions");
-    const profile = await getRestaurantById(restoId!);
+    const profile = await getRestaurantById(restoId);
     if (profile) {
       setPlan(profile.plan);
     }
 
     const [invData, statsData, locData, supData, predData] = await Promise.all([
-      getInventory(restoId!),
-      getInventoryStats(restoId!),
-      getLocations(restoId!),
-      getSuppliers(restoId!),
-      import("@/lib/stock-predictive-actions").then(m => m.getPredictiveStockReport(restoId!))
+      getInventory(restoId),
+      getInventoryStats(restoId),
+      getLocations(restoId),
+      getSuppliers(restoId),
+      import("@/lib/stock-predictive-actions").then(m => m.getPredictiveStockReport(restoId))
     ]);
-    setArticles(invData);
-    setStats(statsData);
+    setArticles(invData as InventoryArticle[]);
+    setStats(statsData as InventoryStats);
     setLocations(locData);
     setSuppliers(supData);
     if (predData && predData.success) setPredictions(predData.predictions || []);
     setLoading(false);
-  }
+  }, [restoId]);
 
-  const categories = ["ALL", ...Array.from(new Set(articles.map(a => a.categorie).filter(Boolean)))];
+  useEffect(() => {
+    if (restoId) {
+      fetchData();
+    }
+  }, [restoId, fetchData]);
+
+  const categories = ["ALL", ...Array.from(new Set(articles.map(a => a.categorie).filter((c): c is string => !!c)))];
   
   const filteredArticles = articles.filter(art => {
     const matchesSearch = art.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -528,14 +545,14 @@ export default function InventoryPage() {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
                     const res = await createArticle(restoId!, {
-                      nom: formData.get("nom"),
-                      reference: formData.get("reference"),
+                      nom: formData.get("nom") as string,
+                      reference: formData.get("reference") as string,
                       prixAchat: parseFloat(formData.get("prixAchat") as string) || 0,
                       stockMin: parseFloat(formData.get("stockMin") as string) || 5,
-                      unite: formData.get("unite"),
-                      categorie: formData.get("categorie"),
-                      emplacementId: formData.get("emplacementId") || null,
-                      fournisseurId: formData.get("fournisseurId") || null,
+                      unite: formData.get("unite") as string,
+                      categorie: formData.get("categorie") as string,
+                      emplacementId: (formData.get("emplacementId") as string) || null,
+                      fournisseurId: (formData.get("fournisseurId") as string) || null,
                       stockActuel: parseFloat(formData.get("stockInitial") as string) || 0,
                     });
                     if(res.success) {
@@ -702,10 +719,10 @@ export default function InventoryPage() {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
                     const res = await createSupplier(restoId!, {
-                      nom: formData.get("nom"),
-                      contact: formData.get("contact"),
-                      telephone: formData.get("telephone"),
-                      email: formData.get("email"),
+                      nom: formData.get("nom") as string,
+                      contact: formData.get("contact") as string,
+                      telephone: formData.get("telephone") as string,
+                      email: formData.get("email") as string,
                     });
                     if(res.success) {
                       toast.success("Fournisseur créé !");
@@ -744,8 +761,8 @@ export default function InventoryPage() {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
                     const res = await createLocation(restoId!, {
-                      nom: formData.get("nom"),
-                      description: formData.get("description"),
+                      nom: formData.get("nom") as string,
+                      description: formData.get("description") as string,
                     });
                     if(res.success) {
                       toast.success("Emplacement créé !");

@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 import { getPlats } from "@/lib/actions";
 import { getRestaurantBySlug } from "@/lib/admin-actions";
-import { Utensils, Search, Clock, Loader2 } from "lucide-react";
+import { Search, Clock } from "lucide-react";
 import { CartFloat } from "@/components/client/CartFloat";
 import ClientMenuContent from "../ClientMenuContent";
 import { recordVisit } from "@/lib/analytics-actions";

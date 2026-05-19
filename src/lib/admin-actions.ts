@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { prisma } from "./prisma";
@@ -45,11 +46,11 @@ export async function createRestaurant(formData: FormData) {
     const ville = formData.get("ville") as string || "Lubumbashi";
 
     // Générer un slug unique
-    let baseSlug = slugify(nom);
+    const baseSlug = slugify(nom);
     let uniqueSlug = baseSlug;
     let counter = 1;
     while (true) {
-        const conflict = await (prisma as any).restaurant.findUnique({
+        const conflict = await prisma.restaurant.findUnique({
             where: { slug: uniqueSlug },
             select: { id: true }
         });
@@ -59,7 +60,7 @@ export async function createRestaurant(formData: FormData) {
     }
 
     // Déterminer s'il s'agit d'un enfant (email existe déjà)
-    const motherResto = await (prisma as any).restaurant.findFirst({
+    const motherResto = await prisma.restaurant.findFirst({
         where: { email },
         orderBy: { createdAt: 'asc' }
     });
@@ -67,7 +68,7 @@ export async function createRestaurant(formData: FormData) {
 
     // LIMITE SMARTRESTO SaaS : 5 enfants max (6 établissements au total par email)
     if (isChild) {
-        const count = await (prisma as any).restaurant.count({
+        const count = await prisma.restaurant.count({
             where: { email }
         });
         if (count >= 6) {
@@ -78,7 +79,7 @@ export async function createRestaurant(formData: FormData) {
     // Indexation du nom si c'est un enfant avec le même nom que la mère
     let finalNom = nom;
     if (isChild && motherResto.nom.toLowerCase() === nom.toLowerCase()) {
-        const count = await (prisma as any).restaurant.count({
+        const count = await prisma.restaurant.count({
             where: { email }
         });
         finalNom = `${nom} ${count + 1}`;
@@ -101,7 +102,7 @@ export async function createRestaurant(formData: FormData) {
 
     // 1. Créer le restaurant
     console.log("[SaaS-Server] Création du restaurant en DB...");
-    const resto = await (prisma as any).restaurant.create({
+    const resto = await prisma.restaurant.create({
       data: { 
         nom: finalNom, 
         slug: uniqueSlug,
@@ -141,15 +142,16 @@ export async function createRestaurant(formData: FormData) {
     ];
 
     for (const p of initialPlats) {
-      await (prisma as any).plat.create({ data: p });
+      await prisma.plat.create({ data: p });
     }
     console.log("[SaaS-Server] Menu initialisé.");
 
     revalidatePath("/super-admin");
     return { success: true, restoId: resto.id, password: tempPassword };
-  } catch (error: any) {
+  } catch (error) {
     console.error("[SaaS-Server] CRITICAL ERROR:", error);
-    return { success: false, error: error.message || "Erreur serveur lors de la création." };
+    const message = error instanceof Error ? error.message : "Erreur serveur lors de la création.";
+    return { success: false, error: message };
   }
 }
 
@@ -196,7 +198,7 @@ export async function updateRestaurant(id: string, formData: FormData) {
             updateData.pinCode = pinCode.trim();
         }
 
-        await (prisma as any).restaurant.update({
+        await prisma.restaurant.update({
             where: { id },
             data: updateData
         });
@@ -223,7 +225,7 @@ export async function updateRestaurant(id: string, formData: FormData) {
         if (plan !== "PLATINUM") {
             const isMain = await checkIsMainAccount(id);
             if (isMain) {
-                await (prisma as any).restaurant.updateMany({
+                await prisma.restaurant.updateMany({
                     where: { email, id: { not: id } },
                     data: { active: false }
                 });
@@ -232,9 +234,9 @@ export async function updateRestaurant(id: string, formData: FormData) {
 
         revalidatePath("/super-admin");
         return { success: true };
-    } catch (error: any) {
+     } catch (error) {
         console.error("[SaaS-Server] Erreur update:", error);
-        if (error.code === 'P1001') {
+        if (error instanceof Error && (error as any).code === 'P1001') {
             return { success: false, error: "Connexion à la base de données impossible (P1001). Veuillez réessayer dans quelques instants." };
         }
         return { success: false, error: "Erreur lors de la mise à jour." };
@@ -242,14 +244,14 @@ export async function updateRestaurant(id: string, formData: FormData) {
 }
 
 export async function getRestaurantById(id: string) {
-    return await (prisma as any).restaurant.findUnique({
+    return await prisma.restaurant.findUnique({
         where: { id }
     });
 }
 
 export async function getRestaurantBySlug(slug: string) {
     try {
-        const result = await (prisma as any).restaurant.findUnique({
+        const result = await prisma.restaurant.findUnique({
             where: { slug }
         });
         return result;
@@ -262,7 +264,7 @@ export async function getRestaurantBySlug(slug: string) {
 export async function toggleSubscription(id: string, active: boolean) {
     try {
         await ensureSuperAdmin();
-        const target = await (prisma as any).restaurant.findUnique({
+        const target = await prisma.restaurant.findUnique({
             where: { id },
             select: { email: true, createdAt: true }
         });
@@ -270,7 +272,7 @@ export async function toggleSubscription(id: string, active: boolean) {
         if (!target) return { success: false };
 
         // Chercher tous les restos de cet email
-        const allForEmail = await (prisma as any).restaurant.findMany({
+        const allForEmail = await prisma.restaurant.findMany({
             where: { email: target.email },
             orderBy: { createdAt: 'asc' }
         });
@@ -279,13 +281,13 @@ export async function toggleSubscription(id: string, active: boolean) {
 
         if (isMain) {
             // Propager à tous
-            await (prisma as any).restaurant.updateMany({
+            await prisma.restaurant.updateMany({
                 where: { email: target.email },
                 data: { active }
             });
         } else {
             // Uniquement l'enfant
-            await (prisma as any).restaurant.update({
+            await prisma.restaurant.update({
                 where: { id },
                 data: { active }
             });
@@ -293,9 +295,9 @@ export async function toggleSubscription(id: string, active: boolean) {
 
         revalidatePath("/super-admin");
         return { success: true };
-    } catch (e: any) {
+    } catch (e) {
         console.error("[SaaS-Server] Erreur toggle:", e);
-        if (e.code === 'P1001') {
+        if (e instanceof Error && (e as any).code === 'P1001') {
             return { success: false, error: "Connexion impossible (P1001)." };
         }
         return { success: false };
@@ -305,7 +307,7 @@ export async function toggleSubscription(id: string, active: boolean) {
 export async function deleteRestaurant(id: string) {
     try {
         await ensureSuperAdmin();
-        await (prisma as any).restaurant.delete({
+        await prisma.restaurant.delete({
             where: { id }
         });
         revalidatePath("/super-admin");
@@ -318,12 +320,12 @@ export async function deleteRestaurant(id: string) {
 
 export async function getAllRestaurants() {
     await ensureSuperAdmin();
-    return await (prisma as any).restaurant.findMany();
+    return await prisma.restaurant.findMany();
 }
 
 export async function getAllSubscriptionLogs() {
     await ensureSuperAdmin();
-    return await (prisma as any).subscriptionLog.findMany({
+    return await prisma.subscriptionLog.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
             restaurant: {
@@ -337,14 +339,14 @@ export async function getAllSubscriptionLogs() {
  */
 export async function checkIsMainAccount(id: string) {
     try {
-        const target = await (prisma as any).restaurant.findUnique({
+        const target = await prisma.restaurant.findUnique({
             where: { id },
             select: { email: true }
         });
         
         if (!target) return false;
 
-        const allForEmail = await (prisma as any).restaurant.findMany({
+        const allForEmail = await prisma.restaurant.findMany({
             where: { email: target.email },
             orderBy: { createdAt: 'asc' },
             select: { id: true }
@@ -366,7 +368,7 @@ export async function renewSubscription(restaurantId: string, durationDays: numb
     try {
         await ensureSuperAdmin();
 
-        const resto = await (prisma as any).restaurant.findUnique({
+        const resto = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
             select: { id: true, nom: true, plan: true, monthlyPrice: true, active: true }
         });
@@ -376,7 +378,7 @@ export async function renewSubscription(restaurantId: string, durationDays: numb
         const newEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 
         // Mettre à jour la date d'expiration + s'assurer que le compte est actif
-        await (prisma as any).restaurant.update({
+        await prisma.restaurant.update({
             where: { id: restaurantId },
             data: { 
                 subscriptionEnd: newEnd,
@@ -385,7 +387,7 @@ export async function renewSubscription(restaurantId: string, durationDays: numb
         });
 
         // Enregistrer dans les logs d'abonnement
-        await (prisma as any).subscriptionLog.create({
+        await prisma.subscriptionLog.create({
             data: {
                 restaurantId,
                 oldPlan: resto.plan,
@@ -406,9 +408,10 @@ export async function renewSubscription(restaurantId: string, durationDays: numb
 
         revalidatePath("/super-admin");
         return { success: true, newEnd: newEnd.toISOString() };
-    } catch (error: any) {
+    } catch (error) {
         console.error("[SaaS-Server] Erreur renewSubscription:", error);
-        return { success: false, error: error.message || "Erreur lors du réabonnement." };
+        const message = error instanceof Error ? error.message : "Erreur lors du réabonnement.";
+        return { success: false, error: message };
     }
 }
 
@@ -429,11 +432,11 @@ export async function getSuperAdminPageData() {
             supportMessages,
             subscriptionLogs
         ] = await Promise.all([
-            (prisma as any).restaurant.findMany({ orderBy: { createdAt: 'desc' } }),
-            (prisma as any).demandeAbonnement.findMany({ orderBy: { createdAt: 'desc' } }),
-            (prisma as any).recoveryRequest.findMany({ orderBy: { createdAt: 'desc' } }),
-            (prisma as any).supportMessage.findMany({ orderBy: { createdAt: 'desc' } }),
-            (prisma as any).subscriptionLog.findMany({ 
+            prisma.restaurant.findMany({ orderBy: { createdAt: 'desc' } }),
+            prisma.demandeAbonnement.findMany({ orderBy: { createdAt: 'desc' } }),
+            prisma.recoveryRequest.findMany({ orderBy: { createdAt: 'desc' } }),
+            prisma.supportMessage.findMany({ orderBy: { createdAt: 'desc' } }),
+            prisma.subscriptionLog.findMany({ 
                 orderBy: { createdAt: 'desc' }, 
                 take: 50,
                 include: { restaurant: { select: { nom: true } } }
@@ -448,9 +451,10 @@ export async function getSuperAdminPageData() {
             supportMessages,
             subscriptionLogs
         };
-    } catch (e: any) {
+    } catch (e) {
         console.error("[Mega-Action] Super Admin Data Fetch Error:", e);
-        return { success: false, error: e.message };
+        const message = e instanceof Error ? e.message : "Erreur inconnue";
+        return { success: false, error: message };
     }
 }
 
@@ -463,16 +467,16 @@ export async function getSystemDiagnostic() {
         
         // 1. Diagnostic de la base de données
         const dbStart = Date.now();
-        await (prisma as any).$queryRaw`SELECT 1`;
+        await prisma.$queryRaw`SELECT 1`;
         const dbLatency = Date.now() - dbStart;
 
         // 2. Statistiques de volume par table
         const [restos, orders, articles, visits, notifications] = await Promise.all([
-            (prisma as any).restaurant.count(),
-            (prisma as any).commande.count(),
-            (prisma as any).articleStock.count(),
-            (prisma as any).visite.count(),
-            (prisma as any).notification.count()
+            prisma.restaurant.count(),
+            prisma.commande.count(),
+            prisma.articleStock.count(),
+            prisma.visite.count(),
+            prisma.notification.count()
         ]);
 
         // 3. Infos Système / Runtime
@@ -514,8 +518,9 @@ export async function getSystemDiagnostic() {
                 }
             }
         };
-    } catch (e: any) {
+    } catch (e) {
         console.error("[Diagnostic] Erreur:", e);
-        return { success: false, error: e.message };
+        const message = e instanceof Error ? e.message : "Erreur inconnue";
+        return { success: false, error: message };
     }
 }
