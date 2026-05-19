@@ -74,6 +74,13 @@ export async function recordMovement(data: {
 }) {
   try {
     await ensureManager(data.restaurantId);
+
+    // SÉCURITÉ: Vérifier que l'article appartient bien à ce restaurant
+    const exist = await prisma.articleStock.findUnique({ where: { id: data.articleId } });
+    if (!exist || exist.restaurantId !== data.restaurantId) {
+        throw new Error("Action non autorisée : Article non trouvé ou n'appartenant pas à cet établissement");
+    }
+
     // 1. Créer le mouvement
     await prisma.mouvementStock.create({
       data: {

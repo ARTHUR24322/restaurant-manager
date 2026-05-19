@@ -110,6 +110,12 @@ export async function updatePlat(formData: FormData) {
 
     await ensureManager(restaurantId);
 
+    // SÉCURITÉ: Vérifier que le plat appartient bien à ce restaurant
+    const exist = await prisma.plat.findUnique({ where: { id: platId } });
+    if (!exist || exist.restaurantId !== restaurantId) {
+        throw new Error("Action non autorisée : Plat non trouvé ou n'appartenant pas à cet établissement");
+    }
+
     const nom = formData.get("nom") as string;
     const description = formData.get("description") as string;
     const prixUsd = parseFloat(formData.get("prixUsd") as string);
@@ -258,6 +264,12 @@ export async function createCommande(data: {
 
     let calculatedTotal = 0;
     for (const item of data.cartItems) {
+      const qte = parseInt(item.quantite, 10);
+      if (isNaN(qte) || qte <= 0) {
+        throw new Error("Quantité invalide détectée dans le panier");
+      }
+      item.quantite = qte;
+
       const plat = plats.find(p => p.id === item.plat.id);
       if (plat) {
         calculatedTotal += plat.prixUsd * item.quantite;

@@ -2,8 +2,9 @@
 
 import { prisma } from "./prisma";
 import { encrypt } from "./encryption";
-import { sendWhatsAppText } from "./whatsapp-service";
+import { sendWhatsAppTemplate } from "./whatsapp-service";
 import { revalidatePath } from "next/cache";
+import { ensureManager } from "./auth-actions";
 
 /**
  * Sauvegarde les credentials WhatsApp d'un restaurant
@@ -15,6 +16,7 @@ export async function updateWhatsAppSettings(restaurantId: string, data: {
     enabled: boolean;
 }) {
     try {
+        await ensureManager(restaurantId);
         // On ne rechiffre que si le token est fourni (pas vide)
         const updateData: any = {
             whatsappPhoneNumberId: data.phoneNumberId,
@@ -44,6 +46,7 @@ export async function updateWhatsAppSettings(restaurantId: string, data: {
  */
 export async function getWhatsAppSettings(restaurantId: string) {
     try {
+        await ensureManager(restaurantId);
         const settings = await prisma.restaurant.findUnique({
             where: { id: restaurantId },
             select: {
@@ -74,10 +77,12 @@ export async function testWhatsAppConnection(restaurantId: string, testPhone: st
     if (!testPhone) return { success: false, error: "Numéro de téléphone requis pour le test." };
 
     try {
-        const res = await sendWhatsAppText(
+        await ensureManager(restaurantId);
+        const res = await sendWhatsAppTemplate(
             restaurantId, 
             testPhone, 
-            "🚀 SmartResto : Test de connexion WhatsApp réussi ! Votre établissement est prêt à envoyer des notifications."
+            "connection_test",
+            "fr"
         );
 
         return res;

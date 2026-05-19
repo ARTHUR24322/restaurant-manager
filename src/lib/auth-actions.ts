@@ -602,8 +602,12 @@ export async function resetPasswordWithPin(formData: FormData) {
       return { success: false, error: "Informations invalides." };
     }
 
+    if (restaurant.pinCode === "000000") {
+      return { success: false, error: "La réinitialisation est désactivée pour des raisons de sécurité (PIN par défaut). Veuillez contacter le support." };
+    }
+
     if (restaurant.pinCode !== pinCode) {
-      return { success: false, error: "Code PIN d'établissement incorrect." };
+      return { success: false, error: "Informations invalides." };
     }
 
     // Hacher le nouveau mot de passe

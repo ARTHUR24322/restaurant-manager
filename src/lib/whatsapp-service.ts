@@ -40,6 +40,14 @@ async function getRestaurantWhatsAppConfig(restaurantId: string): Promise<WhatsA
 async function sendMetaWhatsAppRequest(config: WhatsAppConfig, to: string, payload: any) {
   const url = `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`;
   
+  // Nettoyage et formatage E.164 (Fallback 243 RDC si format local)
+  let formattedTo = to.replace(/[\s\-\(\)]/g, "");
+  if (formattedTo.startsWith("+")) formattedTo = formattedTo.substring(1);
+  if (formattedTo.startsWith("00")) formattedTo = formattedTo.substring(2);
+  if (formattedTo.startsWith("0") && formattedTo.length >= 9 && formattedTo.length <= 10) {
+    formattedTo = "243" + formattedTo.substring(1);
+  }
+
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -50,7 +58,7 @@ async function sendMetaWhatsAppRequest(config: WhatsAppConfig, to: string, paylo
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        to: to.replace(/\s+/g, ""), // Nettoyage numéro
+        to: formattedTo,
         ...payload
       }),
     });
