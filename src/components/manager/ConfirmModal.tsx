@@ -15,6 +15,7 @@ interface ConfirmModalProps {
   cancelLabel?: string;
   variant?: "danger" | "success" | "info";
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 export function ConfirmModal({
@@ -26,7 +27,8 @@ export function ConfirmModal({
   confirmLabel = "Confirmer",
   cancelLabel = "Annuler",
   variant = "danger",
-  isLoading = false
+  isLoading = false,
+  children
 }: ConfirmModalProps) {
   if (!show) return null;
 
@@ -60,6 +62,8 @@ export function ConfirmModal({
           <p className="text-zinc-500 text-sm font-medium mb-8 leading-relaxed">
             {message}
           </p>
+
+          {children}
           
           <div className="flex gap-3 w-full">
             <button 

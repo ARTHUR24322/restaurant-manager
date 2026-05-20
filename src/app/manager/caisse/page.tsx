@@ -51,14 +51,16 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
     show: boolean;
     title: string;
     message: string;
-    onConfirm: () => Promise<void>;
+    onConfirm?: () => Promise<void>;
     variant: "info" | "success" | "danger";
     confirmLabel: string;
+    isPayment?: boolean;
+    orderId?: string;
+    paymentMethod?: string;
   }>({
     show: false,
     title: "",
     message: "",
-    onConfirm: async () => {},
     variant: "info",
     confirmLabel: "Confirmer"
   });
@@ -170,20 +172,13 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
     const methodName = method === 'CASH' ? 'en ESPÈCES' : 'par MOBILE MONEY';
     setModalConfig({
       show: true,
-      title: "Confirmation Paiement",
+      title: "Paiement & Fidélité",
       message: `Confirmez-vous l'encaissement de ${total.toFixed(2)}$ ${methodName} pour la Table ${table} ?`,
       confirmLabel: "Confirmer l'encaissement",
       variant: "success",
-      onConfirm: async () => {
-        setActionLoading(true);
-        const res = await confirmOrderPayment(id, method);
-        if (res.success) {
-          toast.success("Encaissement enregistré !");
-          fetchOrders(restaurantId);
-        }
-        setActionLoading(false);
-        setModalConfig(prev => ({ ...prev, show: false }));
-      }
+      isPayment: true,
+      orderId: id,
+      paymentMethod: method
     });
   };
 
@@ -368,7 +363,23 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
       <ConfirmModal
         show={modalConfig.show}
         onClose={() => setModalConfig(prev => ({ ...prev, show: false }))}
-        onConfirm={modalConfig.onConfirm}
+        onConfirm={async () => {
+          if (modalConfig.isPayment && modalConfig.orderId && modalConfig.paymentMethod) {
+            setActionLoading(true);
+            try {
+              const res = await confirmOrderPayment(modalConfig.orderId, modalConfig.paymentMethod);
+              if (res.success) {
+                toast.success("Encaissement enregistré !");
+                fetchOrders(restaurantId);
+              }
+            } finally {
+              setActionLoading(false);
+              setModalConfig(prev => ({ ...prev, show: false }));
+            }
+          } else if (modalConfig.onConfirm) {
+            await modalConfig.onConfirm();
+          }
+        }}
         title={modalConfig.title}
         message={modalConfig.message}
         confirmLabel={modalConfig.confirmLabel}

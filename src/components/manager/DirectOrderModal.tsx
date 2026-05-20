@@ -13,7 +13,8 @@ import {
   User,
   Trash2,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  Phone
 } from "lucide-react";
 import { getPlats, createCommande } from "@/lib/actions";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ export function DirectOrderModal({ show, onClose, restaurantId, onSuccess }: Dir
   const [selectedCategory, setSelectedCategory] = useState<string>("Tous");
   const [cart, setCart] = useState<{ plat: Plat; quantite: number; selectedOptions: Record<string, any> }[]>([]);
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [orderType, setOrderType] = useState<"EMPORTER" | "SUR_PLACE">("EMPORTER");
   const [tableNumber, setTableNumber] = useState("");
 
@@ -104,11 +106,16 @@ export function DirectOrderModal({ show, onClose, restaurantId, onSuccess }: Dir
       });
 
       if (res.success) {
+        if (res.orderId && customerPhone.trim()) {
+          const { assignPhoneToOrder } = await import("@/lib/actions");
+          await assignPhoneToOrder(res.orderId, customerPhone.trim(), customerName);
+        }
         toast.success("Commande créée avec succès");
         onSuccess();
         onClose();
         setCart([]);
         setCustomerName("");
+        setCustomerPhone("");
         setTableNumber("");
       } else {
         toast.error("Erreur lors de la création de la commande");
@@ -253,6 +260,17 @@ export function DirectOrderModal({ show, onClose, restaurantId, onSuccess }: Dir
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-all font-bold italic"
+                />
+              </div>
+
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input 
+                  type="tel"
+                  placeholder="Numéro Whatsapp du client..."
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono font-bold"
                 />
               </div>
 

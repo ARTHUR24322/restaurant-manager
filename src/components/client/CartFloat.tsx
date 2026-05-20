@@ -225,8 +225,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
               </div>
             ) : (
               <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-2 px-2">
-                {availableRewards.length > 0 ? (
-                  availableRewards.map(reward => (
+                {availableRewards.length > 0 && availableRewards.map(reward => (
                     <button
                       key={reward.id}
                       onClick={() => handleApplyPromo(reward.promoCode || undefined, promoPhone)}
@@ -236,33 +235,52 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
                       <span className="text-[10px] font-black uppercase tracking-widest">{reward.promoCode}</span>
                     </button>
                   ))
-                ) : (
-                  <button 
-                    onClick={() => setIsPromoOpen(!isPromoOpen)}
-                    className="w-full bg-white/5 border border-white/5 text-zinc-500 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-3 h-3" /> Saisir un code promo
-                  </button>
-                )}
+                }
+                <button 
+                  onClick={() => setIsPromoOpen(!isPromoOpen)}
+                  className="bg-white/5 border border-white/5 text-zinc-500 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 whitespace-nowrap"
+                >
+                  <Plus className="w-3 h-3" /> Saisir un code promo
+                </button>
               </div>
             )}
 
             {isPromoOpen && !appliedPromo && (
-              <div className="mt-4 flex gap-2 animate-in slide-in-from-top-2">
-                <input 
-                  type="text" 
-                  placeholder="CODE" 
-                  value={promoCode} 
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-black text-white outline-none focus:ring-1 focus:ring-primary" 
-                />
-                <button 
-                  onClick={() => handleApplyPromo()}
-                  disabled={isVerifyingPromo || !promoPhone}
-                  className="bg-primary text-black px-4 py-3 rounded-xl text-[10px] font-black uppercase"
-                >
-                  {isVerifyingPromo ? <Loader2 className="w-3 h-3 animate-spin" /> : "OK"}
-                </button>
+              <div className="mt-4 flex flex-col gap-3 animate-in slide-in-from-top-2">
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="tel"
+                    placeholder="Votre numéro de téléphone (obligatoire)"
+                    value={promoPhone}
+                    onChange={(e) => {
+                      setPromoPhone(e.target.value);
+                      localStorage.setItem('sr_loyalty_phone', e.target.value);
+                    }}
+                    className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-3 text-xs font-black text-white outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="CODE PROMO" 
+                    value={promoCode} 
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs font-black text-white outline-none focus:ring-1 focus:ring-primary" 
+                  />
+                  <button 
+                    onClick={() => handleApplyPromo()}
+                    disabled={isVerifyingPromo || !promoPhone || !promoCode}
+                    className="bg-primary text-black px-4 py-3 rounded-xl text-[10px] font-black uppercase disabled:opacity-50"
+                  >
+                    {isVerifyingPromo ? <Loader2 className="w-3 h-3 animate-spin" /> : "OK"}
+                  </button>
+                </div>
+                {!promoPhone && (
+                  <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-center mt-1">
+                    Veuillez entrer votre numéro pour valider
+                  </p>
+                )}
               </div>
             )}
           </div>
