@@ -8,6 +8,7 @@ import { recordVisit } from "@/lib/analytics-actions";
 import { notFound } from "next/navigation";
 
 import { ClientWelcomeScreen } from "@/components/client/ClientWelcomeScreen";
+import { PromoGiftModal } from "@/components/client/PromoGiftModal";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,9 @@ export default async function ClientMenuSlugPage({
                Bonjour, <span className="text-primary">{clientName}</span>
             </h1>
             <p className="text-zinc-400 mt-1 font-medium">Prêt pour une expérience culinaire unique ?</p>
+          </div>
+          <div>
+            <PromoGiftModal restaurantId={restaurantId} />
           </div>
         </div>
       </header>

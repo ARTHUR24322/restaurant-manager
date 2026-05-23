@@ -23,7 +23,6 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const [isPromoOpen, setIsPromoOpen] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState<ClientReward | null>(null);
   const [isVerifyingPromo, setIsVerifyingPromo] = useState(false);
-  const [availableRewards, setAvailableRewards] = useState<ClientReward[]>([]);
   
   const searchParams = useSearchParams();
   const tableNumber = searchParams.get("table") || "Inconnue";
@@ -46,16 +45,6 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
     return `$${price.toFixed(2)}`;
   };
   
-  const fetchAvailableRewards = useCallback(async (phone: string) => {
-     try {
-        const { getClientLoyalty } = await import("@/lib/actions-loyalty");
-        const res = await getClientLoyalty(restaurantId || "", phone);
-        if (res.success) {
-           setAvailableRewards(res.myRewards || []);
-        }
-     } catch (_e) {}
-  }, [restaurantId]);
-
   useEffect(() => {
     const saved = localStorage.getItem('sr_applied_promo');
     if (saved) setAppliedPromo(JSON.parse(saved));
@@ -63,9 +52,8 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
     const savedPhone = localStorage.getItem('sr_loyalty_phone');
     if (savedPhone && restaurantId) {
       setPromoPhone(savedPhone);
-      fetchAvailableRewards(savedPhone);
     }
-  }, [restaurantId, fetchAvailableRewards]);
+  }, [restaurantId]);
 
   const discountPercent = appliedPromo?.discountValue || 0;
   const discountAmount = (baseTotalUsd * discountPercent) / 100;
@@ -241,17 +229,6 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
               </div>
             ) : (
               <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-2 px-2">
-                {availableRewards.length > 0 && availableRewards.map(reward => (
-                    <button
-                      key={reward.id}
-                      onClick={() => handleApplyPromo(reward.promoCode || undefined, promoPhone)}
-                      className="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-2xl flex items-center gap-2 whitespace-nowrap animate-in fade-in"
-                    >
-                      <Ticket className="w-4 h-4" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{reward.promoCode}</span>
-                    </button>
-                  ))
-                }
                 <button 
                   onClick={() => setIsPromoOpen(!isPromoOpen)}
                   className="bg-white/5 border border-white/5 text-zinc-500 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 whitespace-nowrap"

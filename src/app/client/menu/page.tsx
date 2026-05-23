@@ -1,13 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 import { getPlats } from "@/lib/actions";
-import { 
-  Gift, Utensils
-} from "lucide-react";
-import Link from "next/link";
+import { Utensils } from "lucide-react";
 import { CartFloat } from "@/components/client/CartFloat";
 import ClientMenuContent from "./ClientMenuContent";
 import { recordVisit } from "@/lib/analytics-actions";
 import { CurrencyBadge } from "@/components/client/CurrencyBadge";
+import { PromoGiftModal } from "@/components/client/PromoGiftModal";
 
 import { ClientWelcomeScreen } from "@/components/client/ClientWelcomeScreen";
 
@@ -62,13 +60,7 @@ export default async function ClientMenuPage({
           
           <div className="flex items-center gap-3">
             <CurrencyBadge exchangeRate={restaurant?.tauxChange || 2800} />
-            
-            <Link 
-              href={`/client/loyalty?resto_id=${restaurantId}&table=${table}`}
-              className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-primary hover:text-black transition-all duration-300"
-            >
-                <Gift className="w-5 h-5" />
-            </Link>
+            <PromoGiftModal restaurantId={restaurantId} />
           </div>
         </div>
 
