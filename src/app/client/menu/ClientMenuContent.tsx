@@ -116,12 +116,21 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
     setIsOptionsOpen(false);
   };
 
-  const formatPrice = (priceUsd: number) => {
+  const formatPrice = (plat: Plat) => {
+    const price = plat.prixUsd;
+    const rate = 2800;
+    
     if (currency === 'FC') {
-       const rate = 2800;
-       return `${(priceUsd * rate).toLocaleString()} FC`;
+       if (plat.devise === 'FC') {
+          return `${price.toLocaleString()} FC`;
+       }
+       return `${(price * rate).toLocaleString()} FC`;
     }
-    return `$${priceUsd.toFixed(2)}`;
+    
+    if (plat.devise === 'FC') {
+       return `$${(price / rate).toFixed(2)}`;
+    }
+    return `$${price.toFixed(2)}`;
   }
 
   return (
@@ -284,7 +293,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                   
                   <div className="flex items-center justify-between mt-auto pt-3">
                     <span className="text-[13px] font-black text-primary">
-                      {formatPrice(plat.prixUsd)}
+                      {formatPrice(plat)}
                     </span>
                     <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
                       <Plus className="w-4 h-4" />

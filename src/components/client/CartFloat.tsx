@@ -4,13 +4,14 @@
 
 import { useCartStore } from "@/store/cartStore";
 import { ShoppingCart, X, Plus, Minus, CreditCard, Loader2, Ticket, Phone, Trash2, CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
-import { type ClientReward } from "@/types";
+import { type ClientReward, type Plat } from "@/types";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createCommande } from "@/lib/actions";
 import { OrderSuccess } from "./OrderSuccess";
 import { toast } from "sonner";
+import { useCurrencyStore } from "./CurrencyBadge";
 
 export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?: string, exchangeRate?: number }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,8 +30,21 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
   const customerName = searchParams.get("name") || "Client";
   
   const { items, getTotalUsd, removeItem, updateQuantity, clearCart, addOfflineOrder, addSubmittedOrderId } = useCartStore();
+  const { currency } = useCurrencyStore();
 
   const baseTotalUsd = getTotalUsd(exchangeRate);
+  
+  const formatPrice = (plat: Plat) => {
+    const price = plat.prixUsd;
+    
+    if (currency === 'FC') {
+       if (plat.devise === 'FC') return `${price.toLocaleString()} FC`;
+       return `${(price * exchangeRate).toLocaleString()} FC`;
+    }
+    
+    if (plat.devise === 'FC') return `$${(price / exchangeRate).toFixed(2)}`;
+    return `$${price.toFixed(2)}`;
+  };
   
   const fetchAvailableRewards = useCallback(async (phone: string) => {
      try {
@@ -166,7 +180,9 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
                {items.length}
             </span>
           </div>
-          <span className="font-black text-sm">${totalUsd.toFixed(2)}</span>
+          <span className="font-black text-sm">
+            {currency === 'FC' ? `${totalCdf.toLocaleString()} FC` : `$${totalUsd.toFixed(2)}`}
+          </span>
         </button>
       )}
 
@@ -192,7 +208,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800 }: { restaurantId?
               <img src={item.plat.image} alt={item.plat.nom} className="w-16 h-16 rounded-2xl object-cover" />
               <div className="flex-1">
                 <h4 className="font-bold text-xs">{item.plat.nom}</h4>
-                <p className="text-primary font-black text-xs mt-1">${item.plat.prixUsd.toFixed(2)}</p>
+                <p className="text-primary font-black text-xs mt-1">{formatPrice(item.plat)}</p>
               </div>
               <div className="flex items-center gap-3 bg-black/40 px-3 py-2 rounded-2xl border border-white/5">
                 <button onClick={() => item.quantite > 1 ? updateQuantity(item.cartItemId, item.quantite - 1) : removeItem(item.cartItemId)}>
