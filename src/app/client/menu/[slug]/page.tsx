@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { getPlats } from "@/lib/actions";
 import { getRestaurantBySlug } from "@/lib/admin-actions";
+import { prisma } from "@/lib/prisma";
 import { Search, Clock } from "lucide-react";
 import { CartFloat } from "@/components/client/CartFloat";
 import ClientMenuContent from "../ClientMenuContent";
@@ -30,6 +31,12 @@ export default async function ClientMenuSlugPage({
   const plats = await getPlats(restaurantId);
   const table = searchParams.table || "Inconnue";
   const clientName = searchParams.name || "Client";
+
+  // Récupérer la config de fidélité pour vérifier si elle est active
+  const loyaltyConfig = await prisma.loyaltyConfig.findUnique({
+    where: { restaurantId }
+  });
+  const isLoyaltyActive = loyaltyConfig ? loyaltyConfig.isActive : false;
 
   // Enregistrer le scan (visite)
   recordVisit(restaurantId, table);
@@ -71,7 +78,7 @@ export default async function ClientMenuSlugPage({
             <p className="text-zinc-400 mt-1 font-medium">Prêt pour une expérience culinaire unique ?</p>
           </div>
           <div>
-            <PromoGiftModal restaurantId={restaurantId} />
+            <PromoGiftModal restaurantId={restaurantId} isLoyaltyActive={isLoyaltyActive} />
           </div>
         </div>
       </header>
@@ -95,6 +102,7 @@ export default async function ClientMenuSlugPage({
           initialPlats={JSON.parse(JSON.stringify(plats))} 
           tableNumber={table}
           restaurantId={restaurantId}
+          isLoyaltyActive={isLoyaltyActive}
         />
       </main>
 

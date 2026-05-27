@@ -8,7 +8,7 @@ import { getClientLoyalty } from '@/lib/actions-loyalty';
 import { type ClientReward } from '@/types';
 import { toast } from "sonner";
 
-export function PromoGiftModal({ restaurantId }: { restaurantId: string }) {
+export function PromoGiftModal({ restaurantId, isLoyaltyActive }: { restaurantId: string; isLoyaltyActive: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +20,8 @@ export function PromoGiftModal({ restaurantId }: { restaurantId: string }) {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  if (!isLoyaltyActive) return null;
 
   const fetchCodes = async () => {
     if (!phone) {

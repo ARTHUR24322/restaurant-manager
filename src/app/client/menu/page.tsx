@@ -67,7 +67,7 @@ export default async function ClientMenuPage({
           
           <div className="flex items-center gap-3">
             <CurrencyBadge exchangeRate={restaurant?.tauxChange || 2800} />
-            <PromoGiftModal restaurantId={restaurantId} />
+            <PromoGiftModal restaurantId={restaurantId} isLoyaltyActive={isLoyaltyActive} />
           </div>
         </div>
 
