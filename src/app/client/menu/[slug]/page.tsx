@@ -106,7 +106,11 @@ export default async function ClientMenuSlugPage({
         />
       </main>
 
-      <CartFloat restaurantId={restaurantId} exchangeRate={restaurant.tauxChange} />
+      <CartFloat 
+        restaurantId={restaurantId} 
+        exchangeRate={restaurant.tauxChange} 
+        isLoyaltyActive={isLoyaltyActive}
+      />
     </div>
     </ClientWelcomeScreen>
   );

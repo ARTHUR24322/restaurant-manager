@@ -20,6 +20,7 @@ function OrderTrackerContent() {
 
   const [order, setOrder] = useState<any | null>(null); // Keeping any for now but adding comment to improve later
   const [loyalty, setLoyalty] = useState<any | null>(null);
+  const [isLoyaltyActive, setIsLoyaltyActive] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,6 +34,7 @@ function OrderTrackerContent() {
       if (res.success) {
         if (res.order) setOrder(res.order);
         if (res.loyalty) setLoyalty(res.loyalty);
+        setIsLoyaltyActive(res.isLoyaltyActive || false);
       }
       setLoading(false);
     };
@@ -48,6 +50,7 @@ function OrderTrackerContent() {
     if (res.success) {
       if (res.order) setOrder(res.order);
       if (res.loyalty) setLoyalty(res.loyalty);
+      setIsLoyaltyActive(res.isLoyaltyActive || false);
     }
     setLoading(false);
   };
@@ -194,7 +197,7 @@ function OrderTrackerContent() {
         </section>
 
         {/* Loyalty Card Visual */}
-        {loyalty && (
+        {isLoyaltyActive && loyalty && (
           <section className="relative overflow-hidden bg-gradient-to-br from-pink-500 to-purple-600 rounded-[2.5rem] p-8 text-white shadow-2xl animate-in slide-in-from-bottom-4 delay-200">
             {/* Decorative background pattern */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl opacity-50"></div>
@@ -281,13 +284,15 @@ function OrderTrackerContent() {
           <span className="text-[9px] font-black uppercase tracking-tight">Menu</span>
         </Link>
 
-        <Link 
-          href={`/client/loyalty?resto_id=${order.restaurantId}&table=${order.table}`}
-          className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-all active:scale-90"
-        >
-          <Gift className="w-5 h-5" />
-          <span className="text-[9px] font-black uppercase tracking-tight">Cadeaux</span>
-        </Link>
+        {isLoyaltyActive && (
+          <Link 
+            href={`/client/loyalty?resto_id=${order.restaurantId}&table=${order.table}`}
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-all active:scale-90"
+          >
+            <Gift className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tight">Cadeaux</span>
+          </Link>
+        )}
         
         <Link 
           href={`/client/menu?resto_id=${order.restaurantId}&table=${order.table}`}

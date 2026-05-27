@@ -220,11 +220,18 @@ export async function getOrderDetails(orderId: string) {
 
     // Get loyalty status if phone exists
     let loyalty = null;
-    if (order.phone) {
+    let isLoyaltyActive = false;
+    
+    const config = await prisma.loyaltyConfig.findUnique({
+      where: { restaurantId: order.restaurantId }
+    });
+    isLoyaltyActive = config?.isActive || false;
+
+    if (order.phone && isLoyaltyActive) {
       loyalty = await getLoyaltyStatus(order.restaurantId, order.phone);
     }
 
-    return { success: true, order, loyalty };
+    return { success: true, order, loyalty, isLoyaltyActive };
   } catch (error) {
     console.error("Error fetching order details:", error);
     return { success: false, error: "Erreur serveur" };
