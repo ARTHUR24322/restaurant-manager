@@ -29,7 +29,7 @@ export default async function ClientLoyaltyPage({
         </div>
         <h1 className="text-2xl font-black italic uppercase text-white mb-2">Programme Inactif</h1>
         <p className="text-zinc-500 mb-8 max-w-xs">
-          Le programme de fidélité n'est pas activé pour cet établissement.
+          Le programme de fidélité n&apos;est pas activé pour cet établissement.
         </p>
         <Link 
           href={`/client/menu?resto_id=${restaurantId}&table=${table}`}
