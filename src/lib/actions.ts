@@ -633,17 +633,20 @@ export async function updateLoyaltySettings(formData: FormData) {
 
     const pointsPerUsd = parseInt(formData.get("pointsPerUsd") as string);
     const rewardThreshold = parseInt(formData.get("rewardThreshold") as string);
+    const isActive = formData.get("isActive") === "true";
 
     await prisma.loyaltyConfig.upsert({
       where: { restaurantId },
       update: {
         pointsPerUsd,
-        rewardThreshold
+        rewardThreshold,
+        isActive
       },
       create: {
         restaurantId,
         pointsPerUsd,
-        rewardThreshold
+        rewardThreshold,
+        isActive
       }
     });
 

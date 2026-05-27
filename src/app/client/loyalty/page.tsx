@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { getRestaurantById } from "@/lib/admin-actions";
+import { prisma } from "@/lib/prisma";
 import { Gift, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import LoyaltyClientContent from "./LoyaltyClientContent";
@@ -14,6 +15,31 @@ export default async function ClientLoyaltyPage({
   const restaurantId = searchParams.resto_id || "";
   const restaurant = restaurantId ? await getRestaurantById(restaurantId) : null;
   const table = searchParams.table || "Sans table";
+
+  // Vérifier si la fidélité est activée
+  const loyaltyConfig = restaurantId ? await prisma.loyaltyConfig.findUnique({
+    where: { restaurantId }
+  }) : null;
+
+  if (!loyaltyConfig || !loyaltyConfig.isActive) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-pink-500/10 rounded-full flex items-center justify-center mb-6">
+          <Gift className="w-10 h-10 text-pink-500 opacity-20" />
+        </div>
+        <h1 className="text-2xl font-black italic uppercase text-white mb-2">Programme Inactif</h1>
+        <p className="text-zinc-500 mb-8 max-w-xs">
+          Le programme de fidélité n'est pas activé pour cet établissement.
+        </p>
+        <Link 
+          href={`/client/menu?resto_id=${restaurantId}&table=${table}`}
+          className="bg-primary text-black font-black px-8 py-3 rounded-xl uppercase text-xs tracking-widest"
+        >
+          Retour au Menu
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-12">

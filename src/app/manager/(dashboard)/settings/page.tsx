@@ -40,6 +40,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
   // Loyalty Config
   const [loyaltyRate, setLoyaltyRate] = useState<string>("1");
   const [loyaltyThreshold, setLoyaltyThreshold] = useState<string>("100");
+  const [loyaltyActive, setLoyaltyActive] = useState(false);
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
 
   // WhatsApp Config
@@ -81,6 +82,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
         if (loyaltyInfo) {
           setLoyaltyRate(String(loyaltyInfo.pointsPerUsd));
           setLoyaltyThreshold(String(loyaltyInfo.rewardThreshold));
+          setLoyaltyActive(loyaltyInfo.isActive);
         }
 
         // Charger la config WhatsApp
@@ -771,6 +773,23 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                           <p className="text-[11px] text-muted-foreground mb-8 leading-relaxed max-w-lg relative z-10">
                               Fidélisez votre clientèle en leur offrant des points à chaque commande. Ces points peuvent ensuite être échangés contre un cadeau que vous définissez.
                           </p>
+
+                          <div className="flex items-center gap-4 mb-6 p-4 bg-pink-500/5 border border-pink-500/10 rounded-2xl relative z-10">
+                            <div className={cn(
+                              "w-3 h-3 rounded-full",
+                              loyaltyActive ? "bg-pink-500 animate-pulse" : "bg-zinc-700"
+                            )} />
+                            <div className="flex-1">
+                              <p className="text-xs font-bold text-white">Activer le programme de fidélité</p>
+                              <p className="text-[10px] text-zinc-500">Si désactivé, l'option de fidélité ne sera plus visible par les clients.</p>
+                            </div>
+                            <input 
+                              type="checkbox"
+                              checked={loyaltyActive}
+                              onChange={(e) => setLoyaltyActive(e.target.checked)}
+                              className="w-5 h-5 accent-pink-500 cursor-pointer"
+                            />
+                          </div>
                           
                           <form className="space-y-6 relative z-10" onSubmit={async (e) => {
                             e.preventDefault();
@@ -781,6 +800,7 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                             formData.append("restaurantId", restaurantId);
                             formData.append("pointsPerUsd", loyaltyRate);
                             formData.append("rewardThreshold", loyaltyThreshold);
+                            formData.append("isActive", String(loyaltyActive));
                             formData.append("rewardDescription", "Un cadeau offert !");
                             
                             try {

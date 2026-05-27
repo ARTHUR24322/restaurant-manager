@@ -10,6 +10,7 @@ import { PromoGiftModal } from "@/components/client/PromoGiftModal";
 import { ClientWelcomeScreen } from "@/components/client/ClientWelcomeScreen";
 
 import { getRestaurantById } from "@/lib/admin-actions";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,12 @@ export default async function ClientMenuPage({
   const plats = restaurantId ? await getPlats(restaurantId) : [];
   const table = searchParams.table || "Inconnue";
   const clientName = searchParams.name || "Client";
+
+  // Récupérer la config de fidélité pour vérifier si elle est active
+  const loyaltyConfig = restaurantId ? await prisma.loyaltyConfig.findUnique({
+    where: { restaurantId }
+  }) : null;
+  const isLoyaltyActive = loyaltyConfig ? loyaltyConfig.isActive : false;
 
   // Enregistrer le scan (visite) en arrière-plan
   recordVisit(restaurantId, table);
@@ -82,6 +89,7 @@ export default async function ClientMenuPage({
           initialPlats={JSON.parse(JSON.stringify(plats))} 
           tableNumber={table}
           restaurantId={restaurantId}
+          isLoyaltyActive={isLoyaltyActive}
         />
       </main>
 

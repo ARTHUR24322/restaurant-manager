@@ -19,9 +19,10 @@ interface Props {
   initialPlats: Plat[];
   tableNumber: string;
   restaurantId: string;
+  isLoyaltyActive: boolean;
 }
 
-export default function ClientMenuContent({ initialPlats, tableNumber, restaurantId }: Props) {
+export default function ClientMenuContent({ initialPlats, tableNumber, restaurantId, isLoyaltyActive }: Props) {
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [selectedPlat, setSelectedPlat] = useState<Plat | null>(null);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -197,9 +198,11 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
         </div>
       )}
 
-      <div className="mb-8">
-         <LoyaltyQuickTrack restaurantId={restaurantId} />
-      </div>
+      {isLoyaltyActive && (
+        <div className="mb-8">
+           <LoyaltyQuickTrack restaurantId={restaurantId} />
+        </div>
+      )}
 
       {/* Barre de Recherche & Catégories Sticky */}
       <div className="sticky top-4 z-40 space-y-4 mb-10">
