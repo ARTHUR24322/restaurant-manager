@@ -27,6 +27,7 @@ export interface Plat {
   trackStock: boolean | null | undefined;
   disponible: boolean;
   isLoyaltyReward: boolean;
+  isAvailableOnline?: boolean;
   restaurantId: string;
 }
 
@@ -69,6 +70,8 @@ export interface Restaurant {
   subscriptionEnd: Date | string | null;
   createdAt: Date | string;
   telephone: string | null;
+  isBoutiqueEnabled?: boolean;
+  boutiqueSlug?: string | null;
 }
 
 export interface DemandeAbonnement {

@@ -24,7 +24,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
-  Gift
+  Gift,
+  ShoppingBag,
+  Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutManager, logoutManagerGlobal } from "@/lib/auth-actions";
@@ -138,6 +140,7 @@ function ManagerLayoutContent({
   const navItems = [
     { label: "Tableau de Bord", href: "/manager/dashboard", icon: LayoutDashboard },
     { label: "Gestion du Menu", href: "/manager/menu", icon: Utensils },
+    { label: "Boutique en Ligne", href: "/manager/boutique", icon: Store },
     { label: "QR Codes Tables", href: "/manager/qr", icon: QrCode },
     { 
       label: "Gestion de Stock", 

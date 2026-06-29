@@ -447,14 +447,69 @@ export default function SuperAdminPage() {
     }
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-zinc-100 p-8 space-y-8">
-            <div className="flex justify-between items-end gap-10">
-                <div className="flex items-start gap-10">
-                    <div>
-                        <h2 className="text-sm font-black text-zinc-500 uppercase tracking-widest italic">SaaS Command Center</h2>
-                        <h1 className="text-5xl font-black italic tracking-tighter text-white">Bonjour, Arthur.</h1>
+        <div className="min-h-screen bg-zinc-950 text-zinc-100 flex">
+            {/* ======= SIDEBAR GAUCHE FIXE ======= */}
+            <aside className="fixed left-0 top-0 h-screen w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col z-30">
+                {/* Logo / Titre */}
+                <div className="px-6 py-8 border-b border-zinc-800">
+                    <div className="flex items-center gap-3 mb-1">
+                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                            <ShieldCheck className="w-4 h-4 text-black" />
+                        </div>
+                        <div>
+                            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">SaaS Command Center</p>
+                            <h1 className="text-sm font-black text-white italic uppercase tracking-tighter leading-none">SmartResto</h1>
+                        </div>
                     </div>
-                    <button 
+                </div>
+
+                {/* Navigation Items */}
+                <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                    {[
+                        { id: 'dashboard', label: 'Command Center', icon: <Pulse className="w-4 h-4" /> },
+                        { id: 'monitoring', label: 'Monitoring', icon: <Boxes className="w-4 h-4" /> },
+                        { id: 'restaurants', label: 'Établissements', icon: <Building2 className="w-4 h-4" /> },
+                        { id: 'abonnements', label: 'Abonnements', icon: <CreditCard className="w-4 h-4" /> },
+                        { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
+                        { id: 'recuperation', label: 'Récupération', icon: <KeyRound className="w-4 h-4" />, count: recoveryRequests.filter(r => r.statut === "EN_ATTENTE").length },
+                        { id: 'messages', label: 'Messages', icon: <Mail className="w-4 h-4" />, count: supportMessages.filter(m => m.statut === "NON_LU").length },
+                        { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
+                        { id: 'diagnostic', label: 'Diagnostic', icon: <Activity className="w-4 h-4" /> },
+                        { id: 'settings', label: 'Paramètres', icon: <Settings className="w-4 h-4" /> },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={cn(
+                                "w-full flex items-center justify-between px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all group",
+                                activeTab === tab.id
+                                    ? "bg-primary text-black shadow-lg shadow-primary/20"
+                                    : "text-zinc-500 hover:text-white hover:bg-zinc-800/60"
+                            )}
+                        >
+                            <div className="flex items-center gap-3">
+                                {tab.icon}
+                                {tab.label}
+                            </div>
+                            {(tab as any).count > 0 && (
+                                <span className={cn(
+                                    "text-[9px] font-black px-2 py-0.5 rounded-full min-w-[20px] text-center",
+                                    activeTab === tab.id ? "bg-black/20 text-black" : "bg-red-500 text-white"
+                                )}>
+                                    {(tab as any).count}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </nav>
+
+                {/* Footer Sidebar */}
+                <div className="px-4 py-6 border-t border-zinc-800 space-y-3">
+                    <div className="px-4 py-3 bg-zinc-800/40 rounded-xl">
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Connecté en tant que</p>
+                        <p className="text-[11px] font-black text-white mt-0.5">Arthur — Super Admin</p>
+                    </div>
+                    <button
                         onClick={() => setModalConfig({
                             show: true,
                             title: "Sécurité Plateforme",
@@ -465,40 +520,32 @@ export default function SuperAdminPage() {
                                 if (r.success) window.location.reload();
                             }
                         })}
-                        className="mt-6 flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-black transition-all font-black uppercase text-[10px] tracking-widest active:scale-95"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest active:scale-95"
                     >
                         <Power className="w-4 h-4" />
                         Déconnexion Globale
                     </button>
                 </div>
+            </aside>
 
-                <nav className="flex items-center bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800/50">
-                    {[
-                        { id: 'dashboard', label: 'Command', icon: <Pulse className="w-4 h-4" /> },
-                        { id: 'monitoring', label: 'Monitoring', icon: <Boxes className="w-4 h-4" /> },
-                        { id: 'restaurants', label: 'Établissements', icon: <Building2 className="w-4 h-4" /> },
-                        { id: 'abonnements', label: 'Abonnements', icon: <CreditCard className="w-4 h-4" /> },
-                        { id: 'demandes', label: 'Validations', icon: <Bell className="w-4 h-4" />, count: demandes.filter(d => d.statut === "EN_ATTENTE").length },
-                        { id: 'recuperation', label: 'Récupération', icon: <KeyRound className="w-4 h-4" />, count: recoveryRequests.filter(r => r.statut === "EN_ATTENTE").length },
-                        { id: 'messages', label: 'Messages', icon: <Mail className="w-4 h-4" />, count: supportMessages.filter(m => m.statut === "NON_LU").length },
-                        { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
-                        { id: 'diagnostic', label: 'Diagnostic', icon: <Activity className="w-4 h-4" /> },
-                        { id: 'settings', label: 'System', icon: <Settings className="w-4 h-4" /> },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={cn(
-                                "flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                activeTab === tab.id ? "bg-primary text-black" : "text-zinc-500 hover:text-white"
-                            )}
-                        >
-                            {tab.icon}
-                            {tab.label}
+            {/* ======= CONTENU PRINCIPAL ======= */}
+            <main className="flex-1 ml-64 min-h-screen p-8 space-y-8 overflow-x-hidden">
+                {/* Page Header */}
+                <div className="flex items-center justify-between pb-4 border-b border-zinc-800/50">
+                    <div>
+                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">SmartResto — Panneau de Contrôle</p>
+                        <h2 className="text-3xl font-black italic tracking-tighter text-white mt-1">Bonjour, Arthur.</h2>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button onClick={fetchRestos} className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-500 hover:text-white transition-all">
+                            <RefreshCw className="w-4 h-4" />
                         </button>
-                    ))}
-                </nav>
-            </div>
+                        <div className="bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl">
+                            <p className="text-[9px] font-black text-zinc-600 uppercase">Restaurants actifs</p>
+                            <p className="text-lg font-black text-primary">{restaurants.filter(r => r.active).length} / {restaurants.length}</p>
+                        </div>
+                    </div>
+                </div>
 
             {activeTab === 'dashboard' && (
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
@@ -1556,6 +1603,7 @@ export default function SuperAdminPage() {
                 </div>
             )}
 
+            </main>
         </div>
     );
 }

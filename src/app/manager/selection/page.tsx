@@ -9,7 +9,8 @@ import {
   ArrowRight,
   LogOut,
   Building2,
-  Lock
+  Lock,
+  ShoppingBag
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -85,9 +86,6 @@ function SelectionPageInner() {
 
   const handleRoleSelect = async (role: string) => {
     if (!resto) return;
-    
-    // La session a déjà été synchronisée dans le useEffect au chargement ou lors de la navigation
-    // On peut donc passer directement au PIN ou à l'entrée
 
     if (role === 'gerant') {
       setShowPinModal(true);
@@ -97,6 +95,9 @@ function SelectionPageInner() {
     } else if (role === 'cuisine') {
       setLoadingRole('cuisine');
       router.push(`/manager/cuisine?resto_id=${resto.id}`);
+    } else if (role === 'boutique') {
+      setLoadingRole('boutique');
+      router.push(`/manager/gestion-boutique?resto_id=${resto.id}`);
     }
   };
 
@@ -148,7 +149,7 @@ function SelectionPageInner() {
 
       {/* Role Cards */}
       {!showPinModal ? (
-        <div className="relative z-10 w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-10 duration-300">
+        <div className="relative z-10 w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-10 duration-300">
           <RoleCard 
             title="Réception & Caisse"
             subtitle="Validation & Encaissement"
@@ -164,6 +165,14 @@ function SelectionPageInner() {
             color="emerald"
             onClick={() => handleRoleSelect('cuisine')}
             isLoading={loadingRole === 'cuisine'}
+          />
+          <RoleCard 
+            title="Gestion Boutique"
+            subtitle="Commandes En Ligne"
+            icon={<ShoppingBag className="w-10 h-10" />}
+            color="violet"
+            onClick={() => handleRoleSelect('boutique')}
+            isLoading={loadingRole === 'boutique'}
           />
           <RoleCard 
             title="Gestion & Stratégie"
@@ -204,7 +213,7 @@ interface RoleCardProps {
   title: string;
   subtitle: string;
   icon: React.ReactNode;
-  color: 'indigo' | 'emerald' | 'primary';
+  color: 'indigo' | 'emerald' | 'primary' | 'violet';
   onClick: () => void;
   isLocked?: boolean;
   isLoading?: boolean;
@@ -214,7 +223,15 @@ function RoleCard({ title, subtitle, icon, color, onClick, isLocked, isLoading }
   const colorMap = {
     indigo: 'from-indigo-500/20 to-indigo-500/5 hover:border-indigo-500/40 text-indigo-400 border-indigo-500/20 shadow-indigo-500/10',
     emerald: 'from-emerald-500/20 to-emerald-500/5 hover:border-emerald-500/40 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10',
+    violet: 'from-violet-500/20 to-violet-500/5 hover:border-violet-500/40 text-violet-400 border-violet-500/20 shadow-violet-500/10',
     primary: 'from-primary/20 to-primary/5 hover:border-primary/40 text-primary border-primary/20 shadow-primary/10'
+  };
+
+  const iconBgMap = {
+    indigo: 'bg-indigo-500 text-white',
+    emerald: 'bg-emerald-500 text-white',
+    violet: 'bg-violet-500 text-white',
+    primary: 'bg-primary text-black'
   };
 
   return (
@@ -234,9 +251,7 @@ function RoleCard({ title, subtitle, icon, color, onClick, isLocked, isLoading }
 
       <div className={cn(
         "w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-3 shadow-xl",
-        color === 'indigo' ? 'bg-indigo-500 text-white' : 
-        color === 'emerald' ? 'bg-emerald-500 text-white' : 
-        'bg-primary text-black'
+        iconBgMap[color]
       )}>
         {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : icon}
       </div>

@@ -23,7 +23,8 @@ import {
   ArrowLeft,
   Loader2,
   Trash2,
-  XCircle
+  XCircle,
+  Truck
 } from "lucide-react";
 import { cn, safeJsonParse } from "@/lib/utils";
 import { format } from "date-fns";
@@ -315,6 +316,18 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
                        </div>
                     </div>
 
+                    {(order as any).adresseLivraison && (
+                      <div className="flex items-center gap-3 text-indigo-400 bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/10">
+                         <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center">
+                            <Info className="w-5 h-5 text-indigo-500" />
+                         </div>
+                         <div>
+                            <p className="text-[9px] font-black uppercase text-indigo-500 mb-1">Adresse de Livraison :</p>
+                            <p className="text-xs font-bold leading-relaxed">{(order as any).adresseLivraison}</p>
+                         </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between bg-zinc-950 p-6 rounded-3xl border border-zinc-800">
                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Total Facturé</span>
                        <div className="flex flex-col items-end">
@@ -418,9 +431,17 @@ function OrderCard({ order, onAction, onCancel, actionLabel, actionIcon, variant
                 <h3 className="text-xl font-black text-white italic tracking-tight">#{order.id.slice(-4)} • {order.client}</h3>
                 <p className="text-[10px] text-zinc-600 font-bold italic mt-1">{format(new Date(order.createdAt), "HH:mm '•' d MMMM", { locale: fr })}</p>
              </div>
-             <div className="text-right">
-                <span className="text-2xl font-black text-white italic tracking-tighter">${order.totalUsd.toFixed(2)}</span>
-                <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Total</p>
+             <div className="flex flex-col items-end gap-2">
+               {(order as any).adresseLivraison && (
+                 <div className="flex items-center gap-1.5 bg-violet-500/10 border border-violet-500/20 px-3 py-1.5 rounded-xl">
+                   <Truck className="w-3.5 h-3.5 text-violet-400" />
+                   <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest">À Livrer</span>
+                 </div>
+               )}
+               <div className="text-right">
+                 <span className="text-2xl font-black text-white italic tracking-tighter">${order.totalUsd.toFixed(2)}</span>
+                 <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Total</p>
+               </div>
              </div>
           </div>
 
@@ -443,6 +464,16 @@ function OrderCard({ order, onAction, onCancel, actionLabel, actionIcon, variant
             <div className="flex items-center gap-3 text-amber-500 bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10">
                <Info className="w-4 h-4 flex-shrink-0" />
                <p className="text-[10px] font-bold italic truncate text-amber-200/70">"{order.noteSpeciale}"</p>
+            </div>
+          )}
+
+          {(order as any).adresseLivraison && (
+            <div className="flex items-center gap-3 text-indigo-400 bg-indigo-500/5 p-3 rounded-2xl border border-indigo-500/10">
+               <Info className="w-4 h-4 flex-shrink-0" />
+               <div>
+                  <p className="text-[9px] font-black uppercase text-indigo-500 mb-1">Livraison :</p>
+                  <p className="text-xs font-bold font-mono">{(order as any).adresseLivraison}</p>
+               </div>
             </div>
           )}
 

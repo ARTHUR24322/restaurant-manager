@@ -6,6 +6,7 @@ import {
   getRecentCommandes, 
   updateOrderStatus 
 } from "@/lib/actions";
+import { Truck } from "lucide-react";
 import { type Commande, type CartItem } from "@/types";
 import { getRestaurantById } from "@/lib/admin-actions";
 import { useRouter } from "next/navigation";
@@ -126,10 +127,14 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
     if (!pendingOrder) return;
     
     setFinishingId(pendingOrder.id);
+    // Si c'est une commande de livraison → READY_FOR_DELIVERY, sinon → READY
+    const isDelivery = !!(pendingOrder as any).adresseLivraison;
+    const nextStatus = isDelivery ? "READY_FOR_DELIVERY" : "READY";
+    const msg = isDelivery ? `Commande ${pendingOrder.table} prête — renvoyée à la boutique !` : `Table ${pendingOrder.table} prête !`;
     try {
-        const res = await updateOrderStatus(pendingOrder.id, "READY");
+        const res = await updateOrderStatus(pendingOrder.id, nextStatus);
         if (res.success) {
-            toast.success(`Table ${pendingOrder.table} prête !`);
+            toast.success(msg);
             fetchProductionOrders(restoId);
         } else {
             toast.error("Erreur lors de la mise à jour");
@@ -203,8 +208,16 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
                 </span>
                 <h3 className="text-5xl font-black italic tracking-tighter text-white">Table {order.table}</h3>
               </div>
-              <div className="bg-zinc-800/50 p-3 rounded-2xl border border-zinc-800">
-                <AlertCircle className="w-6 h-6 text-zinc-700 group-hover:text-emerald-500 transition-colors" />
+              <div className="flex flex-col items-end gap-2">
+                {(order as any).adresseLivraison && (
+                  <div className="flex items-center gap-1.5 bg-violet-500/10 border border-violet-500/20 px-3 py-1.5 rounded-xl">
+                    <Truck className="w-3.5 h-3.5 text-violet-400" />
+                    <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest">À Livrer</span>
+                  </div>
+                )}
+                <div className="bg-zinc-800/50 p-3 rounded-2xl border border-zinc-800">
+                  <AlertCircle className="w-6 h-6 text-zinc-700 group-hover:text-emerald-500 transition-colors" />
+                </div>
               </div>
             </div>
 
@@ -290,7 +303,7 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirmFinish}
         title="Sortie Cuisine"
-        message={`Confirmez-vous que la commande de la Table ${pendingOrder?.table} est prête à être servie ?`}
+        message={`Confirmez-vous que la commande de la Table ${pendingOrder?.table} est prête${(pendingOrder as any)?.adresseLivraison ? ' — elle sera renvoyée à la Boutique pour livraison' : ' à être servie'} ?`}
         confirmLabel="Terminer le ticket"
         variant="success"
         isLoading={finishingId !== null}

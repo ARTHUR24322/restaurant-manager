@@ -32,6 +32,8 @@ model Restaurant {
   whatsappBusinessAccountId String?
   whatsappEnabled           Boolean           @default(false)
   whatsappPhoneNumberId     String?
+  isBoutiqueEnabled         Boolean           @default(false)
+  boutiqueSlug              String?           @unique
   articles                  ArticleStock[]
   clientRewards             ClientReward[]
   commandes                 Commande[]
@@ -125,6 +127,7 @@ model Plat {
   restaurantId    String
   devise          String         @default("USD")
   isLoyaltyReward Boolean        @default(false)
+  isAvailableOnline Boolean      @default(false)
   items           CommandeItem[]
   options         Option[]
   restaurant      Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
@@ -156,6 +159,8 @@ model Commande {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   phone          String?
+  adresseLivraison String?
+  livreur        String?
   restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   items          CommandeItem[]
 

@@ -82,17 +82,46 @@ function OrderTrackerContent() {
     );
   }
 
+  const isDeliveryOrder = !!(order.adresseLivraison);
+
   const getStatusStep = (status: string) => {
-    switch (status) {
-      case 'PENDING': return 1;
-      case 'PREPARING': return 1;
-      case 'READY': return 2;
-      case 'COMPLETED': return 3;
-      default: return 1;
+    if (isDeliveryOrder) {
+      // Flux livraison : Caisse → Cuisine → Livraison
+      switch (status) {
+        case 'PENDING_BOUTIQUE': return 0;
+        case 'SUBMITTED': return 1;      // À la caisse
+        case 'PREPARING': return 2;      // En cuisine
+        case 'READY_FOR_DELIVERY': return 2.5; // Cuisine terminée, en attente livreur
+        case 'DELIVERING': return 3;     // En livraison
+        case 'COMPLETED': return 4;      // Livré
+        default: return 1;
+      }
+    } else {
+      switch (status) {
+        case 'PENDING': return 1;
+        case 'PREPARING': return 1;
+        case 'READY': return 2;
+        case 'COMPLETED': return 3;
+        default: return 1;
+      }
     }
   };
 
   const currentStep = getStatusStep(order.statut);
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PENDING_BOUTIQUE': return 'Validation boutique';
+      case 'SUBMITTED': return 'En attente caisse';
+      case 'PREPARING': return 'En préparation';
+      case 'READY_FOR_DELIVERY': return 'En attente livreur';
+      case 'DELIVERING': return 'En course de livraison';
+      case 'READY': return 'Prête à emporter';
+      case 'COMPLETED': return isDeliveryOrder ? 'Livrée !' : 'Servie';
+      case 'CANCELLED': return 'Annulée';
+      default: return 'En cours';
+    }
+  };
 
   return (
     <div className="bg-background text-foreground font-medium min-h-screen pb-32">
@@ -133,67 +162,98 @@ function OrderTrackerContent() {
           
           <div className="flex justify-between items-center mb-10 relative z-10">
             <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-              <History className="w-4 h-4 text-primary" /> Suivi direct
+              <History className="w-4 h-4 text-primary" /> Suivi en temps réel
             </h3>
             <span className={cn(
               "inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-              order.statut === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"
+              order.statut === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-500" :
+              order.statut === 'DELIVERING' ? "bg-amber-500/10 text-amber-500" :
+              "bg-primary/10 text-primary"
             )}>
               <span className={cn(
                 "w-2 h-2 rounded-full mr-2",
-                order.statut === 'COMPLETED' ? "bg-emerald-500" : "bg-primary animate-pulse"
+                order.statut === 'COMPLETED' ? "bg-emerald-500" :
+                order.statut === 'DELIVERING' ? "bg-amber-400 animate-pulse" :
+                "bg-primary animate-pulse"
               )}></span>
-              {order.statut === 'PENDING' && "En attente"}
-              {order.statut === 'PREPARING' && "En préparation"}
-              {order.statut === 'READY' && "Prête à emporter"}
-              {order.statut === 'COMPLETED' && "Servie / Livrée"}
-              {order.statut === 'CANCELLED' && "Annulée"}
+              {getStatusLabel(order.statut)}
             </span>
           </div>
 
-          {/* Custom Progress Bar */}
-          <div className="relative pt-2 pb-2">
-            <div className="h-3 w-full bg-secondary rounded-full overflow-hidden border border-border">
-              <div 
-                className="h-full bg-primary transition-all duration-1000 ease-in-out relative"
-                style={{ width: `${(currentStep / 3) * 100}%` }}
-              >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 bg-primary border-4 border-card rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]"></div>
+          {isDeliveryOrder ? (
+            /* === BARRE LIVRAISON 3 ÉTAPES === */
+            <div className="space-y-6">
+              {/* Progress bar */}
+              <div className="h-3 w-full bg-secondary rounded-full overflow-hidden border border-border">
+                <div
+                  className="h-full bg-primary transition-all duration-1000 ease-in-out"
+                  style={{ width: `${Math.min(100, (Math.min(currentStep, 3) / 3) * 100)}%` }}
+                />
+              </div>
+              {/* Steps */}
+              <div className="flex justify-between">
+                {[
+                  { label: 'Caisse', icon: <CheckCircle2 className="w-5 h-5" />, step: 1 },
+                  { label: 'Cuisine', icon: <UtensilsCrossed className="w-5 h-5" />, step: 2 },
+                  { label: 'Livraison', icon: <Truck className="w-5 h-5" />, step: 3 },
+                ].map(({ label, icon, step }) => (
+                  <div key={step} className={cn("flex flex-col items-center gap-2 transition-all duration-300", currentStep >= step ? "opacity-100" : "opacity-30")}>
+                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                      currentStep >= step + 1 ? "bg-emerald-500 text-white" :
+                      currentStep >= step ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-110" :
+                      "bg-secondary text-muted-foreground"
+                    )}>
+                      {icon}
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-tighter">{label}</span>
+                    {currentStep >= step + 1 && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                  </div>
+                ))}
+              </div>
+              {/* Info livreur */}
+              {order.livreur && (
+                <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl mt-4">
+                  <Truck className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-[9px] font-black uppercase text-amber-400 tracking-widest">Votre livreur</p>
+                    <p className="text-sm font-black text-foreground">{order.livreur}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* === BARRE STANDARD 3 ÉTAPES === */
+            <div className="relative pt-2 pb-2">
+              <div className="h-3 w-full bg-secondary rounded-full overflow-hidden border border-border">
+                <div
+                  className="h-full bg-primary transition-all duration-1000 ease-in-out relative"
+                  style={{ width: `${(currentStep / 3) * 100}%` }}
+                >
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-5 bg-primary border-4 border-card rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]"></div>
+                </div>
+              </div>
+              <div className="flex justify-between mt-6">
+                <div className={cn("flex flex-col items-center gap-2 transition-all duration-300", currentStep >= 1 ? "opacity-100 scale-110" : "opacity-30")}>
+                  <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", currentStep >= 1 ? "bg-primary text-white" : "bg-secondary")}>
+                    <UtensilsCrossed className="w-5 h-5" />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-tighter">Préparation</span>
+                </div>
+                <div className={cn("flex flex-col items-center gap-2 transition-all duration-300", currentStep >= 2 ? "opacity-100 scale-110" : "opacity-30")}>
+                  <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", currentStep >= 2 ? "bg-primary text-white" : "bg-secondary")}>
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-tighter">Prête</span>
+                </div>
+                <div className={cn("flex flex-col items-center gap-2 transition-all duration-300", currentStep >= 3 ? "opacity-100 scale-110" : "opacity-30")}>
+                  <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", currentStep >= 3 ? "bg-primary text-white" : "bg-secondary")}>
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-tighter">Livrée</span>
+                </div>
               </div>
             </div>
-            
-            <div className="flex justify-between mt-6">
-              <div className={cn(
-                "flex flex-col items-center gap-2 transition-all duration-300",
-                currentStep >= 1 ? "opacity-100 scale-110" : "opacity-30"
-              )}>
-                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", currentStep >= 1 ? "bg-primary text-white" : "bg-secondary")}>
-                  <UtensilsCrossed className="w-5 h-5" />
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-tighter">Préparation</span>
-              </div>
-
-              <div className={cn(
-                "flex flex-col items-center gap-2 transition-all duration-300",
-                currentStep >= 2 ? "opacity-100 scale-110" : "opacity-30"
-              )}>
-                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", currentStep >= 2 ? "bg-primary text-white" : "bg-secondary")}>
-                  <Truck className="w-5 h-5" />
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-tighter">Prête</span>
-              </div>
-
-              <div className={cn(
-                "flex flex-col items-center gap-2 transition-all duration-300",
-                currentStep >= 3 ? "opacity-100 scale-110" : "opacity-30"
-              )}>
-                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center", currentStep >= 3 ? "bg-primary text-white" : "bg-secondary")}>
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-tighter">Livrée</span>
-              </div>
-            </div>
-          </div>
+          )}
         </section>
 
         {/* Loyalty Card Visual */}

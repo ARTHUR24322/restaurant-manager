@@ -238,6 +238,22 @@ export async function getOrderDetails(orderId: string) {
   }
 }
 
+export async function updateOrderAddress(orderId: string, adresseLivraison: string) {
+  try {
+    const order = await prisma.commande.update({
+      where: { id: orderId },
+      data: { adresseLivraison }
+    });
+    
+    // Broadcast for dashboard real-time update
+    broadcastToAll("status-updated", { orderId, adresseLivraison, restaurantId: order.restaurantId });
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating order address:", error);
+    return { success: false, error: "Erreur lors de l'enregistrement de l'adresse" };
+  }
+}
+
 export async function createCommande(data: {
   cartItems: { plat: { id: string }, quantite: number | string, selectedOptions: Record<string, unknown> }[];
   tableNumber: string;
@@ -306,7 +322,7 @@ export async function createCommande(data: {
         noteSpeciale: data.notes,
         totalUsd: calculatedTotal, 
         tauxChange: exchangeRate,
-        statut: "SUBMITTED",
+        statut: data.tableNumber === "EN LIGNE" ? "PENDING_BOUTIQUE" : "SUBMITTED",
         paiementStatus: "UNPAID",
         restaurantId: restaurantId,
         items: {
@@ -345,7 +361,7 @@ export async function getRecentCommandes(restaurantId?: string) {
       where: { 
         restaurantId,
         OR: [
-          { statut: { in: ["SUBMITTED", "PREPARING", "READY"] } },
+          { statut: { in: ["SUBMITTED", "PREPARING", "READY", "PENDING_BOUTIQUE", "READY_FOR_DELIVERY", "DELIVERING"] } },
           { 
             statut: { in: ["COMPLETED", "CANCELLED"] },
             createdAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) } // 12 dernières heures
@@ -404,6 +420,116 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     return { success: true };
   } catch (error: unknown) {
     console.error("Error updating order status:", error);
+    return { success: false };
+  }
+}
+
+export async function validateBoutiqueOrder(orderId: string) {
+  try {
+    const order = await prisma.commande.update({
+      where: { id: orderId },
+      data: { statut: "SUBMITTED" }
+    });
+    
+    broadcastToAll("status-updated", { orderId, newStatus: "SUBMITTED", restaurantId: order.restaurantId });
+    return { success: true };
+  } catch (error) {
+    console.error("Error validating boutique order:", error);
+    return { success: false, error: "Erreur lors de la validation" };
+  }
+}
+
+export async function assignLivreur(orderId: string, livreurName: string) {
+  try {
+    const order = await prisma.commande.update({
+      where: { id: orderId },
+      data: { statut: "DELIVERING", livreur: livreurName }
+    });
+    broadcastToAll("status-updated", { orderId, newStatus: "DELIVERING", restaurantId: order.restaurantId });
+    return { success: true };
+  } catch (error) {
+    console.error("Error assigning livreur:", error);
+    return { success: false, error: "Erreur lors de l'assignation du livreur" };
+  }
+}
+
+export async function markDelivered(orderId: string) {
+  try {
+    const orderToUpdate = await prisma.commande.findUnique({
+      where: { id: orderId }
+    });
+    if (!orderToUpdate) throw new Error("Commande introuvable");
+
+    const order = await prisma.commande.update({
+      where: { id: orderId },
+      data: { statut: "COMPLETED", paiementStatus: "PAID_CASH" }
+    });
+
+    // Déduction des stocks
+    await deductStockForOrder(orderId, order.restaurantId);
+
+    // Fidélité et Reçu WhatsApp
+    const fullOrderForReceipt = await prisma.commande.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { plat: true } } }
+    });
+
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: order.restaurantId },
+      select: { plan: true }
+    });
+
+    if (order.phone && restaurant && fullOrderForReceipt && (restaurant.plan === "PRO" || restaurant.plan === "PLATINUM" || restaurant.plan === "FREE" || restaurant.plan === "TRIAL")) {
+      const customer = await LoyaltyService.addPoints(order.phone, order.restaurantId, order.totalUsd, orderId);
+      
+      if (customer) {
+        // Notification Fidélité WhatsApp
+        const config = await prisma.loyaltyConfig.findUnique({ where: { restaurantId: order.restaurantId } });
+        const threshold = config?.rewardThreshold || 100;
+        
+        if (customer.points >= threshold) {
+          sendWhatsAppTemplate(
+            order.restaurantId,
+            order.phone,
+            "loyalty_reward_reached",
+            "fr",
+            [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: customer.points.toString() },
+                  { type: "text", text: "une récompense" }
+                ]
+              }
+            ]
+          ).catch((err: any) => console.error("WA Loyalty Reward Error:", err));
+        } else {
+          sendWhatsAppTemplate(
+            order.restaurantId,
+            order.phone,
+            "loyalty_points_earned",
+            "fr",
+            [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: Math.floor(order.totalUsd * (config?.pointsPerUsd || 1)).toString() },
+                  { type: "text", text: customer.points.toString() }
+                ]
+              }
+            ]
+          ).catch((err: any) => console.error("WA Loyalty Earn Error:", err));
+        }
+      }
+
+      // Envoi du reçu numérique via WhatsApp
+      sendDigitalReceipt(fullOrderForReceipt as any).catch((err: any) => console.error("WA Receipt Error:", err));
+    }
+
+    broadcastToAll("status-updated", { orderId, newStatus: "COMPLETED", restaurantId: order.restaurantId });
+    return { success: true };
+  } catch (error) {
+    console.error("Error marking delivered:", error);
     return { success: false };
   }
 }
