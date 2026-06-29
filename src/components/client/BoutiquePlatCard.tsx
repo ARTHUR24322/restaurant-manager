@@ -32,22 +32,24 @@ export function BoutiquePlatCard({ plat, exchangeRate = 2800 }: { plat: Plat, ex
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl p-4 flex gap-4 h-full shadow-sm hover:shadow-md transition-shadow">
-            <img src={plat.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"} alt={plat.nom} className="w-24 h-24 rounded-lg object-cover bg-secondary flex-shrink-0" />
-            <div className="flex flex-col justify-between flex-1 min-w-0">
-                <div>
-                    <h3 className="font-bold text-foreground text-sm truncate">{plat.nom}</h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{plat.description}</p>
+        <div className="bg-card border border-border rounded-[2rem] p-4 flex flex-col h-full shadow-lg hover:shadow-xl transition-all duration-300 gap-4 group">
+            <div className="flex gap-4">
+                <img src={plat.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"} alt={plat.nom} className="w-24 h-24 rounded-2xl object-cover bg-secondary flex-shrink-0 shadow-sm" />
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-foreground text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">{plat.nom}</h3>
+                    <p className="text-[11px] text-muted-foreground line-clamp-3 mt-1.5 leading-relaxed">{plat.description}</p>
                 </div>
-                <div className="flex justify-between items-end mt-3">
-                    <span className="font-black text-primary text-sm">{formattedPrice}</span>
-                    <button 
-                        onClick={handleAddToCart}
-                        className="bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground p-2 rounded-lg transition-colors border border-primary/20 hover:border-primary"
-                    >
-                        <ShoppingCart className="w-4 h-4" />
-                    </button>
-                </div>
+            </div>
+            
+            <div className="flex justify-between items-center pt-3 border-t border-border mt-auto">
+                <span className="font-black text-primary text-lg">{formattedPrice}</span>
+                <button 
+                    onClick={handleAddToCart}
+                    className="bg-primary text-primary-foreground flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 font-black text-[10px] uppercase tracking-widest"
+                >
+                    <ShoppingCart className="w-4 h-4" />
+                    Ajouter
+                </button>
             </div>
         </div>
     );

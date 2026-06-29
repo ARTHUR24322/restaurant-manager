@@ -59,7 +59,7 @@ export default function QRGeneratorPage({ searchParams }: { searchParams: { rest
     const url = URL.createObjectURL(svgBlob);
 
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       const canvas = document.createElement("canvas");
       // 7cm x 10cm @ 300DPI
       canvas.width = 827; 
@@ -70,6 +70,33 @@ export default function QRGeneratorPage({ searchParams }: { searchParams: { rest
       // Background
       ctx.fillStyle = "#0F172A"; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Logo en arrière-plan flou
+      if (restaurant?.logoUrl) {
+          try {
+              const bgImg = new Image();
+              bgImg.crossOrigin = "anonymous";
+              await new Promise((resolve, reject) => {
+                  bgImg.onload = resolve;
+                  bgImg.onerror = reject;
+                  bgImg.src = restaurant.logoUrl;
+              });
+              // Dessiner l'image claire (sans flou global) avec une bonne opacité
+              ctx.globalAlpha = 0.8;
+              ctx.drawImage(bgImg, 0, 0, canvas.width, 450); 
+              ctx.globalAlpha = 1.0;
+              
+              // Appliquer un dégradé par-dessus pour faire fondre le bas vers la couleur de fond
+              const fadeGrad = ctx.createLinearGradient(0, 100, 0, 450);
+              fadeGrad.addColorStop(0, "rgba(15, 23, 42, 0)"); // transparent au début
+              fadeGrad.addColorStop(1, "#0F172A"); // même couleur que le fond à la fin
+              
+              ctx.fillStyle = fadeGrad;
+              ctx.fillRect(0, 0, canvas.width, 450);
+          } catch (e) {
+              console.error("Error loading bg image for canvas", e);
+          }
+      }
 
       // Deco
       ctx.fillStyle = "rgba(212, 175, 55, 0.1)";
@@ -208,10 +235,24 @@ export default function QRGeneratorPage({ searchParams }: { searchParams: { rest
             key={num} 
             className="bg-[#0F172A] text-white p-8 rounded-[2.5rem] border-2 border-[#D4AF37]/20 flex flex-col items-center justify-between gap-6 shadow-2xl relative overflow-hidden print:shadow-none print:border-none print:mb-12 print:break-inside-avoid"
           >
+            {/* Background image fade out at the bottom */}
+            {restaurant?.logoUrl && (
+                 <div 
+                     className="absolute top-0 left-0 w-full h-48 pointer-events-none opacity-80"
+                     style={{ 
+                         backgroundImage: `url(${restaurant.logoUrl})`,
+                         backgroundSize: 'cover',
+                         backgroundPosition: 'center',
+                         WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 100%)',
+                         maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 100%)'
+                     }} 
+                 />
+            )}
+            
             {/* Décoration subtile dorée */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/10 rounded-bl-full pointer-events-none" />
             
-            <div className="bg-[#D4AF37] text-[#0F172A] px-6 py-2 rounded-full text-[11px] font-black uppercase tracking-widest z-10 shadow-lg shadow-[#D4AF37]/20 truncate max-w-full">
+            <div className="bg-[#D4AF37] text-[#0F172A] px-6 py-2 rounded-full text-[11px] font-black uppercase tracking-widest z-10 shadow-lg shadow-[#D4AF37]/20 truncate max-w-full relative">
               {restaurantName}
             </div>
             

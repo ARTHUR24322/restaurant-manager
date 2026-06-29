@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { type Plat } from "@/types";
 import { updateBoutiqueSettings, togglePlatOnlineVisibility } from "@/lib/actions-boutique";
 import { toast } from "sonner";
-import { Store, Globe, EyeOff, Eye, Loader2 } from "lucide-react";
+import { Store, Globe, EyeOff, Eye, Loader2, Copy, Check, ExternalLink } from "lucide-react";
 
 interface BoutiqueManagerProps {
   restaurantId: string;
@@ -18,6 +18,17 @@ export function BoutiqueManager({ restaurantId, plats, initialIsBoutiqueEnabled,
   const [isPending, startTransition] = useTransition();
   const [isEnabled, setIsEnabled] = useState(initialIsBoutiqueEnabled);
   const [slug, setSlug] = useState(initialBoutiqueSlug || "");
+  const [copied, setCopied] = useState(false);
+
+  const boutiqueUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/boutique/${slug}` : "";
+
+  const handleCopyLink = () => {
+    if (!boutiqueUrl) return;
+    navigator.clipboard.writeText(boutiqueUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const handleSaveSettings = async () => {
     startTransition(async () => {
@@ -81,10 +92,33 @@ export function BoutiqueManager({ restaurantId, plats, initialIsBoutiqueEnabled,
                    value={slug}
                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                    placeholder="votre-restaurant"
-                   className="rounded-none rounded-r-lg bg-background border border-border text-foreground focus:ring-primary focus:border-primary block flex-1 min-w-0 w-full text-sm p-2.5 outline-none" 
+                   className="rounded-none bg-background border border-border text-foreground focus:ring-primary focus:border-primary block flex-1 min-w-0 w-full text-sm p-2.5 outline-none" 
                    disabled={!isEnabled || isPending}
                 />
+                <button
+                  onClick={handleCopyLink}
+                  disabled={!slug || !isEnabled}
+                  title="Copier le lien"
+                  className="inline-flex items-center gap-1.5 px-3 text-sm bg-primary text-primary-foreground border border-primary rounded-r-lg hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap font-bold"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? "Copié!" : "Copier"}
+                </button>
              </div>
+             {slug && isEnabled && boutiqueUrl && (
+               <div className="mt-3 flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+                 <Globe className="w-4 h-4 text-primary flex-shrink-0" />
+                 <a
+                   href={boutiqueUrl}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="text-primary text-sm font-medium truncate hover:underline flex-1"
+                 >
+                   {boutiqueUrl}
+                 </a>
+                 <ExternalLink className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
+               </div>
+             )}
           </div>
 
           <button 
