@@ -158,14 +158,14 @@ export function CartFloat({ restaurantId, exchangeRate = 2800, isLoyaltyActive }
       />
 
       {isOpen && (
-        <div className="fixed inset-0 bg-background/90 backdrop-blur-md z-40" onClick={() => setIsOpen(false)} />
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-md z-[60]" onClick={() => setIsOpen(false)} />
       )}
 
       {/* Floating Button */}
       {!isOpen && items.length > 0 && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 rounded-2xl bg-primary text-black px-6 py-4 shadow-2xl flex items-center gap-4 hover:scale-105 active:scale-95 transition-all duration-300 animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 right-6 z-[60] rounded-2xl bg-primary text-black px-6 py-4 shadow-2xl flex items-center gap-4 hover:scale-105 active:scale-95 transition-all duration-300 animate-in slide-in-from-bottom-5"
         >
           <div className="relative">
             <ShoppingCart className="w-5 h-5" />
@@ -181,7 +181,7 @@ export function CartFloat({ restaurantId, exchangeRate = 2800, isLoyaltyActive }
 
       {/* Cart Drawer */}
       <div className={cn(
-        "fixed bottom-0 left-0 right-0 md:left-auto md:right-6 md:bottom-6 md:w-[420px] bg-zinc-950 border-t md:border border-white/5 shadow-2xl md:rounded-[3rem] rounded-t-[3rem] z-50 transform transition-transform duration-500 ease-&lsqb;cubic-bezier(0.33,1,0.68,1)&rsqb;",
+        "fixed bottom-0 left-0 right-0 md:left-auto md:right-6 md:bottom-6 md:w-[420px] bg-zinc-950 border-t md:border border-white/5 shadow-2xl md:rounded-[3rem] rounded-t-[3rem] z-[70] transform transition-transform duration-500 ease-&lsqb;cubic-bezier(0.33,1,0.68,1)&rsqb;",
         isOpen ? "translate-y-0" : "translate-y-full"
       )}>
         <div className="w-full flex justify-center py-3 md:hidden">

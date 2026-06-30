@@ -7,6 +7,7 @@ import { comparePassword, hashPassword } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/jwt";
 import { cookies } from "next/headers";
 import { type SessionPayload } from "@/types";
+import { generateOTP, sendOTPByEmail } from "@/lib/email-otp";
 
 const loginSchema = z.object({
   email: z.string().email("Format d'email invalide"),
@@ -115,23 +116,23 @@ export async function authenticateManager(formData: FormData) {
       return { success: false, error: "Identifiants invalides." };
     }
 
-    // Étape 1 réussie : Créer un jeton temporaire en attente du PIN (valide 5 min)
-    const preAuthToken = await encrypt({
+    // Étape 1 réussie : Créer la session directement (sans PIN)
+    const session = await encrypt({
       restoId: restaurant.id,
       email: restaurant.email,
-      role: "PRE_AUTH_MANAGER",
+      role: "MANAGER",
       version: restaurant.sessionVersion,
     });
 
-    cookies().set("manager_pre_auth", preAuthToken, {
+    cookies().set("session", session, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 60 * 5, // 5 minutes
+      maxAge: 60 * 60 * 24 * 3, // 3 jours
       path: "/",
     });
 
-    return { success: true, requiresPin: true, restoId: restaurant.id };
+    return { success: true, requiresPin: false, restoId: restaurant.id };
   } catch (error) {
     console.error("Login Error:", error);
     return { success: false, error: "Une erreur est survenue lors de la connexion." };
@@ -255,7 +256,27 @@ export async function verifyManagerPin(pin: string) {
       return { success: false, error: "Session invalide. Veuillez vous reconnecter." };
     }
 
-    // Récupérer le PIN actuel depuis la base de données
+    // Récupérer les infos depuis le jeton pré-auth (OTP inclus)
+    const preAuthPayload = payload as any;
+    const storedOtp = preAuthPayload.otp as string | undefined;
+    const otpExpiry = preAuthPayload.otpExpiry as number | undefined;
+
+    // Vérification expiration OTP
+    if (!storedOtp || !otpExpiry) {
+      cookies().delete("manager_pre_auth");
+      return { success: false, error: "Code OTP invalide. Veuillez vous reconnecter." };
+    }
+
+    if (Date.now() > otpExpiry) {
+      cookies().delete("manager_pre_auth");
+      return { success: false, error: "Code OTP expiré (10 min). Veuillez vous reconnecter." };
+    }
+
+    if (pin !== storedOtp) {
+      return { success: false, error: "Code OTP incorrect. Réessayez." };
+    }
+
+    // Récupérer les données du restaurant
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: payload.restoId as string },
       select: { pinCode: true, sessionVersion: true, active: true }
@@ -263,12 +284,6 @@ export async function verifyManagerPin(pin: string) {
 
     if (!restaurant || !restaurant.active) {
       return { success: false, error: "Compte introuvable ou inactif." };
-    }
-
-    // Le PIN par défaut est "000000"
-    const validPin = restaurant.pinCode || "000000";
-    if (pin !== validPin) {
-      return { success: false, error: "Code PIN incorrect. Réessayez." };
     }
 
     // PIN correct : créer la session finale
@@ -305,6 +320,7 @@ export async function authenticateSuperAdmin(formData: FormData) {
 
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
     const ADMIN_PASS = process.env.ADMIN_PASSWORD;
+    const GMAIL_DEST = process.env.GMAIL_USER; // Adresse qui RECOIT l'OTP
 
     if (!ADMIN_EMAIL || !ADMIN_PASS) {
        console.error("CRITICAL: ADMIN_EMAIL or ADMIN_PASSWORD not set in environment.");
@@ -312,18 +328,34 @@ export async function authenticateSuperAdmin(formData: FormData) {
     }
 
     if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-      // Étape 1 réussie : Créer un jeton temporaire (valide 5 min)
-      // On inclut une "version" fixe ou une clé pour le Super Admin aussi
+      // Générer un OTP à 6 chiffres et l'envoyer par Gmail
+      const otp = generateOTP();
+      const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+      const emailResult = await sendOTPByEmail(
+        GMAIL_DEST || ADMIN_EMAIL,
+        otp,
+        "Super Admin"
+      );
+
+      if (!emailResult.success) {
+        console.error("[SuperAdmin Auth] Échec envoi OTP:", emailResult.error);
+        return { success: false, error: "Impossible d'envoyer le code OTP. Vérifiez la configuration Gmail." };
+      }
+
+      // Stocker l'OTP chiffré dans le cookie pré-auth (valid 10 min)
       const preAuthToken = await encrypt({
         email,
         role: "PRE_AUTH_ADMIN",
-      } as SessionPayload);
+        otp,
+        otpExpiry,
+      } as any);
 
       cookies().set("pre_auth_admin", preAuthToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
-        maxAge: 60 * 5, // 5 minutes
+        maxAge: 60 * 10, // 10 minutes
         path: "/",
       });
 
@@ -337,7 +369,7 @@ export async function authenticateSuperAdmin(formData: FormData) {
 }
 
 /**
- * Étape 2 : Vérification du code PIN à 6 chiffres
+ * Étape 2 : Vérification du code OTP envoyé par Gmail
  */
 export async function verifySuperAdminPin(pin: string) {
   try {
@@ -345,51 +377,53 @@ export async function verifySuperAdminPin(pin: string) {
     const preAuthToken = cookies().get("pre_auth_admin")?.value;
     if (!preAuthToken) return { success: false, error: "Session expirée. Reconnectez-vous." };
 
-    const payload = await decrypt(preAuthToken) as SessionPayload | null;
+    const payload = await decrypt(preAuthToken) as any;
     if (!payload || payload.role !== "PRE_AUTH_ADMIN") return { success: false, error: "Non autorisé." };
 
-    // 2. Récupérer le PIN configuré (défaut: 123456 pour Arthur)
-    const config = await prisma.systemConfig.findUnique({
-      where: { key: "admin_pin" }
+    // 2. Vérifier l'OTP et son expiration
+    const storedOtp = payload.otp as string | undefined;
+    const otpExpiry = payload.otpExpiry as number | undefined;
+
+    if (!storedOtp || !otpExpiry) {
+      cookies().delete("pre_auth_admin");
+      return { success: false, error: "Code OTP invalide. Veuillez vous reconnecter." };
+    }
+
+    if (Date.now() > otpExpiry) {
+      cookies().delete("pre_auth_admin");
+      return { success: false, error: "Code OTP expiré (10 min). Veuillez vous reconnecter." };
+    }
+
+    if (pin !== storedOtp) {
+      return { success: false, error: "Code OTP incorrect. Réessayez." };
+    }
+
+    // 3. OTP correct : Créer la session finale
+    const adminVersionConfig = await prisma.systemConfig.findUnique({
+      where: { key: "admin_session_version" }
+    });
+    const currentAdminVersion = adminVersionConfig ? parseInt(adminVersionConfig.value) : 1;
+
+    const session = await encrypt({
+      email: payload.email,
+      role: "SUPER_ADMIN",
+      version: currentAdminVersion
     });
 
-    const correctPin = config?.value;
+    cookies().set("admin_session", session, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 24 * 3, // 3 jours
+      path: "/",
+    });
 
-    if (!correctPin) {
-      console.error("ADMIN SECURITY ALERT: No Admin PIN set in database. Default 123456 has been DISABLED.");
-      return { success: false, error: "Sécurité : PIN administrateur non configuré. Contactez le développeur." };
-    }
+    // Nettoyer le jeton temporaire
+    cookies().delete("pre_auth_admin");
 
-    if (pin === correctPin) {
-      // 3. PIN correct : Créer la session finale
-      const adminVersionConfig = await prisma.systemConfig.findUnique({
-        where: { key: "admin_session_version" }
-      });
-      const currentAdminVersion = adminVersionConfig ? parseInt(adminVersionConfig.value) : 1;
-
-      const session = await encrypt({
-        email: payload.email,
-        role: "SUPER_ADMIN",
-        version: currentAdminVersion
-      });
-
-      cookies().set("admin_session", session, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 60 * 60 * 24 * 3, // 3 jours
-        path: "/",
-      });
-
-      // Nettoyer le jeton temporaire
-      cookies().delete("pre_auth_admin");
-
-      return { success: true };
-    }
-
-    return { success: false, error: "Code PIN incorrect." };
+    return { success: true };
   } catch (error) {
-    console.error("PIN Verification Error:", error);
+    console.error("OTP Verification Error:", error);
     return { success: false, error: "Erreur technique." };
   }
 }

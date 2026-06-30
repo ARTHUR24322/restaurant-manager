@@ -165,14 +165,14 @@ export function BoutiqueCart({ restaurantId, exchangeRate = 2800, isLoyaltyActiv
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-background/90 backdrop-blur-md z-40" onClick={() => (step === 1) && setIsOpen(false)} />
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-md z-[60]" onClick={() => (step === 1) && setIsOpen(false)} />
       )}
 
       {/* Bouton Panier Flottant */}
       {!isOpen && items.length > 0 && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 rounded-2xl bg-primary text-primary-foreground px-6 py-4 shadow-2xl flex items-center gap-4 hover:scale-105 active:scale-95 transition-all duration-300 animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 right-6 z-[60] rounded-2xl bg-primary text-primary-foreground px-6 py-4 shadow-2xl flex items-center gap-4 hover:scale-105 active:scale-95 transition-all duration-300 animate-in slide-in-from-bottom-5"
         >
           <div className="relative">
             <ShoppingCart className="w-5 h-5" />
@@ -188,7 +188,7 @@ export function BoutiqueCart({ restaurantId, exchangeRate = 2800, isLoyaltyActiv
 
       {/* Cart Drawer */}
       <div className={cn(
-        "fixed bottom-0 left-0 right-0 md:left-auto md:right-6 md:bottom-6 md:w-[450px] bg-card border-t md:border border-border shadow-2xl md:rounded-[2rem] rounded-t-[2rem] z-50 transform transition-transform duration-500",
+        "fixed bottom-0 left-0 right-0 md:left-auto md:right-6 md:bottom-6 md:w-[450px] bg-card border-t md:border border-border shadow-2xl md:rounded-[2rem] rounded-t-[2rem] z-[70] transform transition-transform duration-500",
         isOpen ? "translate-y-0" : "translate-y-full"
       )}>
         

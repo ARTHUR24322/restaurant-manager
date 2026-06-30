@@ -163,6 +163,9 @@ export default function SuperAdminPage() {
     const [expandedMother, setExpandedMother] = useState<string | null>(null);
     const [showPinStep, setShowPinStep] = useState(false);
     const [pin, setPin] = useState("");
+    const [maskedOtpEmail, setMaskedOtpEmail] = useState("");
+    const [otpResendCooldown, setOtpResendCooldown] = useState(0);
+    const [lastAdminFormData, setLastAdminFormData] = useState<FormData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings' | 'diagnostic'>('dashboard');
@@ -270,9 +273,19 @@ export default function SuperAdminPage() {
         const formData = new FormData();
         formData.append("email", email);
         formData.append("password", password);
+        setLastAdminFormData(formData);
         const res = await authenticateSuperAdmin(formData);
         if (res.success && res.requiresPin) {
             setShowPinStep(true);
+            // Masquer l'email Gmail
+            const gmailUser = "kisumbulearthur@gmail.com";
+            const [local, domain] = gmailUser.split("@");
+            setMaskedOtpEmail(local.slice(0, 2) + "***" + local.slice(-1) + "@" + domain);
+            // Démarrer cooldown renvoi
+            setOtpResendCooldown(60);
+            const iv = setInterval(() => {
+                setOtpResendCooldown(prev => { if (prev <= 1) { clearInterval(iv); return 0; } return prev - 1; });
+            }, 1000);
         } else if (res.success) {
             setIsLogged(true);
             fetchRestos();
@@ -280,6 +293,23 @@ export default function SuperAdminPage() {
             setError(res.error || "Identifiants incorrects");
         }
         setLoading(false);
+    };
+
+    const handleResendOtp = async () => {
+        if (!lastAdminFormData || otpResendCooldown > 0) return;
+        setLoading(true);
+        setPin("");
+        setError("");
+        const res = await authenticateSuperAdmin(lastAdminFormData);
+        setLoading(false);
+        if (res.success) {
+            setOtpResendCooldown(60);
+            const iv = setInterval(() => {
+                setOtpResendCooldown(prev => { if (prev <= 1) { clearInterval(iv); return 0; } return prev - 1; });
+            }, 1000);
+        } else {
+            setError(res.error || "Erreur lors du renvoi.");
+        }
     };
 
     const handlePinSubmit = async (e: React.FormEvent) => {
@@ -424,21 +454,56 @@ export default function SuperAdminPage() {
                             />
                             {error && <p className="text-red-500 text-[10px] uppercase text-center">{error}</p>}
                             <button disabled={loading} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">
-                                {loading ? "..." : "Entrer"}
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Entrer"}
                             </button>
                         </form>
                     ) : (
-                        <form onSubmit={handlePinSubmit} className="space-y-6">
+                        <form onSubmit={handlePinSubmit} className="space-y-4">
+                            {/* Info OTP */}
+                            <div className="text-center mb-2">
+                                <p className="text-zinc-400 text-xs mb-3">
+                                    Code OTP envoyé sur :
+                                </p>
+                                <div className="bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 flex items-center justify-center gap-2">
+                                    <Mail className="w-4 h-4 text-primary flex-shrink-0" />
+                                    <span className="text-white font-bold text-sm tracking-wider">{maskedOtpEmail}</span>
+                                </div>
+                            </div>
                             <input
                                 type="text"
                                 maxLength={6}
                                 required
                                 value={pin}
                                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 text-center text-3xl font-black text-primary outline-none"
+                                className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 text-center text-3xl font-black text-primary outline-none tracking-[1rem]"
                                 placeholder="••••••"
+                                autoFocus
                             />
-                            <button className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Valider</button>
+                            {error && <p className="text-red-500 text-[10px] uppercase text-center">{error}</p>}
+                            <button disabled={loading} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase flex items-center justify-center gap-2">
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                                {loading ? "Vérification..." : "Valider"}
+                            </button>
+                            {/* Renvoi OTP */}
+                            <div className="text-center pt-2">
+                                <p className="text-zinc-600 text-[10px] uppercase tracking-widest mb-1">Pas reçu ?</p>
+                                <button
+                                    type="button"
+                                    onClick={handleResendOtp}
+                                    disabled={otpResendCooldown > 0 || loading}
+                                    className="text-[11px] font-bold text-primary disabled:text-zinc-600 transition-colors"
+                                >
+                                    {otpResendCooldown > 0 ? `Renvoyer dans ${otpResendCooldown}s` : "🔄 Renvoyer le code"}
+                                </button>
+                            </div>
+                            {/* Retour */}
+                            <button
+                                type="button"
+                                onClick={() => { setShowPinStep(false); setPin(""); setError(""); }}
+                                className="w-full text-zinc-600 hover:text-zinc-400 text-[10px] uppercase font-bold tracking-widest transition-colors flex items-center justify-center gap-1"
+                            >
+                                <ArrowLeft className="w-3 h-3" /> Retour
+                            </button>
                         </form>
                     )}
                 </div>

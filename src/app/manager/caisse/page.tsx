@@ -69,7 +69,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
   
   const fetchOrders = async (id: string) => {
     const all = await getRecentCommandes(id) as unknown as Commande[];
-    const filtered = all.filter((o) => o.statut === "SUBMITTED" as any || o.statut === "READY" as any);
+    const filtered = (all || []).filter((o) => o.statut === "SUBMITTED" as any || o.statut === "READY" as any);
     setOrders(filtered);
     setLoading(false);
   };
