@@ -120,12 +120,6 @@ export default function ManagerLoginPage() {
           </div>
         </div>
 
-        {/* Footer link for Super Admin */}
-        <div className="mt-8 text-center animate-in fade-in duration-300 delay-500">
-            <a href="/super-admin" className="text-[10px] font-black text-zinc-700 uppercase tracking-widest hover:text-primary transition-colors">
-                🔐 Accès Propriétaire Plateforme
-            </a>
-        </div>
       </div>
     </div>
   );
