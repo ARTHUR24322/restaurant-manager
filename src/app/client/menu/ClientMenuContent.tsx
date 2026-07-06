@@ -277,15 +277,12 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                           )}
                         >
                           {/* Image Full Width Top */}
-                          <div className="aspect-[4/3] w-full shrink-0 overflow-hidden relative">
+                          <div className="aspect-square w-full shrink-0 overflow-hidden relative">
                              <img 
                                src={plat.image} 
                                alt={plat.nom}
                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                              />
-                             
-                             {/* Gradient Overlay */}
-                             <div className="absolute inset-0 bg-gradient-to-t from-[#18181b]/90 via-transparent to-transparent pointer-events-none" />
                              
                              {/* Heart Icon Overlay */}
                              <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
@@ -300,7 +297,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                           </div>
 
                           {/* Content */}
-                          <div className="p-4 flex flex-col flex-1 gap-1 -mt-4 relative z-10">
+                          <div className="p-4 flex flex-col flex-1 gap-1">
                               <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
                                 {plat.nom}
                               </h3>
@@ -349,15 +346,12 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                     )}
                   >
                     {/* Image Full Width Top */}
-                    <div className="aspect-[4/3] w-full shrink-0 overflow-hidden relative">
+                    <div className="aspect-square w-full shrink-0 overflow-hidden relative">
                        <img 
                          src={plat.image} 
                          alt={plat.nom}
                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                        />
-                       
-                       {/* Gradient Overlay */}
-                       <div className="absolute inset-0 bg-gradient-to-t from-[#18181b]/90 via-transparent to-transparent pointer-events-none" />
                        
                        {/* Heart Icon Overlay */}
                        <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
@@ -372,7 +366,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                     </div>
 
                     {/* Content */}
-                    <div className="p-4 flex flex-col flex-1 gap-1 -mt-4 relative z-10">
+                    <div className="p-4 flex flex-col flex-1 gap-1">
                         <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
                           {plat.nom}
                         </h3>

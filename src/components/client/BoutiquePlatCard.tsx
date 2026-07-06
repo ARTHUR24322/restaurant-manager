@@ -32,50 +32,24 @@ export function BoutiquePlatCard({ plat, exchangeRate = 2800 }: { plat: Plat, ex
     };
 
     return (
-        <div className="relative bg-card border border-border rounded-[2rem] overflow-hidden flex flex-col h-full shadow-lg hover:shadow-xl transition-all duration-300 group hover:border-primary/30">
-            {/* Section Image avec fondu en bas */}
-            <div className="aspect-[4/3] w-full relative shrink-0">
-                <img 
-                    src={plat.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"} 
-                    alt={plat.nom} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                />
-                
-                {/* Dégradé pour effet fondu vers la couleur de la carte */}
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-card to-transparent pointer-events-none" />
-                
-                {/* Indication épuisé */}
-                {(!plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0)) && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <span className="text-[10px] font-black uppercase text-white tracking-widest bg-black/50 px-4 py-2 rounded-full backdrop-blur-md">Épuisé</span>
-                    </div>
-                )}
-            </div>
-
-            {/* Contenu */}
-            <div className="flex flex-col flex-1 p-5 -mt-6 relative z-10 gap-1.5">
-                <h3 className="font-black text-foreground text-[15px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                    {plat.nom}
-                </h3>
-                <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                    {plat.description || "Une création savoureuse par notre chef."}
-                </p>
-                
-                <div className="flex justify-between items-center pt-3 mt-auto">
-                    <span className="font-black text-primary text-xl tracking-tight">{formattedPrice}</span>
-                    <button 
-                        onClick={(e) => {
-                            e.stopPropagation(); // Avoid triggering card click if added later
-                            if (plat.disponible) handleAddToCart();
-                        }}
-                        disabled={Boolean(!plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0))}
-                        className="bg-primary text-primary-foreground flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 font-black text-[10px] uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <ShoppingCart className="w-4 h-4" />
-                        <span className="hidden sm:inline">Ajouter</span>
-                    </button>
+        <div className="bg-card border border-border rounded-[2rem] p-4 flex flex-col h-full shadow-lg hover:shadow-xl transition-all duration-300 gap-4 group">
+            <div className="flex gap-4">
+                <img src={plat.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"} alt={plat.nom} className="w-24 h-24 rounded-2xl object-cover bg-secondary flex-shrink-0 shadow-sm" />
+                <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-foreground text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">{plat.nom}</h3>
+                    <p className="text-[11px] text-muted-foreground line-clamp-3 mt-1.5 leading-relaxed">{plat.description}</p>
                 </div>
+            </div>
+            
+            <div className="flex justify-between items-center pt-3 border-t border-border mt-auto">
+                <span className="font-black text-primary text-lg">{formattedPrice}</span>
+                <button 
+                    onClick={handleAddToCart}
+                    className="bg-primary text-primary-foreground flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 font-black text-[10px] uppercase tracking-widest"
+                >
+                    <ShoppingCart className="w-4 h-4" />
+                    Ajouter
+                </button>
             </div>
         </div>
     );

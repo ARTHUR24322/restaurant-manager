@@ -11,7 +11,7 @@ const AUTH_TAG_LENGTH = 16;
 // SÉCURITÉ E5 : Ne jamais utiliser une clé par défaut en production
 const RAW_KEY = process.env.WHATSAPP_ENCRYPTION_KEY;
 if (!RAW_KEY && process.env.NODE_ENV === 'production') {
-    console.warn('WARNING: WHATSAPP_ENCRYPTION_KEY environment variable is missing in production! Please add it to your Vercel project.');
+    throw new Error('CRITICAL: WHATSAPP_ENCRYPTION_KEY environment variable is missing in production!');
 }
 const KEY = (RAW_KEY || 'dev-only-whatsapp-key-do-not-use-in-prod!!').substring(0, 32);
 
