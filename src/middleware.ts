@@ -15,11 +15,11 @@ function cleanupRateLimitMap() {
   lastCleanup = now;
   
   const windowMs = 60 * 1000;
-  for (const [ip, record] of rateLimitMap.entries()) {
+  rateLimitMap.forEach((record, ip) => {
     if (now - record.lastRequest > windowMs * 2) {
       rateLimitMap.delete(ip);
     }
-  }
+  });
   
   // Sécurité : limite absolue de la Map pour éviter les abus
   if (rateLimitMap.size > 10000) {
