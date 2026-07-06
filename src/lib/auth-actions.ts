@@ -148,7 +148,7 @@ const RDC_CITIES = [
 const registerSchema = z.object({
   nom: z.string().min(2, "Le nom doit avoir au moins 2 caractères"),
   email: z.string().email("Format d'email invalide"),
-  password: z.string().min(6, "Le mot de passe doit avoir au moins 6 caractères"),
+  password: z.string().min(8, "Le mot de passe doit avoir au moins 8 caractères"),
   adresse: z.string().min(5, "L'adresse est requise"),
   ville: z.string().min(1, "La ville est requise"),
   pays: z.string().refine(val => val === "République Démocratique du Congo", "Seule la RDC est acceptée"),
@@ -319,16 +319,21 @@ export async function authenticateSuperAdmin(formData: FormData) {
     const password = formData.get("password") as string;
 
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-    const ADMIN_PASS = process.env.ADMIN_PASSWORD;
-    const GMAIL_DEST = process.env.GMAIL_USER; // Adresse qui RECOIT l'OTP
+    const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
+    const GMAIL_DEST = process.env.GMAIL_USER;
 
-    if (!ADMIN_EMAIL || !ADMIN_PASS) {
-       console.error("CRITICAL: ADMIN_EMAIL or ADMIN_PASSWORD not set in environment.");
-       return { success: false, error: "Configuration administrateur incomplète." };
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD_HASH) {
+       console.error("CRITICAL: ADMIN_EMAIL or ADMIN_PASSWORD_HASH not set in environment.");
+       return { success: false, error: "Configuration administrateur incomplète. ADMIN_PASSWORD_HASH est requis." };
     }
 
-    if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-      // Générer un OTP à 6 chiffres et l'envoyer par Gmail
+    // SÉCURITÉ : Comparaison uniquement via bcrypt (aucun fallback texte brut)
+    let isValid = false;
+    if (email === ADMIN_EMAIL) {
+      isValid = await comparePassword(password, ADMIN_PASSWORD_HASH);
+    }
+
+    if (isValid) {
       const otp = generateOTP();
       const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
@@ -343,7 +348,6 @@ export async function authenticateSuperAdmin(formData: FormData) {
         return { success: false, error: "Impossible d'envoyer le code OTP. Vérifiez la configuration Gmail." };
       }
 
-      // Stocker l'OTP chiffré dans le cookie pré-auth (valid 10 min)
       const preAuthToken = await encrypt({
         email,
         role: "PRE_AUTH_ADMIN",
@@ -355,7 +359,7 @@ export async function authenticateSuperAdmin(formData: FormData) {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
-        maxAge: 60 * 10, // 10 minutes
+        maxAge: 60 * 10,
         path: "/",
       });
 
@@ -443,16 +447,31 @@ export async function updateAdminPin(oldPin: string, newPin: string) {
             where: { key: "admin_pin" }
         });
 
-        const currentPin = config ? config.value : "123456";
-
-        if (oldPin !== currentPin) {
-            return { success: false, error: "L'ancien code PIN est incorrect." };
+        // SÉCURITÉ : Vérification du PIN via bcrypt avec compatibilité old "123456" non hashé
+        if (config) {
+            let isPinValid = false;
+            if (config.value === "123456") {
+                isPinValid = oldPin === "123456";
+            } else {
+                isPinValid = await comparePassword(oldPin, config.value);
+            }
+            if (!isPinValid) {
+                return { success: false, error: "L'ancien code PIN est incorrect." };
+            }
+        } else {
+            // Premier PIN : on accepte le défaut "123456" uniquement la première fois
+            if (oldPin !== "123456") {
+                return { success: false, error: "L'ancien code PIN est incorrect." };
+            }
         }
+
+        // Hasher le nouveau PIN avant stockage
+        const hashedPin = await hashPassword(newPin);
 
         await prisma.systemConfig.upsert({
             where: { key: "admin_pin" },
-            update: { value: newPin },
-            create: { key: "admin_pin", value: newPin }
+            update: { value: hashedPin },
+            create: { key: "admin_pin", value: hashedPin }
         });
 
         return { success: true };
@@ -625,8 +644,8 @@ export async function resetPasswordWithPin(formData: FormData) {
       return { success: false, error: "Les mots de passe ne correspondent pas." };
     }
 
-    if (newPassword.length < 6) {
-      return { success: false, error: "Le mot de passe doit contenir au moins 6 caractères." };
+    if (newPassword.length < 8) {
+      return { success: false, error: "Le mot de passe doit contenir au moins 8 caractères." };
     }
 
     // Chercher le restaurant par email et vérifier le PIN

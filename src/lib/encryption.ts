@@ -8,9 +8,14 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // Recommandé pour GCM
 const AUTH_TAG_LENGTH = 16;
-const KEY = (process.env.WHATSAPP_ENCRYPTION_KEY || 'default-secret-key-at-least-32-chars-long').substring(0, 32);
+// SÉCURITÉ E5 : Ne jamais utiliser une clé par défaut en production
+const RAW_KEY = process.env.WHATSAPP_ENCRYPTION_KEY;
+if (!RAW_KEY && process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: WHATSAPP_ENCRYPTION_KEY environment variable is missing in production!');
+}
+const KEY = (RAW_KEY || 'dev-only-whatsapp-key-do-not-use-in-prod!!').substring(0, 32);
 
-export function encrypt(text: string): string {
+export function encryptAES(text: string): string {
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(KEY), iv);
     
@@ -23,7 +28,10 @@ export function encrypt(text: string): string {
     return `${iv.toString('hex')}:${authTag}:${encrypted}`;
 }
 
-export function decrypt(hash: string): string {
+// Alias pour compatibilité arrière
+export const encrypt = encryptAES;
+
+export function decryptAES(hash: string): string {
     try {
         const [ivHex, authTagHex, encryptedHex] = hash.split(':');
         
@@ -46,3 +54,6 @@ export function decrypt(hash: string): string {
         return '';
     }
 }
+
+// Alias pour compatibilité arrière
+export const decrypt = decryptAES;

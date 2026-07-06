@@ -1,9 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient({});
 
 async function main() {
   console.log('Seeding initial data...');
+
+  // SÉCURITÉ M1 : Hasher le mot de passe avant insertion
+  const hashedPassword = await bcrypt.hash("demo", 12);
 
   // 1. Create Default Restaurant
   const restaurantId = "resto-99-default";
@@ -15,7 +19,7 @@ async function main() {
       nom: "Restaurant Démo SmartResto",
       email: "demo@smartresto.com",
       logoUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?q=80&w=200&h=200&auto=format&fit=crop",
-      adminPassword: "demo",
+      adminPassword: hashedPassword,
       active: true,
       plan: "PREMIUM",
       subscriptionEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

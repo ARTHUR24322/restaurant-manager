@@ -7,6 +7,7 @@ import { hashPassword, comparePassword } from "./auth";
 import { ensureManager } from "./auth-actions";
 import { writeFile } from "fs/promises";
 import { join } from "path";
+import { validateUploadFile } from "./upload-validator";
 
 /**
  * Mise à jour du mot de passe admin du restaurant
@@ -36,7 +37,9 @@ export async function updateRestaurantPassword(restaurantId: string, oldPassword
         if (restaurant.adminPassword.startsWith("$2a$") || restaurant.adminPassword.startsWith("$2b$")) {
             isOldValid = await comparePassword(oldPassword, restaurant.adminPassword);
         } else {
-            isOldValid = restaurant.adminPassword === oldPassword;
+            // SÉCURITÉ : Refus des mots de passe legacy non hashés — forcer une réinitialisation
+            console.error("[SECURITY] Legacy unhashed password detected for restaurant:", restaurantId);
+            return { success: false, error: "Votre mot de passe nécessite une mise à jour de sécurité. Contactez le support pour réinitialiser." };
         }
 
         if (!isOldValid) {
@@ -71,6 +74,12 @@ export async function updateRestaurantProfile(restaurantId: string, formData: Fo
         let logoUrl = formData.get("logoUrl") as string;
 
         if (logoFile && logoFile.size > 0 && typeof logoFile.arrayBuffer === 'function') {
+            // SÉCURITÉ M4 : Validation du fichier uploadé
+            const validation = validateUploadFile(logoFile);
+            if (!validation.valid) {
+              return { success: false, error: validation.error };
+            }
+
             const bytes = await logoFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
 

@@ -8,7 +8,7 @@ if (!JWT_SECRET && process.env.NODE_ENV === "production") {
 const secret = JWT_SECRET || "development-only-secret-key-123456789";
 const key = new TextEncoder().encode(secret);
 
-export async function encrypt(payload: Record<string, unknown>) {
+export async function encryptJWT(payload: Record<string, unknown>) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -16,7 +16,10 @@ export async function encrypt(payload: Record<string, unknown>) {
     .sign(key);
 }
 
-export async function decrypt(input: string): Promise<Record<string, unknown> | null> {
+// Alias pour compatibilité arrière
+export const encrypt = encryptJWT;
+
+export async function decryptJWT(input: string): Promise<Record<string, unknown> | null> {
     try {
         const { payload } = await jwtVerify(input, key, {
             algorithms: ["HS256"],
@@ -26,3 +29,6 @@ export async function decrypt(input: string): Promise<Record<string, unknown> | 
         return null;
     }
 }
+
+// Alias pour compatibilité arrière
+export const decrypt = decryptJWT;

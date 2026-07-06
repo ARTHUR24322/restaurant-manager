@@ -284,12 +284,21 @@ export default function DashboardPage({ searchParams }: { searchParams: { resto_
     
     const eventSource = new EventSource(`/api/events?restaurantId=${restaurantId}`);
     eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "new-order" || data.type === "status-updated") {
-        if (!data.restaurantId || data.restaurantId === restaurantId) {
-            fetchAllOrders(filter);
+      try {
+        const data = JSON.parse(event.data);
+        // SÉCURITÉ: Vérification STRICTE — on n'accepte que les events de CE restaurant
+        // On rejette les events sans restaurantId ou avec un restaurantId différent
+        if ((data.type === "new-order" || data.type === "status-updated") 
+            && data.restaurantId === restaurantId) {
+          fetchAllOrders(filter);
         }
+      } catch (e) {
+        console.error("SSE Message Error:", e);
       }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE Connection Error:", err);
     };
 
     const interval = setInterval(() => fetchAllOrders(filter), 10000); 

@@ -130,7 +130,7 @@ export async function sendOTPByEmail(
     await transporter.sendMail({
       from: `"SmartResto Security" <${user}>`,
       to: toEmail,
-      subject: `🔐 Votre code de connexion SmartResto : ${otp}`,
+      subject: `🔐 Votre code de connexion SmartResto`,
       html: htmlContent,
     });
 

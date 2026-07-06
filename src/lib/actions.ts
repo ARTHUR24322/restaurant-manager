@@ -11,6 +11,7 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 import { notifyOrderReady, sendDigitalReceipt, sendWhatsAppTemplate } from "./whatsapp-service";
 import { LoyaltyService } from "./loyalty-service";
+import { validateUploadFile } from "./upload-validator";
 
 // Utilitaire de diffusion Temps Réel (SSE)
 function broadcastToAll(type: string, data: Record<string, unknown> = {}) {
@@ -52,6 +53,12 @@ export async function addPlat(formData: FormData) {
     const imageFile = formData.get("imageFile") as File | null;
 
     if (imageFile && imageFile.size > 0 && typeof imageFile.arrayBuffer === 'function') {
+      // SÉCURITÉ M4 : Validation du fichier uploadé
+      const validation = validateUploadFile(imageFile);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
@@ -134,6 +141,12 @@ export async function updatePlat(formData: FormData) {
     };
 
     if (imageFile && imageFile.size > 0 && typeof imageFile.arrayBuffer === 'function') {
+      // SÉCURITÉ M4 : Validation du fichier uploadé
+      const validation = validateUploadFile(imageFile);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const extension = imageFile.name.split('.').pop() || 'png';
@@ -240,6 +253,22 @@ export async function getOrderDetails(orderId: string) {
 
 export async function updateOrderAddress(orderId: string, adresseLivraison: string) {
   try {
+    // SÉCURITÉ M3 : Vérifier que la commande existe et contrôler l'autorisation
+    const existing = await prisma.commande.findUnique({
+      where: { id: orderId },
+      select: { restaurantId: true, createdAt: true }
+    });
+    if (!existing) throw new Error("Commande introuvable");
+
+    // Autorisation : seules les commandes récentes (< 30 min) OU un manager authentifié peuvent modifier l'adresse
+    const ageMs = Date.now() - new Date(existing.createdAt).getTime();
+    const isRecentOrder = ageMs < 30 * 60 * 1000; // 30 minutes
+    
+    if (!isRecentOrder) {
+      // Si la commande est ancienne, seul un manager peut modifier
+      await ensureManager(existing.restaurantId);
+    }
+
     const order = await prisma.commande.update({
       where: { id: orderId },
       data: { adresseLivraison }
@@ -267,12 +296,22 @@ export async function createCommande(data: {
     const restaurantId = data.restaurantId;
     if (!restaurantId) throw new Error("Restaurant ID requis");
 
-    // 0. Récupérer le taux de change
-    let exchangeRate = 2800;
+    // SÉCURITÉ B2 : Vérifier le statut d'abonnement du restaurant
     const restoProfile = await prisma.restaurant.findUnique({
       where: { id: restaurantId },
-      select: { tauxChange: true }
+      select: { tauxChange: true, active: true, subscriptionEnd: true }
     });
+
+    if (!restoProfile || !restoProfile.active) {
+      return { success: false, error: "Ce restaurant est actuellement inactif. Impossible de passer une commande." };
+    }
+
+    if (restoProfile.subscriptionEnd && new Date(restoProfile.subscriptionEnd) < new Date()) {
+      return { success: false, error: "L'abonnement de ce restaurant a expiré. Impossible de passer une commande." };
+    }
+
+    // 0. Récupérer le taux de change
+    let exchangeRate = 2800;
     if (restoProfile?.tauxChange) exchangeRate = restoProfile.tauxChange;
     
     // 1. Recalculer le total côté serveur
@@ -426,6 +465,15 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
 
 export async function validateBoutiqueOrder(orderId: string) {
   try {
+    // SÉCURITÉ: Récupérer le restaurantId et vérifier l'autorisation
+    const existing = await prisma.commande.findUnique({
+      where: { id: orderId },
+      select: { restaurantId: true }
+    });
+    if (!existing) throw new Error("Commande introuvable");
+
+    await ensureManager(existing.restaurantId);
+
     const order = await prisma.commande.update({
       where: { id: orderId },
       data: { statut: "SUBMITTED" }
@@ -441,6 +489,15 @@ export async function validateBoutiqueOrder(orderId: string) {
 
 export async function assignLivreur(orderId: string, livreurName: string) {
   try {
+    // SÉCURITÉ: Récupérer le restaurantId et vérifier l'autorisation
+    const existing = await prisma.commande.findUnique({
+      where: { id: orderId },
+      select: { restaurantId: true }
+    });
+    if (!existing) throw new Error("Commande introuvable");
+
+    await ensureManager(existing.restaurantId);
+
     const order = await prisma.commande.update({
       where: { id: orderId },
       data: { statut: "DELIVERING", livreur: livreurName }
@@ -460,13 +517,22 @@ export async function markDelivered(orderId: string) {
     });
     if (!orderToUpdate) throw new Error("Commande introuvable");
 
+    // SÉCURITÉ: Vérifier que le manager est bien celui de ce restaurant
+    await ensureManager(orderToUpdate.restaurantId);
+
     const order = await prisma.commande.update({
       where: { id: orderId },
       data: { statut: "COMPLETED", paiementStatus: "PAID_CASH" }
     });
 
-    // Déduction des stocks
-    await deductStockForOrder(orderId, order.restaurantId);
+    // SÉCURITÉ B1 : Déduction des stocks uniquement si pas déjà fait
+    if (!orderToUpdate.stockDeducted) {
+      await deductStockForOrder(orderId, order.restaurantId);
+      await prisma.commande.update({
+        where: { id: orderId },
+        data: { stockDeducted: true }
+      });
+    }
 
     // Fidélité et Reçu WhatsApp
     const fullOrderForReceipt = await prisma.commande.findUnique({
@@ -538,7 +604,7 @@ export async function confirmOrderPayment(orderId: string, method: string) {
   try {
     const order = await prisma.commande.findUnique({
       where: { id: orderId },
-      select: { restaurantId: true, statut: true, id: true, totalUsd: true, client: true, phone: true, table: true }
+      select: { restaurantId: true, statut: true, id: true, totalUsd: true, client: true, phone: true, table: true, stockDeducted: true }
     });
 
     if (!order) throw new Error("Commande introuvable");
@@ -557,8 +623,14 @@ export async function confirmOrderPayment(orderId: string, method: string) {
       }
     });
 
-    // Déduction des stocks automatique en fonction de la recette
-    await deductStockForOrder(orderId, order.restaurantId);
+    // SÉCURITÉ B1 : Déduction des stocks uniquement si pas déjà fait
+    if (!order.stockDeducted) {
+      await deductStockForOrder(orderId, order.restaurantId);
+      await prisma.commande.update({
+        where: { id: orderId },
+        data: { stockDeducted: true }
+      });
+    }
     
     // Points de fidélité et Reçu WhatsApp (Uniquement PRO et PLATINUM)
     const fullOrderForReceipt = await prisma.commande.findUnique({
@@ -707,6 +779,21 @@ export async function getLoyaltyConfig(restaurantId: string) {
 
 export async function assignPhoneToOrder(orderId: string, phone: string, customerName?: string) {
   try {
+    // SÉCURITÉ M2 : Vérifier que la commande existe avant modification
+    const existingOrder = await prisma.commande.findUnique({
+      where: { id: orderId },
+      select: { id: true, createdAt: true }
+    });
+    if (!existingOrder) {
+      return { success: false, error: "Commande introuvable." };
+    }
+
+    // Autorisation : uniquement sur les commandes récentes (< 2h)
+    const ageMs = Date.now() - new Date(existingOrder.createdAt).getTime();
+    if (ageMs > 2 * 60 * 60 * 1000) {
+      return { success: false, error: "Cette commande est trop ancienne pour être modifiée." };
+    }
+
     const order = await prisma.commande.update({
       where: { id: orderId },
       data: { phone }

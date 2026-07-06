@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { getStreamsForRestaurant } from "@/lib/sse";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/jwt";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,33 @@ export async function GET(req: NextRequest) {
 
   if (!restaurantId) {
     return new Response("restaurantId is required", { status: 400 });
+  }
+
+  // SÉCURITÉ : Vérifier l'authentification avant d'autoriser la connexion SSE
+  const sessionCookie = cookies().get("session")?.value;
+  const adminCookie = cookies().get("admin_session")?.value;
+
+  let authorized = false;
+
+  if (adminCookie) {
+    const adminPayload = await decrypt(adminCookie);
+    if (adminPayload && adminPayload.role === "SUPER_ADMIN") {
+      authorized = true;
+    }
+  }
+
+  if (!authorized && sessionCookie) {
+    const payload = await decrypt(sessionCookie);
+    if (payload && payload.restoId === restaurantId) {
+      authorized = true;
+    }
+  }
+
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "Non autorisé" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const stream = new ReadableStream({

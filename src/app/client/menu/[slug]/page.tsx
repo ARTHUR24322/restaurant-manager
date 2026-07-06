@@ -54,9 +54,10 @@ export default async function ClientMenuSlugPage({
           <img 
             src={restaurant.logoUrl || "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2070"} 
             alt={restaurant.nom}
-            className="w-full h-full object-cover brightness-[0.4] scale-105"
+            className="w-full h-full object-cover scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+          {/* Gradient overlay on the bottom part to make text readable, completely clear at the top */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
         </div>
 
         <div className="relative z-10 w-full flex justify-between items-end">
@@ -82,20 +83,6 @@ export default async function ClientMenuSlugPage({
           </div>
         </div>
       </header>
-
-      {/* Search Bar */}
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input 
-              type="text" 
-              placeholder="Rechercher un plat..."
-              className="w-full bg-secondary/50 border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-primary outline-none transition-all"
-            />
-          </div>
-        </div>
-      </div>
 
       <main className="p-6 max-w-4xl mx-auto">
         <ClientMenuContent 

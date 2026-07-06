@@ -242,75 +242,160 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       </div>
 
       {/* Product List */}
-      <div className="grid grid-cols-2 gap-4">
-        {filteredPlats.map((plat) => {
-          const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
+      <div className="space-y-12">
+        {activeCategory === "ALL" 
+          ? categories.filter(c => c.id !== "ALL").map(cat => {
+              const catPlats = filteredPlats.filter(p => p.categorie === cat.id);
+              if (catPlats.length === 0) return null;
+              
+              return (
+                <div key={cat.id} className="space-y-4">
+                  <div className="flex items-center gap-2 px-1">
+                    <cat.icon className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-black uppercase tracking-widest text-white">{cat.label}</h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {catPlats.map((plat) => {
+                      const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
 
-          return (
-            <div 
-              key={plat.id} 
-              onClick={() => {
-                if (isOutOfStock) return;
-                const hasOptions = plat.options && plat.options.length > 0;
-                if (hasOptions) {
-                  setSelectedPlat(plat);
-                  setIsOptionsOpen(true);
-                } else {
-                  addItemToCart(plat);
-                }
-              }}
-              className={cn(
-                "group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col",
-                isOutOfStock && "opacity-50 grayscale"
-              )}
-            >
-              {/* Image Full Width Top */}
-              <div className="aspect-square w-full shrink-0 overflow-hidden relative">
-                 <img 
-                   src={plat.image} 
-                   alt={plat.nom}
-                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                 />
-                 
-                 {/* Heart Icon Overlay */}
-                 <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
-                    <Heart className="w-3.5 h-3.5" />
-                 </div>
+                      return (
+                        <div 
+                          key={plat.id} 
+                          onClick={() => {
+                            if (isOutOfStock) return;
+                            const hasOptions = plat.options && plat.options.length > 0;
+                            if (hasOptions) {
+                              setSelectedPlat(plat);
+                              setIsOptionsOpen(true);
+                            } else {
+                              addItemToCart(plat);
+                            }
+                          }}
+                          className={cn(
+                            "group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col",
+                            isOutOfStock && "opacity-50 grayscale"
+                          )}
+                        >
+                          {/* Image Full Width Top */}
+                          <div className="aspect-square w-full shrink-0 overflow-hidden relative">
+                             <img 
+                               src={plat.image} 
+                               alt={plat.nom}
+                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                             />
+                             
+                             {/* Heart Icon Overlay */}
+                             <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
+                                <Heart className="w-3.5 h-3.5" />
+                             </div>
 
-                 {isOutOfStock && (
-                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                     <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
-                   </div>
-                 )}
-              </div>
+                             {isOutOfStock && (
+                               <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                 <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
+                               </div>
+                             )}
+                          </div>
 
-              {/* Content */}
-              <div className="p-4 flex flex-col flex-1 gap-1">
-                  <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
-                    {plat.nom}
-                  </h3>
-                  
-                  <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
-                    {plat.description || "Une création culinaire unique par notre chef."}
-                  </p>
-                  
-                  <div className="flex items-center justify-between mt-auto pt-3">
-                    <span className="text-[13px] font-black text-primary">
-                      {formatPrice(plat)}
-                    </span>
-                    <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
-                      <Plus className="w-4 h-4" />
+                          {/* Content */}
+                          <div className="p-4 flex flex-col flex-1 gap-1">
+                              <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
+                                {plat.nom}
+                              </h3>
+                              
+                              <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
+                                {plat.description || "Une création culinaire unique par notre chef."}
+                              </p>
+                              
+                              <div className="flex items-center justify-between mt-auto pt-3">
+                                <span className="text-[13px] font-black text-primary">
+                                  {formatPrice(plat)}
+                                </span>
+                                <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
+                                  <Plus className="w-4 h-4" />
+                                </div>
+                              </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          : (
+            <div className="grid grid-cols-2 gap-4">
+              {filteredPlats.map((plat) => {
+                const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
+
+                return (
+                  <div 
+                    key={plat.id} 
+                    onClick={() => {
+                      if (isOutOfStock) return;
+                      const hasOptions = plat.options && plat.options.length > 0;
+                      if (hasOptions) {
+                        setSelectedPlat(plat);
+                        setIsOptionsOpen(true);
+                      } else {
+                        addItemToCart(plat);
+                      }
+                    }}
+                    className={cn(
+                      "group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col",
+                      isOutOfStock && "opacity-50 grayscale"
+                    )}
+                  >
+                    {/* Image Full Width Top */}
+                    <div className="aspect-square w-full shrink-0 overflow-hidden relative">
+                       <img 
+                         src={plat.image} 
+                         alt={plat.nom}
+                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                       />
+                       
+                       {/* Heart Icon Overlay */}
+                       <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
+                          <Heart className="w-3.5 h-3.5" />
+                       </div>
+
+                       {isOutOfStock && (
+                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                           <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
+                         </div>
+                       )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-4 flex flex-col flex-1 gap-1">
+                        <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
+                          {plat.nom}
+                        </h3>
+                        
+                        <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
+                          {plat.description || "Une création culinaire unique par notre chef."}
+                        </p>
+                        
+                        <div className="flex items-center justify-between mt-auto pt-3">
+                          <span className="text-[13px] font-black text-primary">
+                            {formatPrice(plat)}
+                          </span>
+                          <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
+                            <Plus className="w-4 h-4" />
+                          </div>
+                        </div>
                     </div>
                   </div>
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
+          )
+        }
+
 
         {filteredPlats.length === 0 && (
            <div className="py-20 text-center">
-             <Utensils className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-             <p className="text-xs font-black uppercase text-zinc-700 tracking-widest">Aucun résultat trouvé</p>
+             <Search className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
+             <p className="text-xs font-black uppercase text-zinc-700 tracking-widest">Aucun plat ne correspond à votre recherche</p>
            </div>
         )}
       </div>

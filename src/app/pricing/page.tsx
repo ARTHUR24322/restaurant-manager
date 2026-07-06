@@ -76,8 +76,8 @@ const plans: PricingPlan[] = [
     ],
     cta: "S'abonner",
     badge: "Meilleure offre",
-    gradient: "from-blue-600/20 to-indigo-700/20",
-    iconBg: "bg-blue-600",
+    gradient: "from-primary/10 to-primary/5",
+    iconBg: "bg-primary text-black",
   },
   {
     name: "Pro",
@@ -97,8 +97,8 @@ const plans: PricingPlan[] = [
     cta: "S'abonner",
     popular: true,
     badge: "Populaire",
-    gradient: "from-violet-600/20 to-purple-800/20",
-    iconBg: "bg-violet-600",
+    gradient: "from-primary/20 to-primary/5",
+    iconBg: "bg-primary text-black",
   },
   {
     name: "Platinum",
@@ -116,8 +116,8 @@ const plans: PricingPlan[] = [
     ],
     cta: "S'abonner",
     badge: "Enterprise",
-    gradient: "from-emerald-600/20 to-teal-800/20",
-    iconBg: "bg-emerald-600",
+    gradient: "from-zinc-700/50 to-zinc-900/50",
+    iconBg: "bg-zinc-700 text-white",
   },
 ];
 
@@ -152,11 +152,11 @@ function NavBar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-zinc-950/70 backdrop-blur-xl border-b border-white/5">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 bg-gradient-to-br from-violet-600 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-shadow">
+          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-shadow">
             <UtensilsCrossed className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-black tracking-tight text-white">
-            Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-blue-400">Resto</span>
+            Smart<span className="text-primary">Resto</span>
           </span>
         </Link>
 
@@ -186,7 +186,7 @@ function NavBar() {
           </Link>
           <a
             href="#pricing"
-            className="px-5 py-2.5 text-sm font-bold bg-gradient-to-r from-violet-600 to-blue-500 text-white rounded-xl hover:shadow-lg hover:shadow-violet-500/25 transition-all active:scale-95"
+            className="px-5 py-2.5 text-sm font-bold bg-primary text-white rounded-xl hover:shadow-lg hover:shadow-violet-500/25 transition-all active:scale-95"
           >
             Démarrer
           </a>
@@ -225,7 +225,7 @@ function NavBar() {
             <Link href="/manager/login" className="flex-1 text-center py-3 text-sm font-bold border border-white/10 rounded-xl text-zinc-300 hover:text-white hover:bg-white/5 transition-all">
               Connexion
             </Link>
-            <a href="#pricing" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-3 text-sm font-bold bg-gradient-to-r from-violet-600 to-blue-500 text-white rounded-xl">
+            <a href="#pricing" onClick={() => setMobileOpen(false)} className="flex-1 text-center py-3 text-sm font-bold bg-primary text-white rounded-xl">
               Démarrer
             </a>
           </div>
@@ -251,7 +251,7 @@ function BillingToggle({ cycle, setCycle }: { cycle: BillingCycle; setCycle: (c:
           className={`
             relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300
             ${cycle === opt.key
-              ? "bg-gradient-to-r from-violet-600 to-blue-500 text-white shadow-lg shadow-violet-500/20"
+              ? "bg-primary text-white shadow-lg shadow-violet-500/20"
               : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
             }
           `}
@@ -291,14 +291,14 @@ function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: B
       className={`
         relative group flex flex-col rounded-[2rem] border overflow-hidden transition-all duration-200
         ${plan.popular
-          ? "border-violet-500/40 bg-gradient-to-b from-violet-600/10 via-zinc-900/80 to-zinc-950 scale-[1.02] shadow-2xl shadow-violet-500/10 hover:shadow-violet-500/20"
+          ? "border-primary/40 bg-gradient-to-b from-primary/10 via-zinc-900/80 to-zinc-950 scale-[1.02] shadow-2xl shadow-primary/10 hover:shadow-primary/20"
           : "border-white/[0.06] bg-gradient-to-b " + plan.gradient + " hover:border-white/10 hover:shadow-xl"
         }
         hover:-translate-y-2
       `}
     >
       {plan.popular && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-blue-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
       )}
 
       <div className="p-8 flex-1 flex flex-col">
@@ -318,8 +318,8 @@ function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: B
             <span className={`
               text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full
               ${plan.popular
-                ? "bg-violet-500 text-white shadow-lg shadow-violet-500/30"
-                : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                ? "bg-primary text-black shadow-lg shadow-primary/30"
+                : "bg-blue-500/20 text-primary border border-blue-500/30"
               }
             `}>
               {plan.badge}
@@ -364,7 +364,7 @@ function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: B
           className={`
             w-full py-4 rounded-2xl font-bold text-sm tracking-wide transition-all duration-300 active:scale-[0.97] flex items-center justify-center gap-2
             ${plan.popular
-              ? "bg-gradient-to-r from-violet-600 to-blue-500 text-white shadow-xl shadow-violet-500/20 hover:shadow-violet-500/40 hover:brightness-110"
+              ? "bg-primary text-white shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:brightness-110"
               : "bg-white/10 text-white border border-white/10 hover:bg-white/15 hover:border-white/20"
             }
           `}
@@ -445,12 +445,12 @@ function SubscriptionModal({
             Votre demande d'abonnement <span className="font-bold text-white">{plan.name}</span> a été transmise à notre équipe.
           </p>
           <p className="text-zinc-500 text-xs mb-8">
-            Nous vous contacterons sous 24h à l'adresse <span className="text-violet-400">{formData.email}</span> ou
-            au <span className="text-violet-400">{formData.telephone}</span> pour finaliser votre inscription.
+            Nous vous contacterons sous 24h à l'adresse <span className="text-primary">{formData.email}</span> ou
+            au <span className="text-primary">{formData.telephone}</span> pour finaliser votre inscription.
           </p>
           <button
             onClick={onClose}
-            className="px-8 py-3 bg-gradient-to-r from-violet-600 to-blue-500 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95"
+            className="px-8 py-3 bg-primary text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95"
           >
             Compris !
           </button>
@@ -492,7 +492,7 @@ function SubscriptionModal({
                   required
                   value={formData.nomRestaurant}
                   onChange={(e) => setFormData({ ...formData, nomRestaurant: e.target.value })}
-                  className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-violet-500/50 outline-none transition-all placeholder:text-zinc-600"
+                  className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-primary/50 outline-none transition-all placeholder:text-zinc-600"
                   placeholder="ex: Le Grand Buffet"
                 />
               </div>
@@ -506,7 +506,7 @@ function SubscriptionModal({
                   required
                   value={formData.nomProprietaire}
                   onChange={(e) => setFormData({ ...formData, nomProprietaire: e.target.value })}
-                  className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-violet-500/50 outline-none transition-all placeholder:text-zinc-600"
+                  className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-primary/50 outline-none transition-all placeholder:text-zinc-600"
                   placeholder="ex: Jean Mukendi"
                 />
               </div>
@@ -522,7 +522,7 @@ function SubscriptionModal({
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-violet-500/50 outline-none transition-all placeholder:text-zinc-600"
+                    className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-primary/50 outline-none transition-all placeholder:text-zinc-600"
                     placeholder="email@example.com"
                   />
                 </div>
@@ -536,7 +536,7 @@ function SubscriptionModal({
                     required
                     value={formData.telephone}
                     onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                    className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-violet-500/50 outline-none transition-all placeholder:text-zinc-600"
+                    className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-primary/50 outline-none transition-all placeholder:text-zinc-600"
                     placeholder="+243 99 000 0000"
                   />
                 </div>
@@ -550,7 +550,7 @@ function SubscriptionModal({
                 <select
                   value={formData.ville}
                   onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
-                  className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-violet-500/50 outline-none transition-all appearance-none"
+                  className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white focus:ring-2 focus:ring-primary/50 outline-none transition-all appearance-none"
                 >
                   <option value="Lubumbashi">Lubumbashi</option>
                   <option value="Kinshasa">Kinshasa</option>
@@ -577,7 +577,7 @@ function SubscriptionModal({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-violet-600 to-blue-500 text-white font-bold rounded-2xl shadow-xl shadow-violet-500/20 hover:shadow-violet-500/40 transition-all active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2 text-sm uppercase tracking-widest"
+              className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.97] disabled:opacity-60 flex items-center justify-center gap-2 text-sm uppercase tracking-widest"
             >
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Envoi en cours...</>
@@ -630,7 +630,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
       >
         <span className="text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors pr-4">{q}</span>
         <ChevronDown
-          className={`w-5 h-5 text-zinc-500 flex-shrink-0 transition-transform duration-300 ${open ? "rotate-180 text-violet-400" : ""}`}
+          className={`w-5 h-5 text-zinc-500 flex-shrink-0 transition-transform duration-300 ${open ? "rotate-180 text-primary" : ""}`}
         />
       </button>
       <div
@@ -663,31 +663,69 @@ export default function PricingPage() {
       {/* ─── Hero ─── */}
       <section className="relative pt-32 pb-16 px-6">
         {/* Background decorations */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-violet-600/10 via-blue-600/5 to-transparent rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-primary/10 via-primary/5 to-transparent rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute top-32 left-[10%] w-2 h-2 bg-violet-400 rounded-full animate-pulse" />
         <div className="absolute top-48 right-[15%] w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse delay-300" />
         <div className="absolute top-64 left-[20%] w-1 h-1 bg-emerald-400 rounded-full animate-pulse delay-700" />
 
-        <div className="relative z-10 max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-bold uppercase tracking-widest mb-6">
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary uppercase text-xs font-bold uppercase tracking-widest mb-6">
             <Sparkles className="w-3.5 h-3.5" />
-            Pricing transparent
+            La plateforme n°1 pour les restaurateurs
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.1] mb-5">
-            Choisissez le plan
+            Gérez votre restaurant
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 via-blue-400 to-cyan-400">
-              qui vous convient
+            <span className="text-primary">
+              en toute simplicité
             </span>
           </h1>
-          <p className="text-zinc-400 text-lg max-w-xl mx-auto leading-relaxed">
-            Des solutions simples et puissantes pour digitaliser votre restaurant et booster votre activité.
+          <p className="text-zinc-400 text-lg max-w-2xl mx-auto leading-relaxed">
+            Rendez vos clients fiers de vos services grâce à une solution de gestion ultra-complète, du menu digitalisé à la cuisine.
           </p>
         </div>
       </section>
 
+      {/* ─── Features Grid ─── */}
+      <section id="features" className="px-6 py-12 md:py-24">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-black tracking-tight mb-3">
+              Tout ce dont vous avez besoin
+            </h2>
+            <p className="text-zinc-500 text-sm max-w-lg mx-auto">
+              SmartResto centralise la gestion de votre restaurant en un seul outil puissant.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: <QrCode className="w-5 h-5" />, title: "QR Code & Menu", desc: "Menu digital avec scan de table." },
+              { icon: <BarChart3 className="w-5 h-5" />, title: "Dashboard Temps Réel", desc: "Statistiques et CA en direct." },
+              { icon: <Printer className="w-5 h-5" />, title: "Impression Thermique", desc: "Tickets cuisine automatisés." },
+              { icon: <Users className="w-5 h-5" />, title: "Multi-Utilisateurs", desc: "Caisse, Cuisine, Gérant." },
+              { icon: <Package className="w-5 h-5" />, title: "Gestion de Stock", desc: "Suivi des produits en temps réel." },
+              { icon: <Clock className="w-5 h-5" />, title: "Commandes SSE", desc: "Flux en temps réel instantané." },
+              { icon: <Globe className="w-5 h-5" />, title: "Multi-Restaurant", desc: "Gérez plusieurs établissements." },
+              { icon: <HeadphonesIcon className="w-5 h-5" />, title: "Support 24/7", desc: "Assistance dédiée et réactive." },
+            ].map((feat, i) => (
+              <div
+                key={i}
+                className="group bg-zinc-900/40 border border-white/[0.04] p-5 rounded-2xl hover:bg-zinc-900/80 hover:border-white/10 transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-4 group-hover:bg-primary/20 transition-colors">
+                  {feat.icon}
+                </div>
+                <h4 className="text-sm font-bold text-white mb-1">{feat.title}</h4>
+                <p className="text-xs text-zinc-500 leading-relaxed">{feat.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── Pricing Cards ─── */}
-      <section id="pricing" className="relative px-6 pb-24">
+      <section id="pricing" className="relative px-6 py-24 border-t border-white/5">
         <div className="max-w-5xl mx-auto">
           {/* Toggle */}
           <div className="flex flex-col items-center gap-8 mb-16">
@@ -695,16 +733,16 @@ export default function PricingPage() {
             
             <Link 
               href="/manager/register"
-              className="group relative flex items-center gap-3 px-8 py-5 bg-white/5 border border-white/10 rounded-[2rem] hover:bg-white/10 hover:border-violet-500/30 transition-all duration-300 shadow-xl"
+              className="group relative flex items-center gap-3 px-8 py-5 bg-white/5 border border-white/10 rounded-[2rem] hover:bg-white/10 hover:border-primary/30 transition-all duration-300 shadow-xl"
             >
-              <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-600/20 group-hover:scale-110 transition-transform">
+              <div className="w-10 h-10 bg-primary text-black rounded-xl flex items-center justify-center shadow-lg shadow-violet-600/20 group-hover:scale-110 transition-transform">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div className="text-left">
                 <p className="text-xs font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Offre de Lancement</p>
                 <h4 className="text-lg font-black text-white italic tracking-tighter uppercase leading-none">Creez et Gérez votre établissement gratuitement</h4>
               </div>
-              <ArrowRight className="w-5 h-5 text-violet-400 group-hover:translate-x-1 transition-transform ml-4" />
+              <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform ml-4" />
               
               <div className="absolute -top-3 -right-3 bg-emerald-500 text-black text-[9px] font-black px-3 py-1 rounded-full shadow-lg">ESSAI 14 JOURS</div>
             </Link>
@@ -737,44 +775,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ─── Features Grid ─── */}
-      <section id="features" className="px-6 py-24 border-t border-white/5">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-black tracking-tight mb-3">
-              Tout ce dont vous avez besoin
-            </h2>
-            <p className="text-zinc-500 text-sm max-w-lg mx-auto">
-              SmartResto centralise la gestion de votre restaurant en un seul outil puissant.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { icon: <QrCode className="w-5 h-5" />, title: "QR Code & Menu", desc: "Menu digital avec scan de table." },
-              { icon: <BarChart3 className="w-5 h-5" />, title: "Dashboard Temps Réel", desc: "Statistiques et CA en direct." },
-              { icon: <Printer className="w-5 h-5" />, title: "Impression Thermique", desc: "Tickets cuisine automatisés." },
-              { icon: <Users className="w-5 h-5" />, title: "Multi-Utilisateurs", desc: "Caisse, Cuisine, Gérant." },
-              { icon: <Package className="w-5 h-5" />, title: "Gestion de Stock", desc: "Suivi des produits en temps réel." },
-              { icon: <Clock className="w-5 h-5" />, title: "Commandes SSE", desc: "Flux en temps réel instantané." },
-              { icon: <Globe className="w-5 h-5" />, title: "Multi-Restaurant", desc: "Gérez plusieurs établissements." },
-              { icon: <HeadphonesIcon className="w-5 h-5" />, title: "Support 24/7", desc: "Assistance dédiée et réactive." },
-            ].map((feat, i) => (
-              <div
-                key={i}
-                className="group bg-zinc-900/40 border border-white/[0.04] p-5 rounded-2xl hover:bg-zinc-900/80 hover:border-white/10 transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-4 group-hover:bg-violet-500/20 transition-colors">
-                  {feat.icon}
-                </div>
-                <h4 className="text-sm font-bold text-white mb-1">{feat.title}</h4>
-                <p className="text-xs text-zinc-500 leading-relaxed">{feat.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ─── FAQ ─── */}
       <section className="px-6 py-24 border-t border-white/5">
         <div className="max-w-2xl mx-auto">
@@ -792,8 +792,8 @@ export default function PricingPage() {
 
       {/* ─── CTA Banner ─── */}
       <section className="px-6 py-24">
-        <div className="max-w-4xl mx-auto relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-violet-600/20 via-blue-600/10 to-zinc-900 border border-violet-500/20 p-12 md:p-16 text-center">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-violet-500/20 blur-[100px] rounded-full pointer-events-none" />
+        <div className="max-w-4xl mx-auto relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary/10 via-primary/5 to-zinc-900 border border-primary/20 p-12 md:p-16 text-center">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
           <div className="relative z-10">
             <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-4">
               Prêt à transformer votre restaurant ?
@@ -804,7 +804,7 @@ export default function PricingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
                 href="#pricing"
-                className="px-8 py-4 bg-gradient-to-r from-violet-600 to-blue-500 text-white font-bold rounded-2xl shadow-xl shadow-violet-500/20 hover:shadow-violet-500/40 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 Commencer maintenant <ArrowRight className="w-5 h-5" />
               </a>
@@ -825,11 +825,11 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-blue-500 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                   <UtensilsCrossed className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-lg font-black text-white">
-                  Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-blue-400">Resto</span>
+                  Smart<span className="text-primary">Resto</span>
                 </span>
               </div>
               <p className="text-xs text-zinc-500 leading-relaxed">

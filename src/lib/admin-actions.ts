@@ -10,6 +10,7 @@ import { hashPassword } from "./auth";
 import { ensureSuperAdmin } from "./auth-actions";
 import { PLAN_PRICES } from "./constants";
 import { createNotification } from "./notification-actions";
+import { validateUploadFile } from "./upload-validator";
 
 /**
  * Action Super-Admin : Création d'un nouveau restaurant
@@ -29,6 +30,12 @@ export async function createRestaurant(formData: FormData) {
     let finalLogoUrl = formData.get("logoUrl") as string || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200";
 
     if (logoFile && logoFile.size > 0) {
+      // SÉCURITÉ M4 : Validation du fichier uploadé
+      const validation = validateUploadFile(logoFile);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
       console.log("[SaaS-Server] Détection d'un fichier logo local...");
       const bytes = await logoFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
@@ -169,6 +176,12 @@ export async function updateRestaurant(id: string, formData: FormData) {
         let finalLogoUrl = formData.get("logoUrl") as string;
 
         if (logoFile && logoFile.size > 0) {
+            // SÉCURITÉ M4 : Validation du fichier uploadé
+            const validation = validateUploadFile(logoFile);
+            if (!validation.valid) {
+              return { success: false, error: validation.error };
+            }
+
             const bytes = await logoFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
             const fileName = `${Date.now()}-${logoFile.name.replaceAll(" ", "_")}`;

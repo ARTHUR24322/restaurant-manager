@@ -161,6 +161,7 @@ model Commande {
   phone          String?
   adresseLivraison String?
   livreur        String?
+  stockDeducted  Boolean        @default(false)
   restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   items          CommandeItem[]
 
