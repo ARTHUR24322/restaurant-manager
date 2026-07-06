@@ -5,6 +5,7 @@ import { ShoppingBag } from "lucide-react";
 import { BoutiquePlatCard } from "@/components/client/BoutiquePlatCard";
 import { BoutiqueCart } from "@/components/client/BoutiqueCart";
 import { BoutiqueWelcomeScreen } from "@/components/client/BoutiqueWelcomeScreen";
+import { BoutiqueMenuContent } from "@/components/client/BoutiqueMenuContent";
 import { type Plat } from "@/types";
 
 export default async function BoutiqueClientPage({ params }: { params: { restoId: string } }) {
@@ -62,11 +63,7 @@ export default async function BoutiqueClientPage({ params }: { params: { restoId
                         <p className="text-muted-foreground">Cette boutique n&apos;a pas encore ajouté d&apos;articles.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {plats.map(plat => (
-                            <BoutiquePlatCard key={plat.id} plat={plat as unknown as Plat} exchangeRate={restaurant.tauxChange} />
-                        ))}
-                    </div>
+                    <BoutiqueMenuContent initialPlats={plats as unknown as Plat[]} exchangeRate={restaurant.tauxChange} />
                 )}
             </div>
 
