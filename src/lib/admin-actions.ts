@@ -5,6 +5,7 @@ import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
 import { writeFile } from "fs/promises";
 import { join } from "path";
+import { uploadImageToSupabase } from "./supabase-storage";
 import { slugify } from "./utils/slugify";
 import { hashPassword } from "./auth";
 import { ensureSuperAdmin } from "./auth-actions";
@@ -40,11 +41,7 @@ export async function createRestaurant(formData: FormData) {
       const bytes = await logoFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
       
-      const fileName = `${Date.now()}-${logoFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-      const publicPath = join(process.cwd(), "public", "uploads", fileName);
-      
-      await writeFile(publicPath, buffer);
-      finalLogoUrl = `/uploads/${fileName}`; 
+      finalLogoUrl = await uploadImageToSupabase(buffer, logoFile.name, "logos");
       console.log("[SaaS-Server] Fichier sauvegardé vers:", finalLogoUrl);
     }
 
@@ -184,10 +181,8 @@ export async function updateRestaurant(id: string, formData: FormData) {
 
             const bytes = await logoFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
-            const fileName = `${Date.now()}-${logoFile.name.replaceAll(" ", "_")}`;
-            const publicPath = join(process.cwd(), "public", "uploads", fileName);
-            await writeFile(publicPath, buffer);
-            finalLogoUrl = `/uploads/${fileName}`;
+            
+            finalLogoUrl = await uploadImageToSupabase(buffer, logoFile.name, "logos");
         }
 
         const ville = formData.get("ville") as string;

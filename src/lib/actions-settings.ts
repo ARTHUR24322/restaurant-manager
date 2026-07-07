@@ -7,6 +7,7 @@ import { hashPassword, comparePassword } from "./auth";
 import { ensureManager } from "./auth-actions";
 import { writeFile } from "fs/promises";
 import { join } from "path";
+import { uploadImageToSupabase } from "./supabase-storage";
 import { validateUploadFile } from "./upload-validator";
 
 /**
@@ -83,12 +84,7 @@ export async function updateRestaurantProfile(restaurantId: string, formData: Fo
             const bytes = await logoFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
 
-            const extension = logoFile.name.split('.').pop() || 'png';
-            const fileName = `logo-${restaurantId}-${Date.now()}.${extension}`;
-            const uploadPath = join(process.cwd(), "public", "uploads", fileName);
-            
-            await writeFile(uploadPath, buffer);
-            logoUrl = `/uploads/${fileName}`;
+            logoUrl = await uploadImageToSupabase(buffer, logoFile.name, "logos");
         }
 
         if (!nom) {

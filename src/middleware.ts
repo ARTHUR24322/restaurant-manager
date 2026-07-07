@@ -15,7 +15,7 @@ function cleanupRateLimitMap() {
   lastCleanup = now;
   
   const windowMs = 60 * 1000;
-  for (const [ip, record] of rateLimitMap.entries()) {
+  for (const [ip, record] of Array.from(rateLimitMap.entries())) {
     if (now - record.lastRequest > windowMs * 2) {
       rateLimitMap.delete(ip);
     }

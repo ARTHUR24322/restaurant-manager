@@ -9,6 +9,7 @@ import { getCachedPlats, getCachedRestaurant } from "./cache";
 import { deductStockForOrder } from "./inventory-actions";
 import { writeFile } from "fs/promises";
 import { join } from "path";
+import { uploadImageToSupabase } from "./supabase-storage";
 import { notifyOrderReady, sendDigitalReceipt, sendWhatsAppTemplate } from "./whatsapp-service";
 import { LoyaltyService } from "./loyalty-service";
 import { validateUploadFile } from "./upload-validator";
@@ -62,12 +63,7 @@ export async function addPlat(formData: FormData) {
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
-      const extension = imageFile.name.split('.').pop() || 'png';
-      const fileName = `plat-${restaurantId}-${Date.now()}.${extension}`;
-      const uploadPath = join(process.cwd(), "public", "uploads", fileName);
-      
-      await writeFile(uploadPath, buffer);
-      image = `/uploads/${fileName}`;
+      image = await uploadImageToSupabase(buffer, imageFile.name, "plats");
     }
 
     if (!nom || isNaN(prixUsd)) {
@@ -149,11 +145,7 @@ export async function updatePlat(formData: FormData) {
 
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const extension = imageFile.name.split('.').pop() || 'png';
-      const fileName = `plat-${restaurantId}-${Date.now()}.${extension}`;
-      const uploadPath = join(process.cwd(), "public", "uploads", fileName);
-      await writeFile(uploadPath, buffer);
-      data.image = `/uploads/${fileName}`;
+      data.image = await uploadImageToSupabase(buffer, imageFile.name, "plats");
     } else if (image) {
       data.image = image;
     }

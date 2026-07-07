@@ -2,7 +2,7 @@
 import { getPlats } from "@/lib/actions";
 import { getRestaurantBySlug } from "@/lib/admin-actions";
 import { prisma } from "@/lib/prisma";
-import { Search, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { CartFloat } from "@/components/client/CartFloat";
 import ClientMenuContent from "../ClientMenuContent";
 import { recordVisit } from "@/lib/analytics-actions";
