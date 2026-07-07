@@ -380,20 +380,19 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                                   <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-zinc-900 border border-zinc-700 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                                       <Upload className="w-5 h-5 text-primary" />
                                   </div>
-                                  
-                                  {/* Hidden File Input */}
-                                  <input 
-                                    type="file"
-                                    name="logoFile"
-                                    ref={fileInputRef}
-                                    onChange={handleFileChange}
-                                    accept="image/*"
-                                    className="hidden"
-                                  />
                               </div>
                           </div>
 
                           <form action={handleUpdateProfile} className="space-y-6">
+                              {/* Hidden File Input (moved inside form so it submits) */}
+                              <input 
+                                type="file"
+                                name="logoFile"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/*"
+                                className="hidden"
+                              />
                               <div className="relative p-6 bg-primary/5 border border-primary/10 rounded-3xl mb-4 group overflow-hidden">
                                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                     <Globe className="w-12 h-12" />
