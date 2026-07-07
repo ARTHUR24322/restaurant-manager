@@ -13,16 +13,14 @@ import { PlateOptionsModal } from "@/components/client/PlateOptionsModal";
 import { getRecentCommandes } from "@/lib/actions";
 import { toast } from "sonner";
 import { useCurrencyStore } from "@/components/client/CurrencyBadge";
-import { LoyaltyQuickTrack } from "@/components/client/LoyaltyQuickTrack";
 
 interface Props {
   initialPlats: Plat[];
   tableNumber: string;
   restaurantId: string;
-  isLoyaltyActive: boolean;
 }
 
-export default function ClientMenuContent({ initialPlats, tableNumber, restaurantId, isLoyaltyActive }: Props) {
+export default function ClientMenuContent({ initialPlats, tableNumber, restaurantId }: Props) {
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [selectedPlat, setSelectedPlat] = useState<Plat | null>(null);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -198,31 +196,29 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
         </div>
       )}
 
-      {isLoyaltyActive && (
-        <div className="mb-8">
-           <LoyaltyQuickTrack restaurantId={restaurantId} />
-        </div>
-      )}
-
-      {/* Barre de Recherche & Catégories Sticky */}
-      <div className="sticky top-4 z-40 space-y-4 mb-10">
-        {/* Search */}
-        <div className="relative group">
-           <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity" />
-           <div className="relative bg-zinc-950/80 backdrop-blur-2xl border border-white/5 rounded-2xl flex items-center h-14 px-5 shadow-2xl focus-within:border-primary/30 transition-all">
-              <Search className="w-5 h-5 text-zinc-500 group-focus-within:text-primary transition-colors" />
+      {/* Search Bar Refondue */}
+      <div className="sticky top-4 z-40 mb-10 transition-all duration-300">
+        <div className="relative group mx-auto">
+           <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full opacity-50 group-focus-within:opacity-100 transition-opacity" />
+           <div className="relative bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-2xl flex items-center h-16 px-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] focus-within:border-primary/50 transition-all">
+              <Search className="w-6 h-6 text-zinc-400 group-focus-within:text-primary transition-colors" />
               <input 
                 type="text" 
-                placeholder="Rechercher un plat..."
+                placeholder="Cherchez un plat, une boisson..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-white placeholder:text-zinc-600 ml-3"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-bold text-white placeholder:text-zinc-500 ml-4 placeholder:italic"
               />
+              {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="text-xs font-black text-zinc-500 hover:text-white uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-full">
+                      Effacer
+                  </button>
+              )}
            </div>
         </div>
 
         {/* Categories Horizontal Scroll */}
-        <div className="flex gap-2 overflow-x-auto pb-4 -mx-6 px-6 no-scrollbar snap-x">
+        <div className="flex gap-3 overflow-x-auto mt-6 pb-4 -mx-6 px-6 no-scrollbar snap-x">
           {categories.map((cat) => (
             <button
               key={cat.id}
@@ -249,10 +245,15 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
               if (catPlats.length === 0) return null;
               
               return (
-                <div key={cat.id} className="space-y-4">
-                  <div className="flex items-center gap-2 px-1">
-                    <cat.icon className="w-5 h-5 text-primary" />
-                    <h2 className="text-xl font-black uppercase tracking-widest text-white">{cat.label}</h2>
+                <div key={cat.id} className="space-y-6 pt-4">
+                  <div className="flex items-center gap-4 px-2 border-b border-white/10 pb-4">
+                    <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.1)]">
+                        <cat.icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-black uppercase tracking-widest text-white italic leading-none">{cat.label}</h2>
+                        <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-1.5">{catPlats.length} Produits</p>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     {catPlats.map((plat) => {

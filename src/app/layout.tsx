@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -18,7 +18,6 @@ export const metadata: Metadata = {
   title: "SmartResto",
   description: "Plateforme intelligente de gestion de restaurant",
   manifest: "/manifest.json",
-  themeColor: "#4f46e5",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -28,6 +27,10 @@ export const metadata: Metadata = {
     icon: "/logo.svg",
     apple: "/logo.svg",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4f46e5",
 };
 
 import { ThemeProvider } from "@/components/ThemeProvider";

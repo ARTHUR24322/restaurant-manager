@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 
 import { ClientWelcomeScreen } from "@/components/client/ClientWelcomeScreen";
 import { PromoGiftModal } from "@/components/client/PromoGiftModal";
+import { LoyaltyQuickTrack } from "@/components/client/LoyaltyQuickTrack";
 
 export const dynamic = "force-dynamic";
 
@@ -50,14 +51,16 @@ export default async function ClientMenuSlugPage({
     <div className="min-h-screen bg-background pb-32">
       {/* Header Premium */}
       <header className="relative h-64 flex items-end p-6 overflow-hidden">
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 bg-background">
           <img 
             src={restaurant.logoUrl || "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2070"} 
             alt={restaurant.nom}
             className="w-full h-full object-cover scale-105"
+            style={{ 
+                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
+                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)'
+            }} 
           />
-          {/* Gradient overlay on the bottom part to make text readable, completely clear at the top */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
         </div>
 
         <div className="relative z-10 w-full flex justify-between items-end">
@@ -73,12 +76,17 @@ export default async function ClientMenuSlugPage({
                 1$ = {restaurant.tauxChange} FC
               </div>
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-white italic">
-               Bonjour, <span className="text-primary">{clientName}</span>
+            <h1 className="text-4xl font-extrabold tracking-tight text-white italic flex items-center gap-3">
+               <span>Bonjour, <span className="text-primary">{clientName}</span></span>
             </h1>
-            <p className="text-zinc-400 mt-1 font-medium">Prêt pour une expérience culinaire unique ?</p>
+            <p className="text-zinc-400 mt-1 mb-3 font-medium">Prêt pour une expérience culinaire unique ?</p>
+            {isLoyaltyActive && (
+               <div className="w-64 max-w-full">
+                  <LoyaltyQuickTrack restaurantId={restaurantId} />
+               </div>
+            )}
           </div>
-          <div>
+          <div className="flex flex-col items-end gap-3">
             <PromoGiftModal restaurantId={restaurantId} isLoyaltyActive={isLoyaltyActive} />
           </div>
         </div>
@@ -89,7 +97,6 @@ export default async function ClientMenuSlugPage({
           initialPlats={JSON.parse(JSON.stringify(plats))} 
           tableNumber={table}
           restaurantId={restaurantId}
-          isLoyaltyActive={isLoyaltyActive}
         />
       </main>
 

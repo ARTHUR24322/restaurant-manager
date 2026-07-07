@@ -99,11 +99,12 @@ export async function updateRestaurantProfile(restaurantId: string, formData: Fo
         });
 
         revalidatePath("/manager/dashboard");
+        revalidatePath("/manager/dashboard");
         revalidatePath("/client/menu");
         return { success: true };
-    } catch (e) {
+    } catch (e: any) {
         console.error(e);
-        return { success: false, error: "Erreur lors de la mise à jour du profil." };
+        return { success: false, error: "Erreur technique: " + (e.message || String(e)) };
     }
 }
 /**

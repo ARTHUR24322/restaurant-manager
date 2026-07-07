@@ -89,7 +89,6 @@ export default async function ClientMenuPage({
           initialPlats={JSON.parse(JSON.stringify(plats))} 
           tableNumber={table}
           restaurantId={restaurantId}
-          isLoyaltyActive={isLoyaltyActive}
         />
       </main>
 
