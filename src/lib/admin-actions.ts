@@ -3,8 +3,7 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
-import { writeFile } from "fs/promises";
-import { join } from "path";
+
 import { uploadImageToSupabase } from "./supabase-storage";
 import { slugify } from "./utils/slugify";
 import { hashPassword } from "./auth";

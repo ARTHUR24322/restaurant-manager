@@ -5,8 +5,7 @@ import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
 import { hashPassword, comparePassword } from "./auth";
 import { ensureManager } from "./auth-actions";
-import { writeFile } from "fs/promises";
-import { join } from "path";
+
 import { uploadImageToSupabase } from "./supabase-storage";
 import { validateUploadFile } from "./upload-validator";
 

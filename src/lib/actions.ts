@@ -7,8 +7,7 @@ import { broadcastEvent } from "@/lib/sse";
 import { ensureManager } from "./auth-actions";
 import { getCachedPlats, getCachedRestaurant } from "./cache";
 import { deductStockForOrder } from "./inventory-actions";
-import { writeFile } from "fs/promises";
-import { join } from "path";
+
 import { uploadImageToSupabase } from "./supabase-storage";
 import { notifyOrderReady, sendDigitalReceipt, sendWhatsAppTemplate } from "./whatsapp-service";
 import { LoyaltyService } from "./loyalty-service";
