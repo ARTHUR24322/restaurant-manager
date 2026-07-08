@@ -1,8 +1,8 @@
 /* eslint-disable react/no-unescaped-entities, @next/next/no-img-element */
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ShoppingBag } from "lucide-react";
-import { BoutiquePlatCard } from "@/components/client/BoutiquePlatCard";
+import { ShoppingBag, Store } from "lucide-react";
+import { BoutiqueMenuContent } from "@/components/client/BoutiqueMenuContent";
 import { BoutiqueCart } from "@/components/client/BoutiqueCart";
 import { BoutiqueWelcomeScreen } from "@/components/client/BoutiqueWelcomeScreen";
 import { type Plat } from "@/types";
@@ -40,21 +40,66 @@ export default async function BoutiqueClientPage({ params }: { params: { restoId
 
     // The shop content (shown inside the welcome screen after registration)
     const shopContent = (
-        <div className="min-h-screen bg-background p-4 md:p-8">
-            <div className="max-w-4xl mx-auto">
-                <header className="flex flex-col items-center justify-center text-center gap-3 mb-10">
-                    {restaurant.logoUrl && (
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-primary/20 rounded-[2rem] blur-xl" />
-                            <img src={restaurant.logoUrl} alt="Logo" className="w-24 h-24 rounded-[2rem] object-cover border-2 border-border shadow-2xl relative z-10 bg-card" />
+        <div className="min-h-screen bg-background">
+            {/* ─── HERO BANNER — Logo full width, clear top / blurred bottom ─── */}
+            <div className="relative w-full h-[45vh] min-h-[280px] max-h-[420px] overflow-hidden">
+                {restaurant.logoUrl ? (
+                    <>
+                        {/* Full-width background image */}
+                        <img 
+                            src={restaurant.logoUrl} 
+                            alt={restaurant.nom} 
+                            className="absolute inset-0 w-full h-full object-cover" 
+                        />
+                        {/* Gradient: clear top → dark bottom transition */}
+                        <div 
+                            className="absolute inset-0" 
+                            style={{
+                                background: "linear-gradient(to bottom, transparent 20%, rgba(0,0,0,0.2) 45%, rgba(0,0,0,0.7) 75%, hsl(var(--background)) 100%)"
+                            }} 
+                        />
+                        {/* Blur mask on lower portion */}
+                        <div 
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                                maskImage: "linear-gradient(to bottom, transparent 35%, black 70%)",
+                                WebkitMaskImage: "linear-gradient(to bottom, transparent 35%, black 70%)",
+                            }}
+                        >
+                            <div 
+                                className="w-full h-full" 
+                                style={{ 
+                                    backdropFilter: "blur(16px)", 
+                                    WebkitBackdropFilter: "blur(16px)" 
+                                }} 
+                            />
                         </div>
-                    )}
-                    <div>
-                        <h1 className="text-3xl font-black italic tracking-tighter text-foreground">{restaurant.nom}</h1>
-                        <p className="text-muted-foreground mt-1 text-sm font-medium">Commandez nos meilleures spécialités</p>
-                    </div>
-                </header>
+                    </>
+                ) : (
+                    <>
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-indigo-900/10" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-24 h-24 bg-card/50 border-2 border-border rounded-[2rem] flex items-center justify-center backdrop-blur-xl">
+                                <Store className="w-12 h-12 text-primary" />
+                            </div>
+                        </div>
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 50%, hsl(var(--background)) 100%)" }} />
+                    </>
+                )}
 
+                {/* Restaurant name + tagline at bottom of hero */}
+                <div className="absolute bottom-0 left-0 right-0 z-20 px-6 pb-8">
+                    <h1 className="text-3xl sm:text-4xl font-black italic tracking-tighter text-white drop-shadow-2xl leading-tight">
+                        {restaurant.nom}
+                    </h1>
+                    <p className="text-white/50 mt-1.5 text-xs font-medium tracking-wide uppercase">
+                        Commandez nos meilleures spécialités
+                    </p>
+                </div>
+            </div>
+
+            {/* ─── MENU CONTENT (search + categories + plats) ─── */}
+            <div className="relative z-10 -mt-4 rounded-t-[2rem] bg-background px-4 pt-6 pb-32 md:px-8 max-w-5xl mx-auto">
                 {plats.length === 0 ? (
                     <div className="text-center py-20 bg-card rounded-2xl border border-border">
                         <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -62,11 +107,10 @@ export default async function BoutiqueClientPage({ params }: { params: { restoId
                         <p className="text-muted-foreground">Cette boutique n&apos;a pas encore ajouté d&apos;articles.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {plats.map(plat => (
-                            <BoutiquePlatCard key={plat.id} plat={plat as unknown as Plat} exchangeRate={restaurant.tauxChange} />
-                        ))}
-                    </div>
+                    <BoutiqueMenuContent 
+                        initialPlats={plats as unknown as Plat[]} 
+                        exchangeRate={restaurant.tauxChange} 
+                    />
                 )}
             </div>
 

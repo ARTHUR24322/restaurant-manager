@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React, { useState, useEffect } from "react";
-import { User, Phone, ArrowRight, Store, ShoppingCart, MapPin, UserCircle } from "lucide-react";
+import { User, Phone, ArrowRight, Store, ShoppingCart, MapPin, UserCircle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BoutiqueWelcomeScreenProps {
@@ -25,6 +25,7 @@ export function BoutiqueWelcomeScreen({
   const [isRegistered, setIsRegistered] = useState(false);
   const [activeTab, setActiveTab] = useState<"shop" | "track" | "profile">("shop");
   const [isLoading, setIsLoading] = useState(true);
+  const [formReady, setFormReady] = useState(false);
 
   const storageKey = `${STORAGE_KEY_PREFIX}${restaurantId}`;
 
@@ -44,6 +45,9 @@ export function BoutiqueWelcomeScreen({
       /* ignore */
     }
     setIsLoading(false);
+    // Trigger form animation after mount
+    const t = setTimeout(() => setFormReady(true), 300);
+    return () => clearTimeout(t);
   }, [storageKey]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,50 +69,97 @@ export function BoutiqueWelcomeScreen({
     );
   }
 
-  // Welcome / registration screen
+  // ─── WELCOME / REGISTRATION SCREEN ────────────────────────────────
   if (!isRegistered) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-6 text-foreground overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-[-15%] left-[-10%] w-[55%] h-[55%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-
-        <div className="relative z-10 w-full max-w-sm flex flex-col items-center animate-in zoom-in-95 fade-in duration-300">
-          {/* Logo */}
-          <div className="mb-8 relative">
-            <div className="absolute inset-0 bg-primary/30 rounded-[2rem] blur-2xl animate-pulse" />
-            {logoUrl ? (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col text-foreground overflow-hidden">
+        {/* Hero Banner — Logo full width with clear top / blurred bottom */}
+        <div className="relative w-full h-[55vh] flex-shrink-0 overflow-hidden">
+          {logoUrl ? (
+            <>
+              {/* Background image — full coverage */}
               <img
                 src={logoUrl}
                 alt={restaurantName}
-                className="relative w-28 h-28 object-cover rounded-[2rem] border-2 border-border shadow-2xl"
+                className="absolute inset-0 w-full h-full object-cover"
               />
-            ) : (
-              <div className="relative w-28 h-28 bg-card border-2 border-border rounded-[2rem] flex items-center justify-center shadow-2xl shadow-primary/10">
-                <Store className="w-12 h-12 text-primary" />
+              {/* Gradient fade: clear on top, smooth transition to blurred bottom */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  background: "linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.85) 80%, hsl(var(--background)) 100%)"
+                }}
+              />
+              {/* Blur overlay on lower portion */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backdropFilter: "blur(0px)",
+                  WebkitBackdropFilter: "blur(0px)",
+                  maskImage: "linear-gradient(to bottom, transparent 40%, black 75%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, transparent 40%, black 75%)",
+                }}
+              >
+                <div className="w-full h-full" style={{ backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }} />
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Fallback: beautiful gradient when no logo */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-indigo-900/20" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 bg-card/50 border-2 border-border rounded-[2.5rem] flex items-center justify-center backdrop-blur-xl shadow-2xl">
+                  <Store className="w-16 h-16 text-primary" />
+                </div>
+              </div>
+              <div 
+                className="absolute inset-0" 
+                style={{ background: "linear-gradient(to bottom, transparent 50%, hsl(var(--background)) 100%)" }}
+              />
+            </>
+          )}
 
-          {/* Title */}
-          <div className="text-center mb-10 w-full">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-black uppercase tracking-widest text-primary mb-6">
-              <Store className="w-3 h-3" />
+          {/* Floating badge */}
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
+            <div className="inline-flex items-center gap-2 px-5 py-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full text-[10px] font-black uppercase tracking-[0.25em] text-white/90 shadow-2xl">
+              <Sparkles className="w-3 h-3 text-primary" />
               Boutique en Ligne
             </div>
-            <h1 className="text-4xl sm:text-5xl font-black italic tracking-tighter mb-4 leading-tight">
-              Bienvenue chez <br />
-              <span className="text-primary">{restaurantName}</span>
+          </div>
+
+          {/* Restaurant name overlay at bottom of hero */}
+          <div className="absolute bottom-0 left-0 right-0 z-20 px-6 pb-6">
+            <h1 className="text-4xl sm:text-5xl font-black italic tracking-tighter leading-[0.95] text-white drop-shadow-2xl">
+              {restaurantName}
             </h1>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Entrez votre nom et votre numéro pour commander et suivre votre livraison.
+            <p className="text-white/50 text-xs font-medium tracking-wide mt-2 uppercase">
+              Commandez et faites-vous livrer
+            </p>
+          </div>
+        </div>
+
+        {/* Form area — slides up */}
+        <div 
+          className={cn(
+            "relative z-30 flex-1 -mt-4 rounded-t-[2rem] bg-background px-6 pt-8 pb-8 flex flex-col transition-all duration-700 ease-out",
+            formReady ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          )}
+        >
+          <div className="w-12 h-1 bg-border rounded-full mx-auto mb-6" />
+          
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-black tracking-tight text-foreground">
+              Bienvenue 👋
+            </h2>
+            <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
+              Identifiez-vous pour commander et suivre votre livraison.
             </p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="w-full space-y-4">
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+          <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto space-y-4 flex-1">
+            {/* Name input */}
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none group-focus-within:text-primary transition-colors">
                 <User className="w-5 h-5" />
               </div>
               <input
@@ -119,12 +170,13 @@ export function BoutiqueWelcomeScreen({
                 required
                 maxLength={40}
                 autoFocus
-                className="w-full bg-secondary/50 border border-border/50 text-foreground font-medium text-base rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/40"
+                className="w-full bg-secondary/50 border border-border/50 text-foreground font-medium text-base rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 transition-all placeholder:text-muted-foreground/40"
               />
             </div>
 
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+            {/* Phone input */}
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none group-focus-within:text-primary transition-colors">
                 <Phone className="w-5 h-5" />
               </div>
               <input
@@ -133,7 +185,7 @@ export function BoutiqueWelcomeScreen({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
-                className="w-full bg-secondary/50 border border-border/50 text-foreground font-medium text-base rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/40"
+                className="w-full bg-secondary/50 border border-border/50 text-foreground font-medium text-base rounded-2xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30 transition-all placeholder:text-muted-foreground/40"
               />
             </div>
 
@@ -141,21 +193,32 @@ export function BoutiqueWelcomeScreen({
               type="submit"
               disabled={!name.trim() || !phone.trim()}
               className={cn(
-                "w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all duration-200",
+                "w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all duration-300 mt-2",
                 name.trim() && phone.trim()
-                  ? "bg-primary text-primary-foreground shadow-xl shadow-primary/25 hover:scale-[1.02] active:scale-[0.98]"
+                  ? "bg-primary text-primary-foreground shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]"
                   : "bg-secondary text-muted-foreground cursor-not-allowed opacity-60"
               )}
             >
               Accéder à la boutique <ArrowRight className="w-5 h-5" />
             </button>
           </form>
+
+          {/* Trust indicators */}
+          <div className="flex items-center justify-center gap-6 mt-auto pt-6 pb-2">
+            <div className="flex items-center gap-1.5 text-muted-foreground/50 text-[10px] font-bold uppercase tracking-widest">
+              <ShoppingCart className="w-3 h-3" /> Livraison rapide
+            </div>
+            <div className="w-1 h-1 rounded-full bg-border" />
+            <div className="flex items-center gap-1.5 text-muted-foreground/50 text-[10px] font-bold uppercase tracking-widest">
+              <Phone className="w-3 h-3" /> Suivi WhatsApp
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Main boutique view with bottom nav
+  // ─── MAIN BOUTIQUE VIEW WITH BOTTOM NAV ─────────────────────────
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Active tab content */}
@@ -273,7 +336,7 @@ function NavButton({
     <button
       onClick={onClick}
       className={cn(
-        "flex-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200",
+        "flex-1 flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 relative",
         active
           ? "text-primary bg-primary/10"
           : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"

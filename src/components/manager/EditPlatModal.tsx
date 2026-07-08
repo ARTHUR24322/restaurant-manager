@@ -23,11 +23,15 @@ export function EditPlatModal({ isOpen, onClose, plat, restaurantId }: EditPlatM
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true);
     try {
-      await updatePlat(formData);
-      toast.success("Plat mis à jour avec succès !");
-      onClose();
+      const result = await updatePlat(formData);
+      if (result && !result.success) {
+         toast.error(result.error || "Erreur lors de la mise à jour.");
+      } else {
+         toast.success("Plat mis à jour avec succès !");
+         onClose();
+      }
     } catch (error) {
-      toast.error("Erreur lors de la mise à jour.");
+      toast.error("Erreur serveur lors de la mise à jour.");
       console.error(error);
     } finally {
       setIsSubmitting(false);

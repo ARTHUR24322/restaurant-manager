@@ -175,7 +175,8 @@ export async function updatePlat(formData: FormData) {
     return { success: true };
   } catch (error: unknown) {
     console.error("Error updating plat:", error);
-    throw error;
+    const msg = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: msg };
   }
 }
 
