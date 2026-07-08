@@ -46,7 +46,7 @@ export async function uploadImageToSupabase(
   // maximale avec le fetch bundlé de Next.js (webpack-internal).
   // Un Buffer castée directement en BodyInit peut être mal encodé dans ce runtime.
   const uint8 = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-  const blob = new Blob([uint8], { type: mimeType });
+  const blob = new Blob([uint8 as BlobPart], { type: mimeType });
 
   // Timeout de 45 secondes (les grandes images peuvent prendre du temps)
   const controller = new AbortController();
