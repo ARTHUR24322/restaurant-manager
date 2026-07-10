@@ -486,7 +486,32 @@ export async function getSystemDiagnostic() {
             prisma.notification.count()
         ]);
 
-        // 3. Infos Système / Runtime
+        // 3. Anomalies & Erreurs (Images, Comptes, Commandes)
+        const [imageIssues, accountIssues, orderIssues] = await Promise.all([
+            // Plats avec images par défaut (unsplash) ou vides (signalent un échec d'upload ou oubli)
+            prisma.plat.findMany({
+                where: { OR: [{ image: "" }, { image: { startsWith: "https://images.unsplash.com" } }] },
+                include: { restaurant: { select: { nom: true } } },
+                take: 50 // Limit to avoid massive payloads, we mainly need count + sample
+            }),
+            // Comptes inactifs ou expirés
+            prisma.restaurant.findMany({
+                where: { OR: [{ active: false }, { subscriptionEnd: { lt: new Date() } }] },
+                select: { id: true, nom: true, email: true, active: true, subscriptionEnd: true }
+            }),
+            // Commandes bloquées en PENDING ou non payées depuis plus de 2 heures
+            prisma.commande.findMany({
+                where: { 
+                    statut: { in: ["PENDING", "PREPARING"] }, 
+                    createdAt: { lt: new Date(Date.now() - 2 * 60 * 60 * 1000) } 
+                },
+                include: { restaurant: { select: { nom: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: 20
+            })
+        ]);
+
+        // 4. Infos Système / Runtime
         const memory = process.memoryUsage();
         const uptime = process.uptime();
 
@@ -504,6 +529,14 @@ export async function getSystemDiagnostic() {
                     articles: articles,
                     visites: visits,
                     notifications: notifications
+                },
+                anomalies: {
+                    images: imageIssues,
+                    imagesCount: await prisma.plat.count({ where: { OR: [{ image: "" }, { image: { startsWith: "https://images.unsplash.com" } }] } }),
+                    accounts: accountIssues,
+                    accountsCount: accountIssues.length,
+                    orders: orderIssues,
+                    ordersCount: await prisma.commande.count({ where: { statut: { in: ["PENDING", "PREPARING"] }, createdAt: { lt: new Date(Date.now() - 2 * 60 * 60 * 1000) } } })
                 },
                 server: {
                     nodeVersion: process.version,

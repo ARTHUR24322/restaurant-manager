@@ -311,11 +311,15 @@ function ManagerLayoutContent({
              </button>
              <span className="font-bold text-lg">Smart<span className="text-primary">Resto</span> Admin</span>
           </div>
-          <div className="flex-1 hidden md:block">
-          </div>
           <div className="flex items-center gap-4">
             <NotificationMenu restaurantId={restoId || ""} />
-            <div className="w-8 h-8 rounded-full bg-secondary border border-border" />
+            <div className="w-8 h-8 rounded-full bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
+              {restoProfile?.logoUrl ? (
+                 <img src={restoProfile.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                 <Store className="w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
           </div>
         </header>
 

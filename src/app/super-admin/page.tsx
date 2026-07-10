@@ -175,6 +175,7 @@ export default function SuperAdminPage() {
     const [renewLoadingId, setRenewLoadingId] = useState<string | null>(null);
     const [diagnosticData, setDiagnosticData] = useState<any>(null);
     const [diagLoading, setDiagLoading] = useState(false);
+    const [diagAnomalyView, setDiagAnomalyView] = useState<'images' | 'accounts' | 'orders' | null>(null);
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -1468,6 +1469,44 @@ export default function SuperAdminPage() {
                                     </div>
                                 </div>
 
+                                {/* ALERTS & ANOMALIES */}
+                                <div className="md:col-span-2 bg-zinc-950/20 p-8 rounded-[2.5rem] border border-red-500/20">
+                                    <h4 className="text-[10px] font-black text-red-500 uppercase mb-8 tracking-widest flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4" /> Alertes & Anomalies
+                                    </h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {/* Images Erreurs */}
+                                        <div className="bg-red-500/5 p-6 rounded-3xl border border-red-500/10">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h5 className="text-[9px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1.5"><AlertCircle className="w-3 h-3" /> Images Plats</h5>
+                                                <span className="bg-red-500/20 text-red-500 font-black text-sm px-2 py-0.5 rounded-full">{diagnosticData?.anomalies?.imagesCount || 0}</span>
+                                            </div>
+                                            <p className="text-xs text-zinc-500 mb-4 h-8">Plats sans images ou avec image par défaut.</p>
+                                            <button onClick={() => setDiagAnomalyView('images')} disabled={!diagnosticData?.anomalies?.imagesCount} className="w-full py-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all disabled:opacity-50">Voir Détails</button>
+                                        </div>
+                                        
+                                        {/* Comptes */}
+                                        <div className="bg-amber-500/5 p-6 rounded-3xl border border-amber-500/10">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h5 className="text-[9px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5"><Building2 className="w-3 h-3" /> Comptes</h5>
+                                                <span className="bg-amber-500/20 text-amber-500 font-black text-sm px-2 py-0.5 rounded-full">{diagnosticData?.anomalies?.accountsCount || 0}</span>
+                                            </div>
+                                            <p className="text-xs text-zinc-500 mb-4 h-8">Comptes bloqués ou abonnements expirés.</p>
+                                            <button onClick={() => setDiagAnomalyView('accounts')} disabled={!diagnosticData?.anomalies?.accountsCount} className="w-full py-2 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all disabled:opacity-50">Voir Détails</button>
+                                        </div>
+
+                                        {/* Commandes / Scans */}
+                                        <div className="bg-orange-500/5 p-6 rounded-3xl border border-orange-500/10">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h5 className="text-[9px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5"><Activity className="w-3 h-3" /> Commandes</h5>
+                                                <span className="bg-orange-500/20 text-orange-500 font-black text-sm px-2 py-0.5 rounded-full">{diagnosticData?.anomalies?.ordersCount || 0}</span>
+                                            </div>
+                                            <p className="text-xs text-zinc-500 mb-4 h-8">Commandes bloquées/anciennes non traitées.</p>
+                                            <button onClick={() => setDiagAnomalyView('orders')} disabled={!diagnosticData?.anomalies?.ordersCount} className="w-full py-2 bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all disabled:opacity-50">Voir Détails</button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Mémoire et Variables */}
                                 <div className="bg-zinc-950/50 p-8 rounded-3xl border border-zinc-800">
                                     <h5 className="text-[9px] font-black text-zinc-500 uppercase mb-4 tracking-widest italic">Analyse Mémoire</h5>
@@ -1663,6 +1702,60 @@ export default function SuperAdminPage() {
                                     {approveModalLoading ? "Création..." : "Approuver"}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODALE DETAILS ANOMALIES */}
+            {diagAnomalyView && (
+                <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[300] flex items-center justify-center p-4">
+                    <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8 relative flex flex-col max-h-[80vh]">
+                        <button onClick={() => setDiagAnomalyView(null)} className="absolute top-8 right-8 text-zinc-500 hover:text-white"><X /></button>
+                        
+                        <h3 className="text-xl font-black italic uppercase text-white mb-2">
+                            {diagAnomalyView === 'images' && "Détail Anomalies - Images"}
+                            {diagAnomalyView === 'accounts' && "Détail Anomalies - Comptes"}
+                            {diagAnomalyView === 'orders' && "Détail Anomalies - Commandes"}
+                        </h3>
+                        <p className="text-xs text-zinc-500 mb-6 font-medium">L'échantillon des objets concernés par cette erreur dans le système.</p>
+                        
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                            {diagAnomalyView === 'images' && diagnosticData?.anomalies?.images?.map((plat: any) => (
+                                <div key={plat.id} className="bg-zinc-950 p-4 rounded-2xl border border-red-500/20 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-black text-sm uppercase text-white">{plat.nom}</p>
+                                        <p className="text-[10px] text-zinc-500">{plat.restaurant?.nom} • ID: {plat.id}</p>
+                                    </div>
+                                    <span className="text-[9px] uppercase px-2 py-1 bg-red-500/10 text-red-500 rounded-md font-bold">Image Invalide/Manquante</span>
+                                </div>
+                            ))}
+
+                            {diagAnomalyView === 'accounts' && diagnosticData?.anomalies?.accounts?.map((acc: any) => (
+                                <div key={acc.id} className="bg-zinc-950 p-4 rounded-2xl border border-amber-500/20 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-black text-sm uppercase text-white">{acc.nom}</p>
+                                        <p className="text-[10px] text-zinc-500">{acc.email}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                        {!acc.active && <span className="text-[9px] uppercase px-2 py-0.5 bg-red-500/10 text-red-500 rounded-md font-bold">Suspendu</span>}
+                                        {new Date(acc.subscriptionEnd) < new Date() && <span className="text-[9px] uppercase px-2 py-0.5 bg-amber-500/10 text-amber-500 rounded-md font-bold">Expiré</span>}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {diagAnomalyView === 'orders' && diagnosticData?.anomalies?.orders?.map((ord: any) => (
+                                <div key={ord.id} className="bg-zinc-950 p-4 rounded-2xl border border-orange-500/20 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-black text-sm uppercase text-white">Table {ord.table}</p>
+                                        <p className="text-[10px] text-zinc-500">{ord.restaurant?.nom} • ID: {ord.id}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[9px] uppercase px-2 py-0.5 bg-orange-500/10 text-orange-500 rounded-md font-bold block mb-1">Status: {ord.statut}</span>
+                                        <span className="text-[8px] text-zinc-600 font-bold uppercase">{new Date(ord.createdAt).toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
