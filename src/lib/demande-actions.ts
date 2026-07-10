@@ -219,6 +219,8 @@ export async function approveDemande(id: string, adminPassword: string) {
           adminPassword: hashedPassword,
           subscriptionEnd: new Date(Date.now() + durationMs),
           active: true,
+          parentId: isChild ? motherResto!.id : null,
+          firstLogin: true,
         },
       });
 

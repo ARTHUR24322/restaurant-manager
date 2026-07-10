@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutManager, logoutManagerGlobal } from "@/lib/auth-actions";
-import { getRestaurantById, checkIsMainAccount } from "@/lib/admin-actions";
+import { getRestaurantById, checkIsMainAccount, markFirstLoginDone } from "@/lib/admin-actions";
 import { checkSubscriptionAlerts } from "@/lib/notification-actions";
 import { NotificationMenu } from "@/components/manager/NotificationMenu";
 import { useTheme } from "next-themes";
@@ -51,6 +51,11 @@ function ManagerLayoutContent({
   const [pendingAction, setPendingAction] = useState<() => Promise<void>>(() => async () => {});
   const restoId = searchParams.get("resto_id");
   const { setTheme, theme } = useTheme();
+  // Premier login : modale de sécurité
+  const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [firstLoginPwd, setFirstLoginPwd] = useState("");
+  const [firstLoginPwd2, setFirstLoginPwd2] = useState("");
+  const [firstLoginLoading, setFirstLoginLoading] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -111,6 +116,17 @@ function ManagerLayoutContent({
     window.addEventListener('pageshow', handlePageShow);
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, [restoId, router]);
+
+  // Détecter la première connexion via sessionStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const flag = sessionStorage.getItem('smartresto_first_login');
+      if (flag === 'true') {
+        setShowFirstLoginModal(true);
+        sessionStorage.removeItem('smartresto_first_login');
+      }
+    }
+  }, []);
 
   const currentPlan = restoProfile?.plan?.toUpperCase() || "STANDARD";
 
@@ -295,6 +311,81 @@ function ManagerLayoutContent({
                     </button>
                 </div>
              </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          MODALE SÉCURITÉ : PREMIÈRE CONNEXION
+      ===================================================== */}
+      {showFirstLoginModal && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[600] flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-primary/30 rounded-[2.5rem] p-10 relative shadow-2xl shadow-primary/10 animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center">
+              {/* Icone */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+                <div className="relative w-20 h-20 bg-primary/10 border border-primary/30 rounded-full flex items-center justify-center">
+                  <ShieldCheck className="w-10 h-10 text-primary" />
+                </div>
+              </div>
+
+              <h3 className="text-2xl font-black italic uppercase text-white mb-1">Sécurisez votre compte</h3>
+              <p className="text-zinc-400 text-sm font-medium mb-6 leading-relaxed">
+                Bienvenue ! Pour votre sécurité, veuillez définir un <span className="font-black text-white">nouveau mot de passe</span> avant de continuer.
+              </p>
+
+              <div className="w-full space-y-4 mb-6">
+                <input
+                  type="password"
+                  value={firstLoginPwd}
+                  onChange={e => setFirstLoginPwd(e.target.value)}
+                  placeholder="Nouveau mot de passe (min. 8 car.)"
+                  className="w-full bg-zinc-800 border border-zinc-700 focus:border-primary rounded-2xl py-4 px-6 text-white font-bold outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-zinc-600 placeholder:font-normal text-sm"
+                />
+                <input
+                  type="password"
+                  value={firstLoginPwd2}
+                  onChange={e => setFirstLoginPwd2(e.target.value)}
+                  placeholder="Confirmer le mot de passe"
+                  className="w-full bg-zinc-800 border border-zinc-700 focus:border-primary rounded-2xl py-4 px-6 text-white font-bold outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-zinc-600 placeholder:font-normal text-sm"
+                />
+                {firstLoginPwd.length > 0 && firstLoginPwd.length < 8 && (
+                  <p className="text-xs text-red-400 font-bold text-left pl-1">⚠ Minimum 8 caractères requis.</p>
+                )}
+                {firstLoginPwd.length >= 8 && firstLoginPwd !== firstLoginPwd2 && firstLoginPwd2.length > 0 && (
+                  <p className="text-xs text-red-400 font-bold text-left pl-1">⚠ Les mots de passe ne correspondent pas.</p>
+                )}
+              </div>
+
+              <button
+                disabled={firstLoginLoading || firstLoginPwd.length < 8 || firstLoginPwd !== firstLoginPwd2}
+                onClick={async () => {
+                  if (!restoId) return;
+                  setFirstLoginLoading(true);
+                  try {
+                    const { updateRestaurantPassword } = await import("@/lib/actions-settings");
+                    // Pour la première connexion on ne vérifie pas l'ancien mot de passe
+                    const res = await updateRestaurantPassword(restoId, "__FIRST_LOGIN__", firstLoginPwd);
+                    if (res?.success) {
+                      await markFirstLoginDone(restoId);
+                      setShowFirstLoginModal(false);
+                      setFirstLoginPwd("");
+                      setFirstLoginPwd2("");
+                      import("sonner").then(s => s.toast.success("Mot de passe mis à jour ! Votre compte est sécurisé."));
+                    } else {
+                      import("sonner").then(s => s.toast.error(res?.error || "Erreur lors de la mise à jour."));
+                    }
+                  } finally {
+                    setFirstLoginLoading(false);
+                  }
+                }}
+                className="w-full bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl uppercase text-xs tracking-widest transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {firstLoginLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                {firstLoginLoading ? "Sauvegarde..." : "Sécuriser mon compte"}
+              </button>
+            </div>
           </div>
         </div>
       )}

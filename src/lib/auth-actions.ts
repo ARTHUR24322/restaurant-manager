@@ -100,6 +100,14 @@ export async function authenticateManager(formData: FormData) {
 
     const restaurant = await prisma.restaurant.findFirst({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        adminPassword: true,
+        active: true,
+        sessionVersion: true,
+        firstLogin: true,
+      }
     });
 
     if (!restaurant) {
@@ -132,7 +140,7 @@ export async function authenticateManager(formData: FormData) {
       path: "/",
     });
 
-    return { success: true, requiresPin: false, restoId: restaurant.id };
+    return { success: true, requiresPin: false, restoId: restaurant.id, firstLogin: restaurant.firstLogin };
   } catch (error) {
     console.error("Login Error:", error);
     return { success: false, error: "Une erreur est survenue lors de la connexion." };

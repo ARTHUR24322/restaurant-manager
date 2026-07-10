@@ -118,7 +118,10 @@ export async function createRestaurant(formData: FormData) {
         pinCode,
         monthlyPrice: PLAN_PRICES[plan] || 0,
         createdAt: new Date(),
-        subscriptionEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        subscriptionEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        // Lier automatiquement à la mère si c'est un enfant
+        parentId: isChild ? motherResto!.id : null,
+        firstLogin: true,
       }
     });
     console.log("[SaaS-Server] Restaurant créé avec succès:", resto.id);
@@ -342,27 +345,56 @@ export async function getAllSubscriptionLogs() {
     });
 }
 /**
- * Vérifie si un restaurant est le compte "Mère" (le plus ancien créé avec cet email)
+ * Vérifie si un restaurant est le compte "Mère" via parentId
+ * Un compte mère = parentId null
  */
 export async function checkIsMainAccount(id: string) {
     try {
         const target = await prisma.restaurant.findUnique({
             where: { id },
-            select: { email: true }
+            select: { parentId: true }
         });
-        
         if (!target) return false;
-
-        const allForEmail = await prisma.restaurant.findMany({
-            where: { email: target.email },
-            orderBy: { createdAt: 'asc' },
-            select: { id: true }
-        });
-
-        return allForEmail[0]?.id === id;
+        // Mère = pas de parentId
+        return target.parentId === null;
     } catch (e) {
         console.error("[SaaS-Server] Erreur checkIsMainAccount:", e);
         return false;
+    }
+}
+
+/**
+ * Super-Admin : Rattacher manuellement un restaurant enfant à sa mère
+ */
+export async function linkChildToParent(childId: string, parentId: string) {
+    try {
+        await ensureSuperAdmin();
+        if (childId === parentId) return { success: false, error: "Un restaurant ne peut pas être son propre parent." };
+        await prisma.restaurant.update({
+            where: { id: childId },
+            data: { parentId }
+        });
+        revalidatePath("/super-admin");
+        return { success: true };
+    } catch (e) {
+        console.error("[SaaS-Server] Erreur linkChildToParent:", e);
+        return { success: false, error: "Erreur lors du rattachement." };
+    }
+}
+
+/**
+ * Marque la première connexion comme effectuée
+ */
+export async function markFirstLoginDone(restoId: string) {
+    try {
+        await prisma.restaurant.update({
+            where: { id: restoId },
+            data: { firstLogin: false }
+        });
+        return { success: true };
+    } catch (e) {
+        console.error("[Auth] Erreur markFirstLoginDone:", e);
+        return { success: false };
     }
 }
 

@@ -72,6 +72,8 @@ export interface Restaurant {
   telephone: string | null;
   isBoutiqueEnabled?: boolean;
   boutiqueSlug?: string | null;
+  parentId?: string | null;
+  firstLogin?: boolean;
 }
 
 export interface DemandeAbonnement {

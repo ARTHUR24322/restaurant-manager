@@ -27,6 +27,10 @@ export default function ManagerLoginPage() {
     startTransition(async () => {
       const res = await authenticateManager(formData);
       if (res?.success) {
+        // Stocker le flag première connexion pour l'affichage de la modale de sécurité
+        if (res.firstLogin) {
+          sessionStorage.setItem('smartresto_first_login', 'true');
+        }
         router.push(`/manager/selection`);
         router.refresh();
       } else {

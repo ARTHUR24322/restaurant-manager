@@ -52,8 +52,8 @@ export default function MultiSitePage() {
         import("sonner").then(s => s.toast.success("PIN mis à jour !"));
         setEditingPinId(null);
         setNewPin("");
-        if (restoProfile?.email) {
-            const data = await getMultiSiteStats(restoProfile.email);
+        if (restoId) {
+            const data = await getMultiSiteStats(restoId);
             setStats(data);
         }
     } else {
@@ -65,8 +65,8 @@ export default function MultiSitePage() {
     const res = await toggleChildStatus(id, active);
     if (res.success) {
         import("sonner").then(s => s.toast.success(active ? "Établissement activé" : "Établissement suspendu"));
-        if (restoProfile?.email) {
-            const data = await getMultiSiteStats(restoProfile.email);
+        if (restoId) {
+            const data = await getMultiSiteStats(restoId);
             setStats(data);
         }
     } else {
@@ -89,10 +89,9 @@ export default function MultiSitePage() {
       const profile = await getRestaurantById(restoId);
       setRestoProfile(profile);
       
-      if (profile?.email) {
-        const data = await getMultiSiteStats(profile.email);
-        setStats(data);
-      }
+      // Passer le restoId directement (plus l'email)
+      const data = await getMultiSiteStats(restoId);
+      setStats(data);
       setLoading(false);
     }
     loadData();
@@ -109,9 +108,8 @@ export default function MultiSitePage() {
   const totalRevenue = stats.reduce((acc, r) => acc + r.dailyRevenue, 0);
   const totalOrders = stats.reduce((acc, r) => acc + r.dailyOrders, 0);
 
-  // Identifier l'établissement mère (le plus ancien par inscription)
-  const sortedStats = [...stats].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  const isMainEstablishment = sortedStats.length > 0 && sortedStats[0].id === restoId;
+  // La mère = le restaurant dont parentId est null
+  const isMainEstablishment = stats.find(s => s.id === restoId)?.parentId === null || stats.find(s => s.id === restoId)?.parentId === undefined;
 
   const handleRequestNew = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -192,7 +190,7 @@ export default function MultiSitePage() {
             </div>
             <div>
                 <h4 className="text-sm font-black text-white uppercase tracking-tighter italic">Établissement Secondaire</h4>
-                <p className="text-xs text-indigo-500/80 font-bold uppercase tracking-tight">Seul l'établissement principal "{sortedStats[0]?.nom}" peut gérer et ajouter de nouveaux sites.</p>
+                <p className="text-xs text-indigo-500/80 font-bold uppercase tracking-tight">Seul l'établissement principal "{stats.find(s => s.parentId === null || s.parentId === undefined)?.nom}" peut gérer et ajouter de nouveaux sites.</p>
             </div>
         </div>
       )}

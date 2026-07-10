@@ -16,34 +16,38 @@ import { validateUploadFile } from "./upload-validator";
 export async function updateRestaurantPassword(restaurantId: string, oldPassword: string, newPassword: string) {
     try {
         await ensureManager(restaurantId);
-        
-        if (!oldPassword) {
+
+        const isFirstLoginBypass = oldPassword === "__FIRST_LOGIN__";
+
+        if (!isFirstLoginBypass && !oldPassword) {
             return { success: false, error: "Vous devez entrer votre mot de passe actuel." };
         }
-        if (!newPassword || newPassword.length < 4) {
-            return { success: false, error: "Le nouveau mot de passe doit faire au moins 4 caractères." };
+        if (!newPassword || newPassword.length < 8) {
+            return { success: false, error: "Le nouveau mot de passe doit faire au moins 8 caractères." };
         }
 
-        // Vérifier l'ancien mot de passe
-        const restaurant = await (prisma as any).restaurant.findUnique({
-            where: { id: restaurantId }
-        });
+        if (!isFirstLoginBypass) {
+            // Vérifier l'ancien mot de passe
+            const restaurant = await (prisma as any).restaurant.findUnique({
+                where: { id: restaurantId }
+            });
 
-        if (!restaurant) {
-            return { success: false, error: "Restaurant introuvable." };
-        }
+            if (!restaurant) {
+                return { success: false, error: "Restaurant introuvable." };
+            }
 
-        let isOldValid = false;
-        if (restaurant.adminPassword.startsWith("$2a$") || restaurant.adminPassword.startsWith("$2b$")) {
-            isOldValid = await comparePassword(oldPassword, restaurant.adminPassword);
-        } else {
-            // SÉCURITÉ : Refus des mots de passe legacy non hashés — forcer une réinitialisation
-            console.error("[SECURITY] Legacy unhashed password detected for restaurant:", restaurantId);
-            return { success: false, error: "Votre mot de passe nécessite une mise à jour de sécurité. Contactez le support pour réinitialiser." };
-        }
+            let isOldValid = false;
+            if (restaurant.adminPassword.startsWith("$2a$") || restaurant.adminPassword.startsWith("$2b$")) {
+                isOldValid = await comparePassword(oldPassword, restaurant.adminPassword);
+            } else {
+                // SÉCURITÉ : Refus des mots de passe legacy non hashés — forcer une réinitialisation
+                console.error("[SECURITY] Legacy unhashed password detected for restaurant:", restaurantId);
+                return { success: false, error: "Votre mot de passe nécessite une mise à jour de sécurité. Contactez le support pour réinitialiser." };
+            }
 
-        if (!isOldValid) {
-            return { success: false, error: "Mot de passe actuel incorrect." };
+            if (!isOldValid) {
+                return { success: false, error: "Mot de passe actuel incorrect." };
+            }
         }
 
         // Hasher le nouveau mot de passe

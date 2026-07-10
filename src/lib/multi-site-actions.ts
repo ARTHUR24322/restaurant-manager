@@ -2,12 +2,31 @@
 
 import { prisma } from "./prisma";
 
-export async function getMultiSiteStats(proprietorEmail: string) {
+export async function getMultiSiteStats(restoId: string) {
   try {
-    if (!proprietorEmail) return [];
+    if (!restoId) return [];
 
+    // Trouver le restaurant demandé
+    const target = await prisma.restaurant.findUnique({
+      where: { id: restoId },
+      select: { id: true, parentId: true }
+    });
+
+    if (!target) return [];
+
+    // Déterminer l'ID de la mère :
+    // si le restaurant est une mère (parentId null) → prendre son propre id
+    // si c'est un enfant → prendre parentId
+    const parentId = target.parentId ?? target.id;
+
+    // Récupérer la mère ET tous ses enfants
     const restaurants = await prisma.restaurant.findMany({
-      where: { email: proprietorEmail },
+      where: {
+        OR: [
+          { id: parentId },               // La mère elle-même
+          { parentId: parentId }          // Tous ses enfants
+        ]
+      },
       select: {
         id: true,
         nom: true,
@@ -15,6 +34,7 @@ export async function getMultiSiteStats(proprietorEmail: string) {
         plan: true,
         active: true,
         pinCode: true,
+        parentId: true,
         createdAt: true,
         _count: {
           select: {
@@ -48,7 +68,8 @@ export async function getMultiSiteStats(proprietorEmail: string) {
         ville: r.ville,
         plan: r.plan,
         active: r.active,
-        // pinCode: r.pinCode, // On ne renvoie plus le PIN au client pour sécurité
+        pinCode: r.pinCode,
+        parentId: r.parentId,
         createdAt: r.createdAt,
         dailyOrders: r._count.commandes,
         dailyRevenue: dailyRevenue

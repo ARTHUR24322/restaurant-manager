@@ -34,6 +34,12 @@ model Restaurant {
   whatsappPhoneNumberId     String?
   isBoutiqueEnabled         Boolean           @default(false)
   boutiqueSlug              String?           @unique
+  // Multi-site: lien parent-enfant
+  parentId                  String?
+  parent                    Restaurant?       @relation("RestaurantChildren", fields: [parentId], references: [id])
+  children                  Restaurant[]      @relation("RestaurantChildren")
+  // Sécurité: première connexion
+  firstLogin                Boolean           @default(true)
   articles                  ArticleStock[]
   clientRewards             ClientReward[]
   commandes                 Commande[]
