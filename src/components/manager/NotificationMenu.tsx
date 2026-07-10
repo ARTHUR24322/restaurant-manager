@@ -76,8 +76,8 @@ export function NotificationMenu({ restaurantId }: { restaurantId: string }) {
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-4 w-80 md:w-96 bg-card border border-border rounded-3xl shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-4 duration-300">
+          <div className="fixed inset-0 z-[200]" onClick={() => setIsOpen(false)} />
+          <div className="fixed top-20 right-4 w-80 md:w-96 bg-card border border-border rounded-3xl shadow-2xl z-[201] overflow-hidden animate-in slide-in-from-top-4 duration-300">
             <div className="p-5 border-b border-border flex items-center justify-between bg-zinc-900/50">
               <h3 className="font-black text-xs uppercase tracking-[0.2em] italic">Notifications</h3>
               <button 
