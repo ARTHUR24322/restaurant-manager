@@ -56,6 +56,21 @@ export default function RootLayout({
           <OfflineSync />
           {children}
         </ThemeProvider>
+        
+        {/* Anti Broken-Image Global Proxy */}
+        <script
+          dangerouslySetInnerHTML={{
+             __html: `
+               document.addEventListener('error', function (e) {
+                 if (e.target && e.target.tagName === 'IMG') {
+                   if (e.target.dataset.errorHandled) return;
+                   e.target.dataset.errorHandled = 'true';
+                   e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop';
+                 }
+               }, true);
+             `,
+          }}
+        />
       </body>
     </html>
   );
