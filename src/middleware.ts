@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. PROTECTION DES ROUTES PRIVÉES (JWT)
-  const privateRoutes = ['/manager', '/cuisine', '/caisse', '/super-admin'];
+  const privateRoutes = ['/manager', '/cuisine', '/caisse', '/mokolositekisumbule'];
   const isPrivateRoute = privateRoutes.some(route => pathname.startsWith(route));
 
   if (isPrivateRoute) {
@@ -98,7 +98,7 @@ export async function middleware(request: NextRequest) {
 
     if (!payload && !adminPayload && !pathname.endsWith('/login')) {
       // Rediriger vers le login approprié
-      if (pathname.startsWith('/super-admin')) {
+      if (pathname.startsWith('/mokolositekisumbule')) {
         return response;
       }
       const redirectRes = NextResponse.redirect(new URL('/manager/login', request.url));
@@ -107,7 +107,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Protection par rôle — TOUS les rôles vérifiés
-    if (pathname.startsWith('/super-admin')) {
+    if (pathname.startsWith('/mokolositekisumbule')) {
        if (!adminPayload || adminPayload.role !== 'SUPER_ADMIN') {
          return response; // La page gère l'affichage du login
        }
@@ -143,6 +143,6 @@ export const config = {
     '/manager/:path*',
     '/cuisine/:path*',
     '/caisse/:path*',
-    '/super-admin/:path*',
+    '/mokolositekisumbule/:path*',
   ],
 };

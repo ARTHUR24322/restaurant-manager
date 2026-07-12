@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { type Plat, type CartItem } from "@/types";
 import { useCartStore } from "@/store/cartStore";
-import { 
+import {
   Plus, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame, Search,
   Beef, Wine, Beer, CupSoda, IceCream, Heart
 } from "lucide-react";
@@ -26,7 +26,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<{ id: string; statut: string; table: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   const { addItem, submittedOrderIds } = useCartStore();
   const { currency } = useCurrencyStore();
 
@@ -36,11 +36,11 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
         setActiveOrder(null);
         return;
       }
-      
+
       const all = await getRecentCommandes(restaurantId);
-      const myOrder = all.find((o: { id: string; statut: string; table: string }) => 
-        o.table === tableNumber && 
-        o.statut !== "COMPLETED" && 
+      const myOrder = all.find((o: { id: string; statut: string; table: string }) =>
+        o.table === tableNumber &&
+        o.statut !== "COMPLETED" &&
         submittedOrderIds.includes(o.id)
       );
       setActiveOrder(myOrder || null);
@@ -54,7 +54,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
         const data = JSON.parse(event.data);
         if (data.type === "new-order" || data.type === "status-updated") {
           if (!data.restaurantId || data.restaurantId === restaurantId) {
-              fetchMyOrder();
+            fetchMyOrder();
           }
         }
       } catch {
@@ -62,7 +62,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       }
     };
 
-    const interval = setInterval(fetchMyOrder, 10000); 
+    const interval = setInterval(fetchMyOrder, 10000);
 
     return () => {
       eventSource.close();
@@ -92,8 +92,8 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
 
   const filteredPlats = initialPlats.filter(p => {
     const matchCategory = activeCategory === "ALL" || p.categorie === activeCategory;
-    const matchSearch = p.nom.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                       (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchSearch = p.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchCategory && matchSearch;
   });
 
@@ -102,7 +102,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       cartItemId: Math.random().toString(36).substring(7),
       plat: plat,
       quantite: 1,
-      selectedOptions: { detail: selectedOptions }, 
+      selectedOptions: { detail: selectedOptions },
     };
     addItem(newItem);
     toast.success(`${plat.nom} ajouté ! 🛒`);
@@ -118,23 +118,23 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
   const formatPrice = (plat: Plat) => {
     const price = plat.prixUsd;
     const rate = 2800;
-    
+
     if (currency === 'FC') {
-       if (plat.devise === 'FC') {
-          return `${price.toLocaleString()} FC`;
-       }
-       return `${(price * rate).toLocaleString()} FC`;
+      if (plat.devise === 'FC') {
+        return `${price.toLocaleString()} FC`;
+      }
+      return `${(price * rate).toLocaleString()} FC`;
     }
-    
+
     if (plat.devise === 'FC') {
-       return `$${(price / rate).toFixed(2)}`;
+      return `$${(price / rate).toFixed(2)}`;
     }
     return `$${price.toFixed(2)}`;
   }
 
   return (
     <>
-      <PlateOptionsModal 
+      <PlateOptionsModal
         plat={selectedPlat}
         isOpen={isOptionsOpen}
         onClose={() => setIsOptionsOpen(false)}
@@ -147,50 +147,50 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-xl">
-                    <Clock className="w-5 h-5 text-primary" />
+                  <Clock className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 leading-none">Commande en cours</p>
-                   <p className="text-xs font-bold text-white mt-1">#{activeOrder.id.slice(-4).toUpperCase()}</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 leading-none">Commande en cours</p>
+                  <p className="text-xs font-bold text-white mt-1">#{activeOrder.id.slice(-4).toUpperCase()}</p>
                 </div>
               </div>
               <div className="px-3 py-1 bg-white/5 rounded-full border border-white/5">
-                 <span className="text-[9px] font-black text-primary uppercase tracking-widest animate-pulse">
-                    {activeOrder.statut === 'SUBMITTED' ? 'Validée' : activeOrder.statut === 'PREPARING' ? 'En Cuisine' : 'Prête'}
-                 </span>
+                <span className="text-[9px] font-black text-primary uppercase tracking-widest animate-pulse">
+                  {activeOrder.statut === 'SUBMITTED' ? 'Validée' : activeOrder.statut === 'PREPARING' ? 'En Cuisine' : 'Prête'}
+                </span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-               {[
-                 { id: 'SUBMITTED', icon: CheckCircle2, label: 'Reçue' },
-                 { id: 'PREPARING', icon: Flame, label: 'Préparation' },
-                 { id: 'READY', icon: CheckCircle2, label: 'Prête' }
-               ].map((step, idx, arr) => {
-                 const isActive = activeOrder.statut === step.id || 
-                                 (activeOrder.statut === 'PREPARING' && step.id === 'SUBMITTED') ||
-                                 (activeOrder.statut === 'READY');
+              {[
+                { id: 'SUBMITTED', icon: CheckCircle2, label: 'Reçue' },
+                { id: 'PREPARING', icon: Flame, label: 'Préparation' },
+                { id: 'READY', icon: CheckCircle2, label: 'Prête' }
+              ].map((step, idx, arr) => {
+                const isActive = activeOrder.statut === step.id ||
+                  (activeOrder.statut === 'PREPARING' && step.id === 'SUBMITTED') ||
+                  (activeOrder.statut === 'READY');
 
-                 return (
-                   <div key={step.id} className="flex-1 flex items-center gap-2">
-                     <div className={cn(
-                       "flex-1 h-1 rounded-full transition-all duration-1000",
-                       isActive ? "bg-primary" : "bg-zinc-800"
-                     )} />
-                     {idx === arr.length - 1 && (
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          isActive ? "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" : "bg-zinc-800"
-                        )} />
-                     )}
-                   </div>
-                 )
-               })}
+                return (
+                  <div key={step.id} className="flex-1 flex items-center gap-2">
+                    <div className={cn(
+                      "flex-1 h-1 rounded-full transition-all duration-1000",
+                      isActive ? "bg-primary" : "bg-zinc-800"
+                    )} />
+                    {idx === arr.length - 1 && (
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        isActive ? "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]" : "bg-zinc-800"
+                      )} />
+                    )}
+                  </div>
+                )
+              })}
             </div>
             <div className="flex justify-between mt-3 px-1">
-               <span className="text-[8px] font-black uppercase text-zinc-600">Reçue</span>
-               <span className="text-[8px] font-black uppercase text-zinc-600">En Cuisine</span>
-               <span className="text-[8px] font-black uppercase text-zinc-600">À Table</span>
+              <span className="text-[8px] font-black uppercase text-zinc-600">Reçue</span>
+              <span className="text-[8px] font-black uppercase text-zinc-600">En Cuisine</span>
+              <span className="text-[8px] font-black uppercase text-zinc-600">À Table</span>
             </div>
           </div>
         </div>
@@ -199,22 +199,22 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
       {/* Search Bar Refondue */}
       <div className="sticky top-4 z-40 mb-10 transition-all duration-300">
         <div className="relative group mx-auto">
-           <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full opacity-50 group-focus-within:opacity-100 transition-opacity" />
-           <div className="relative bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-2xl flex items-center h-16 px-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] focus-within:border-primary/50 transition-all">
-              <Search className="w-6 h-6 text-zinc-400 group-focus-within:text-primary transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Cherchez un plat, une boisson..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-bold text-white placeholder:text-zinc-500 ml-4 placeholder:italic"
-              />
-              {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className="text-xs font-black text-zinc-500 hover:text-white uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-full">
-                      Effacer
-                  </button>
-              )}
-           </div>
+          <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full opacity-50 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative bg-zinc-950/90 backdrop-blur-3xl border border-white/10 rounded-2xl flex items-center h-16 px-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] focus-within:border-primary/50 transition-all">
+            <Search className="w-6 h-6 text-zinc-400 group-focus-within:text-primary transition-colors" />
+            <input
+              type="text"
+              placeholder="Cherchez un plat, une boisson..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-bold text-white placeholder:text-zinc-500 ml-4 placeholder:italic"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-xs font-black text-zinc-500 hover:text-white uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-full">
+                Effacer
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Categories Horizontal Scroll */}
@@ -225,8 +225,8 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
               onClick={() => setActiveCategory(cat.id)}
               className={cn(
                 "flex items-center gap-2.5 px-5 py-3 rounded-xl whitespace-nowrap transition-all duration-300 snap-center shrink-0 border",
-                activeCategory === cat.id 
-                  ? "bg-primary text-black border-primary font-black shadow-xl shadow-primary/10" 
+                activeCategory === cat.id
+                  ? "bg-primary text-black border-primary font-black shadow-xl shadow-primary/10"
                   : "bg-zinc-900/50 text-zinc-400 border-white/5 font-bold hover:bg-zinc-800"
               )}
             >
@@ -239,98 +239,98 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
 
       {/* Product List */}
       <div className="space-y-12">
-        {activeCategory === "ALL" 
+        {activeCategory === "ALL"
           ? categories.filter(c => c.id !== "ALL").map(cat => {
-              const catPlats = filteredPlats.filter(p => p.categorie === cat.id);
-              if (catPlats.length === 0) return null;
-              
-              return (
-                <div key={cat.id} className="space-y-6 pt-4">
-                  <div className="flex items-center gap-4 px-2 border-b border-white/10 pb-4">
-                    <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.1)]">
-                        <cat.icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-black uppercase tracking-widest text-white italic leading-none">{cat.label}</h2>
-                        <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-1.5">{catPlats.length} Produits</p>
-                    </div>
+            const catPlats = filteredPlats.filter(p => p.categorie === cat.id);
+            if (catPlats.length === 0) return null;
+
+            return (
+              <div key={cat.id} className="space-y-6 pt-4">
+                <div className="flex items-center gap-4 px-2 border-b border-white/10 pb-4">
+                  <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.1)]">
+                    <cat.icon className="w-6 h-6 text-primary" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {catPlats.map((plat) => {
-                      const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
-
-                      return (
-                        <div 
-                          key={plat.id} 
-                          onClick={() => {
-                            if (isOutOfStock) return;
-                            const hasOptions = plat.options && plat.options.length > 0;
-                            if (hasOptions) {
-                              setSelectedPlat(plat);
-                              setIsOptionsOpen(true);
-                            } else {
-                              addItemToCart(plat);
-                            }
-                          }}
-                          className={cn(
-                            "group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col",
-                            isOutOfStock && "opacity-50 grayscale"
-                          )}
-                        >
-                          {/* Image Full Width Top */}
-                          <div className="aspect-square w-full shrink-0 overflow-hidden relative">
-                             <img 
-                               src={plat.image} 
-                               alt={plat.nom}
-                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                             />
-                             
-                             {/* Heart Icon Overlay */}
-                             <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
-                                <Heart className="w-3.5 h-3.5" />
-                             </div>
-
-                             {isOutOfStock && (
-                               <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                 <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
-                               </div>
-                             )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="p-4 flex flex-col flex-1 gap-1">
-                              <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
-                                {plat.nom}
-                              </h3>
-                              
-                              <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
-                                {plat.description || "Une création culinaire unique par notre chef."}
-                              </p>
-                              
-                              <div className="flex items-center justify-between mt-auto pt-3">
-                                <span className="text-[13px] font-black text-primary">
-                                  {formatPrice(plat)}
-                                </span>
-                                <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
-                                  <Plus className="w-4 h-4" />
-                                </div>
-                              </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-widest text-white italic leading-none">{cat.label}</h2>
+                    <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-1.5">{catPlats.length} Produits</p>
                   </div>
                 </div>
-              );
-            })
+                <div className="grid grid-cols-2 gap-4">
+                  {catPlats.map((plat) => {
+                    const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
+
+                    return (
+                      <div
+                        key={plat.id}
+                        onClick={() => {
+                          if (isOutOfStock) return;
+                          const hasOptions = plat.options && plat.options.length > 0;
+                          if (hasOptions) {
+                            setSelectedPlat(plat);
+                            setIsOptionsOpen(true);
+                          } else {
+                            addItemToCart(plat);
+                          }
+                        }}
+                        className={cn(
+                          "group relative bg-zinc-900/40 border border-white/5 rounded-[2rem] overflow-hidden hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col",
+                          isOutOfStock && "opacity-50 grayscale"
+                        )}
+                      >
+                        {/* Image Full Width Top */}
+                        <div className="aspect-square w-full shrink-0 overflow-hidden relative">
+                          <img
+                            src={plat.image}
+                            alt={plat.nom}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          />
+
+                          {/* Heart Icon Overlay */}
+                          <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
+                            <Heart className="w-3.5 h-3.5" />
+                          </div>
+
+                          {isOutOfStock && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                              <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4 flex flex-col flex-1 gap-1">
+                          <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
+                            {plat.nom}
+                          </h3>
+
+                          <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
+                            {plat.description || "Une création culinaire unique par notre chef."}
+                          </p>
+
+                          <div className="flex items-center justify-between mt-auto pt-3">
+                            <span className="text-[13px] font-black text-primary">
+                              {formatPrice(plat)}
+                            </span>
+                            <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
+                              <Plus className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
           : (
             <div className="grid grid-cols-2 gap-4">
               {filteredPlats.map((plat) => {
                 const isOutOfStock = !plat.disponible || (plat.trackStock && (plat.stockQuantity || 0) <= 0);
 
                 return (
-                  <div 
-                    key={plat.id} 
+                  <div
+                    key={plat.id}
                     onClick={() => {
                       if (isOutOfStock) return;
                       const hasOptions = plat.options && plat.options.length > 0;
@@ -348,42 +348,42 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
                   >
                     {/* Image Full Width Top */}
                     <div className="aspect-square w-full shrink-0 overflow-hidden relative">
-                       <img 
-                         src={plat.image} 
-                         alt={plat.nom}
-                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                       />
-                       
-                       {/* Heart Icon Overlay */}
-                       <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
-                          <Heart className="w-3.5 h-3.5" />
-                       </div>
+                      <img
+                        src={plat.image}
+                        alt={plat.nom}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
 
-                       {isOutOfStock && (
-                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                           <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
-                         </div>
-                       )}
+                      {/* Heart Icon Overlay */}
+                      <div className="absolute top-3 right-3 p-2 bg-black/20 backdrop-blur-md rounded-full border border-white/10 text-white/70 hover:text-white transition-colors">
+                        <Heart className="w-3.5 h-3.5" />
+                      </div>
+
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <span className="text-[8px] font-black uppercase text-white tracking-widest text-center px-2">Épuisé</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Content */}
                     <div className="p-4 flex flex-col flex-1 gap-1">
-                        <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
-                          {plat.nom}
-                        </h3>
-                        
-                        <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
-                          {plat.description || "Une création culinaire unique par notre chef."}
-                        </p>
-                        
-                        <div className="flex items-center justify-between mt-auto pt-3">
-                          <span className="text-[13px] font-black text-primary">
-                            {formatPrice(plat)}
-                          </span>
-                          <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
-                            <Plus className="w-4 h-4" />
-                          </div>
+                      <h3 className="text-[13px] font-black text-white group-hover:text-primary transition-colors leading-tight line-clamp-1">
+                        {plat.nom}
+                      </h3>
+
+                      <p className="text-[10px] text-zinc-500 leading-relaxed line-clamp-2 mt-0.5">
+                        {plat.description || "Une création culinaire unique par notre chef."}
+                      </p>
+
+                      <div className="flex items-center justify-between mt-auto pt-3">
+                        <span className="text-[13px] font-black text-primary">
+                          {formatPrice(plat)}
+                        </span>
+                        <div className="p-2 bg-primary/90 group-hover:bg-primary rounded-full text-black transition-colors shadow-lg shadow-primary/10">
+                          <Plus className="w-4 h-4" />
                         </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -394,10 +394,10 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
 
 
         {filteredPlats.length === 0 && (
-           <div className="py-20 text-center">
-             <Search className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-             <p className="text-xs font-black uppercase text-zinc-700 tracking-widest">Aucun plat ne correspond à votre recherche</p>
-           </div>
+          <div className="py-20 text-center">
+            <Search className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
+            <p className="text-xs font-black uppercase text-zinc-700 tracking-widest">Aucun plat ne correspond à votre recherche</p>
+          </div>
         )}
       </div>
     </>

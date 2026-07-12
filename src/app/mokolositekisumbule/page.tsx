@@ -238,7 +238,7 @@ export default function SuperAdminPage() {
             if (res.success) {
                 setIsLogged(true);
                 fetchRestos();
-            } else if (window.location.pathname.startsWith('/super-admin') && isLogged) {
+            } else if (window.location.pathname.startsWith('/mokolositekisumbule') && isLogged) {
                 // Si on était connecté mais qu'on ne l'est plus, on force un reload complet
                 window.location.href = "/";
             }

@@ -1,5 +1,7 @@
 /* eslint-disable react/no-unescaped-entities, @next/next/no-img-element */
 import { prisma } from "@/lib/prisma";
+import { isFeatureInMaintenance } from "@/lib/maintenance";
+import { MaintenanceBlockerUI } from "@/components/MaintenanceBlocker";
 import { notFound } from "next/navigation";
 import { ShoppingBag, Store } from "lucide-react";
 import { BoutiqueMenuContent } from "@/components/client/BoutiqueMenuContent";
@@ -8,6 +10,10 @@ import { BoutiqueWelcomeScreen } from "@/components/client/BoutiqueWelcomeScreen
 import { type Plat } from "@/types";
 
 export default async function BoutiqueClientPage({ params }: { params: { restoId: string } }) {
+    if (await isFeatureInMaintenance("MAINTENANCE_BOUTIQUE")) {
+        return <MaintenanceBlockerUI />;
+    }
+
     // 1. Fetch restaurant — try slug first, then id
     let restaurant = await prisma.restaurant.findUnique({
         where: { boutiqueSlug: params.restoId }

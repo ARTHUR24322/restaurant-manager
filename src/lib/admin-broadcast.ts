@@ -53,7 +53,7 @@ export async function sendBroadcastNotification(data: {
     });
 
     revalidatePath("/manager/dashboard");
-    revalidatePath("/super-admin");
+    revalidatePath("/mokolositekisumbule");
 
     return { success: true, count: targetRestaurants.length };
   } catch (error: unknown) {

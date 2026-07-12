@@ -152,7 +152,7 @@ export async function createRestaurant(formData: FormData) {
     }
     console.log("[SaaS-Server] Menu initialisé.");
 
-    revalidatePath("/super-admin");
+    revalidatePath("/mokolositekisumbule");
     return { success: true, restoId: resto.id, password: tempPassword };
   } catch (error) {
     console.error("[SaaS-Server] CRITICAL ERROR:", error);
@@ -242,7 +242,7 @@ export async function updateRestaurant(id: string, formData: FormData) {
             }
         }
 
-        revalidatePath("/super-admin");
+        revalidatePath("/mokolositekisumbule");
         return { success: true };
      } catch (error) {
         console.error("[SaaS-Server] Erreur update:", error);
@@ -303,7 +303,7 @@ export async function toggleSubscription(id: string, active: boolean) {
             });
         }
 
-        revalidatePath("/super-admin");
+        revalidatePath("/mokolositekisumbule");
         return { success: true };
     } catch (e) {
         console.error("[SaaS-Server] Erreur toggle:", e);
@@ -320,7 +320,7 @@ export async function deleteRestaurant(id: string) {
         await prisma.restaurant.delete({
             where: { id }
         });
-        revalidatePath("/super-admin");
+        revalidatePath("/mokolositekisumbule");
         return { success: true };
     } catch (e) {
         console.error("[SaaS-Server] Erreur deletion:", e);
@@ -374,7 +374,7 @@ export async function linkChildToParent(childId: string, parentId: string) {
             where: { id: childId },
             data: { parentId }
         });
-        revalidatePath("/super-admin");
+        revalidatePath("/mokolositekisumbule");
         return { success: true };
     } catch (e) {
         console.error("[SaaS-Server] Erreur linkChildToParent:", e);
@@ -445,7 +445,7 @@ export async function renewSubscription(restaurantId: string, durationDays: numb
             type: "SUCCESS"
         });
 
-        revalidatePath("/super-admin");
+        revalidatePath("/mokolositekisumbule");
         return { success: true, newEnd: newEnd.toISOString() };
     } catch (error) {
         console.error("[SaaS-Server] Erreur renewSubscription:", error);
@@ -594,5 +594,73 @@ export async function getSystemDiagnostic() {
         console.error("[Diagnostic] Erreur:", e);
         const message = e instanceof Error ? e.message : "Erreur inconnue";
         return { success: false, error: message };
+    }
+}
+
+/**
+ * Récupère les configurations de maintenance globales
+ */
+export async function getMaintenanceConfig() {
+    try {
+        await ensureSuperAdmin();
+        const configs = await prisma.systemConfig.findMany({
+            where: {
+                key: {
+                    in: ["MAINTENANCE_MULTISITE", "MAINTENANCE_BOUTIQUE", "MAINTENANCE_COMMANDE", "MAINTENANCE_FIDELITE", "MAINTENANCE_WHATSAPP"]
+                }
+            }
+        });
+        const configMap = configs.reduce((acc: any, curr) => {
+            acc[curr.key] = curr.value === "true";
+            return acc;
+        }, {
+            MAINTENANCE_MULTISITE: false,
+            MAINTENANCE_BOUTIQUE: false,
+            MAINTENANCE_COMMANDE: false,
+            MAINTENANCE_FIDELITE: false,
+            MAINTENANCE_WHATSAPP: false
+        });
+        return { success: true, data: configMap };
+    } catch (e) {
+        console.error("[Maintenance] Erreur:", e);
+        return { success: false, error: "Erreur lors de la récupération de la configuration" };
+    }
+}
+
+/**
+ * Mise à jour d'un statut de maintenance
+ */
+export async function updateMaintenanceConfig(key: string, value: boolean) {
+    try {
+        await ensureSuperAdmin();
+        await prisma.systemConfig.upsert({
+            where: { key },
+            update: { value: value.toString() },
+            create: { key, value: value.toString() }
+        });
+        
+        // --- NOTIFICATION AUTOMATIQUE ---
+        // Si on bloque (true), on envoie un broadcast d'information ou warning global.
+        if (value === true) {
+            const { sendBroadcastNotification } = await import('./admin-broadcast');
+            let featureName = key;
+            if (key === "MAINTENANCE_MULTISITE") featureName = "Multi-Sites";
+            if (key === "MAINTENANCE_BOUTIQUE") featureName = "Boutique en Ligne";
+            if (key === "MAINTENANCE_COMMANDE") featureName = "Commandes";
+            if (key === "MAINTENANCE_FIDELITE") featureName = "Fidélité";
+            if (key === "MAINTENANCE_WHATSAPP") featureName = "WhatsApp";
+
+            await sendBroadcastNotification({
+                title: `Maintenance : ${featureName}`,
+                message: `La fonctionnalité ${featureName} est actuellement en maintenance pour environ 24h. Merci de votre patience.`,
+                type: "WARNING"
+            });
+        }
+        
+        revalidatePath("/mokolositekisumbule");
+        return { success: true };
+    } catch (e) {
+        console.error("[Maintenance] Erreur:", e);
+        return { success: false, error: "Erreur lors de la mise à jour" };
     }
 }

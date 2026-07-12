@@ -27,7 +27,7 @@ export async function submitSupportMessage(data: {
 
     console.log("[Support] Message créé avec succès:", newMessage.id);
 
-    revalidatePath("/super-admin");
+    revalidatePath("/mokolositekisumbule");
     return { success: true, id: newMessage.id };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur serveur";
@@ -57,7 +57,7 @@ export async function markMessageRead(id: string) {
             where: { id },
             data: { statut: "LU" }
         });
-        revalidatePath("/super-admin");
+        revalidatePath("/mokolositekisumbule");
         return { success: true };
     } catch {
         return { success: false };

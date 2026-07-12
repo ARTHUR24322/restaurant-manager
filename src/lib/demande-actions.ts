@@ -51,7 +51,7 @@ export async function submitSubscriptionRequest(data: {
       },
     });
 
-    revalidatePath("/super-admin");
+    revalidatePath("/mokolositekisumbule");
     return { success: true, id: newDemande.id };
   } catch (error: any) {
     console.error("[Demande] Erreur:", error);
@@ -267,7 +267,7 @@ export async function approveDemande(id: string, adminPassword: string) {
       data: { statut: "APPROUVEE" },
     });
 
-    revalidatePath("/super-admin");
+    revalidatePath("/mokolositekisumbule");
     return { success: true, restoId: resto.id, isUpdate: !!existingResto };
   } catch (error: any) {
     console.error("[Demande] Approbation error:", error);
@@ -288,7 +288,7 @@ export async function rejectDemande(id: string) {
       where: { id },
       data: { statut: "REFUSEE" },
     });
-    revalidatePath("/super-admin");
+    revalidatePath("/mokolositekisumbule");
     return { success: true };
   } catch (error: any) {
     console.error("[Demande] Rejet error:", error);

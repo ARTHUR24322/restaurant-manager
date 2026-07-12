@@ -67,7 +67,7 @@ export async function resolveRecoveryRequest(requestId: string, newPassword?: st
         where: { id: requestId },
         data: { statut: "REJETE" }
       });
-      revalidatePath("/super-admin");
+      revalidatePath("/mokolositekisumbule");
       return { success: true, message: "Demande rejetée." };
     }
 
@@ -91,7 +91,7 @@ export async function resolveRecoveryRequest(requestId: string, newPassword?: st
       data: { statut: "TRAITE" }
     });
 
-    revalidatePath("/super-admin");
+    revalidatePath("/mokolositekisumbule");
     return { success: true, message: "Mot de passe réinitialisé avec succès." };
   } catch (error) {
     console.error("[Recovery-Actions] Resolve Error:", error);

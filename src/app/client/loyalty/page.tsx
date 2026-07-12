@@ -1,5 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { getRestaurantById } from "@/lib/admin-actions";
+import { isFeatureInMaintenance } from "@/lib/maintenance";
+import { MaintenanceBlockerUI } from "@/components/MaintenanceBlocker";
 import { prisma } from "@/lib/prisma";
 import { Gift, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +15,10 @@ export default async function ClientLoyaltyPage({
   searchParams: { table?: string; resto_id?: string; phone?: string };
 }) {
   const restaurantId = searchParams.resto_id || "";
+
+  if (await isFeatureInMaintenance("MAINTENANCE_FIDELITE")) {
+    return <MaintenanceBlockerUI />;
+  }
   const restaurant = restaurantId ? await getRestaurantById(restaurantId) : null;
   const table = searchParams.table || "Sans table";
 

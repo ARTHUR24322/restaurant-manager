@@ -1,5 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { getPlats } from "@/lib/actions";
+import { isFeatureInMaintenance } from "@/lib/maintenance";
+import { MaintenanceBlockerUI } from "@/components/MaintenanceBlocker";
 import { Utensils } from "lucide-react";
 import { CartFloat } from "@/components/client/CartFloat";
 import ClientMenuContent from "./ClientMenuContent";
@@ -20,6 +22,10 @@ export default async function ClientMenuPage({
   searchParams: { table?: string; name?: string; resto_id?: string };
 }) {
   const restaurantId = searchParams.resto_id || "";
+
+  if (await isFeatureInMaintenance("MAINTENANCE_COMMANDE")) {
+    return <MaintenanceBlockerUI />;
+  }
   const restaurant = restaurantId ? await getRestaurantById(restaurantId) : null;
   const plats = restaurantId ? await getPlats(restaurantId) : [];
   const table = searchParams.table || "Inconnue";
