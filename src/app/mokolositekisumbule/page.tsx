@@ -40,7 +40,8 @@ import {
     Boxes,
     BarChart3,
     Activity as Pulse,
-    Link2
+    Link2,
+    Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
@@ -53,7 +54,8 @@ import {
     renewSubscription,
     getSuperAdminPageData,
     getSystemDiagnostic,
-    linkChildToParent
+    linkChildToParent,
+    updateMaintenanceConfig
 } from "@/lib/admin-actions";
 import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
@@ -169,7 +171,7 @@ export default function SuperAdminPage() {
     const [lastAdminFormData, setLastAdminFormData] = useState<FormData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'settings' | 'diagnostic'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'maintenance' | 'settings' | 'diagnostic'>('dashboard');
     const [monitoringData, setMonitoringData] = useState<any>(null);
     const [subscriptionLogs, setSubscriptionLogs] = useState<SubscriptionLog[]>([]);
     const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
@@ -177,6 +179,7 @@ export default function SuperAdminPage() {
     const [diagnosticData, setDiagnosticData] = useState<any>(null);
     const [diagLoading, setDiagLoading] = useState(false);
     const [diagAnomalyView, setDiagAnomalyView] = useState<'images' | 'accounts' | 'orders' | null>(null);
+    const [systemConfigs, setSystemConfigs] = useState<Record<string, boolean>>({});
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -339,6 +342,7 @@ export default function SuperAdminPage() {
                 setRecoveryRequests(megaData.recoveryRequests || []);
                 setSubscriptionLogs(megaData.subscriptionLogs || []);
                 setSupportMessages(megaData.supportMessages || []);
+                if (megaData.systemConfigs) setSystemConfigs(megaData.systemConfigs);
             }
 
             // 2. Récupération des analytics et monitoring (appels séparés pour ne pas surcharger)
@@ -542,6 +546,7 @@ export default function SuperAdminPage() {
                         { id: 'messages', label: 'Messages', icon: <Mail className="w-4 h-4" />, count: supportMessages.filter(m => m.statut === "NON_LU").length },
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
                         { id: 'diagnostic', label: 'Diagnostic', icon: <Activity className="w-4 h-4" /> },
+                        { id: 'maintenance', label: 'Maintenance Globale', icon: <Wrench className="w-4 h-4" /> },
                         { id: 'settings', label: 'Paramètres', icon: <Settings className="w-4 h-4" /> },
                     ].map((tab) => (
                         <button
@@ -1577,6 +1582,54 @@ export default function SuperAdminPage() {
                     <button onClick={() => setShowSettings(true)} className="w-full bg-zinc-800 p-6 rounded-3xl border border-zinc-700 text-white font-black uppercase flex justify-between items-center">
                         Changer le PIN Admin <ChevronRight />
                     </button>
+                </div>
+            )}
+
+            {activeTab === 'maintenance' && (
+                <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-300 space-y-8">
+                    <div className="bg-zinc-900 border border-zinc-800 p-10 rounded-[2.5rem]">
+                        <h3 className="text-2xl font-black uppercase mb-2 flex items-center gap-3">
+                            <Wrench className="w-8 h-8 text-amber-500" /> Maintenance Globale
+                        </h3>
+                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-8">Suspendre temporairement des fonctionnalités pour des mises à jour système.</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {[
+                                { key: "MAINTENANCE_BOUTIQUE", name: "Boutique en Ligne", desc: "Coupe l'accès public à toutes les boutiques" },
+                                { key: "MAINTENANCE_COMMANDE", name: "Commandes / Scans", desc: "Désactive la prise de commande" },
+                                { key: "MAINTENANCE_FIDELITE", name: "Système de Fidélité", desc: "Désactive les récompenses et points" },
+                                { key: "MAINTENANCE_WHATSAPP", name: "Moteur WhatsApp", desc: "Désactive l'envoi de messages WhatsApp" },
+                                { key: "MAINTENANCE_MULTISITE", name: "Gestion Multi-Sites", desc: "Verrouille la création/gestion de filiales" }
+                            ].map(feature => {
+                                const isMaintained = systemConfigs[feature.key];
+                                return (
+                                    <div key={feature.key} className={cn("p-6 rounded-3xl border transition-all flex justify-between items-center", isMaintained ? "bg-amber-500/5 border-amber-500/30" : "bg-zinc-950/40 border-zinc-800 hover:border-zinc-700")}>
+                                        <div>
+                                            <h4 className={cn("font-black uppercase", isMaintained ? "text-amber-500" : "text-white")}>{feature.name}</h4>
+                                            <p className="text-[10px] text-zinc-500 font-medium mt-1">{feature.desc}</p>
+                                        </div>
+                                        <button 
+                                            onClick={async () => {
+                                                const newVal = !isMaintained;
+                                                setSystemConfigs(prev => ({ ...prev, [feature.key]: newVal }));
+                                                const res = await updateMaintenanceConfig(feature.key, newVal);
+                                                if (res.success) {
+                                                    toast.success(newVal ? "Mise en maintenance activée" : "Maintenance terminée");
+                                                } else {
+                                                    toast.error("Erreur, annulation...");
+                                                    setSystemConfigs(prev => ({ ...prev, [feature.key]: !newVal }));
+                                                }
+                                            }}
+                                            className={cn("p-3 rounded-xl border transition-all", isMaintained ? "bg-amber-500 text-black border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]" : "bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-white")}
+                                            title={isMaintained ? "Terminer la maintenance" : "Activer la maintenance"}
+                                        >
+                                            <Power className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             )}
 

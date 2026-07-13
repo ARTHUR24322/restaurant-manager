@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Timer,
   ArrowLeft,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import { cn, safeJsonParse } from "@/lib/utils";
 import { toast } from "sonner";
@@ -35,6 +36,9 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
   // --- ETAT MODALE ---
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<Commande | null>(null);
+
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [pendingCancelOrder, setPendingCancelOrder] = useState<Commande | null>(null);
 
   const fetchProductionOrders = async (id: string) => {
     const all = await getRecentCommandes(id) as unknown as Commande[];
@@ -145,6 +149,32 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
         setFinishingId(null);
         setShowConfirm(false);
         setPendingOrder(null);
+    }
+  };
+
+  const handleCancelRequest = (order: Commande) => {
+    setPendingCancelOrder(order);
+    setShowCancelConfirm(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!pendingCancelOrder) return;
+    
+    setFinishingId(pendingCancelOrder.id);
+    try {
+        const res = await updateOrderStatus(pendingCancelOrder.id, "CANCELLED");
+        if (res.success) {
+            toast.success("Ticket annulé avec succès.");
+            fetchProductionOrders(restoId);
+        } else {
+            toast.error("Erreur lors de l'annulation");
+        }
+    } catch (e) {
+        toast.error("Une erreur technique est survenue");
+    } finally {
+        setFinishingId(null);
+        setShowCancelConfirm(false);
+        setPendingCancelOrder(null);
     }
   };
 
@@ -271,21 +301,34 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
                )}
             </div>
 
-            <button 
-              onClick={() => handleFinishRequest(order)}
-              disabled={finishingId === order.id}
-              className={cn(
-                  "w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-emerald-900/40 uppercase tracking-[0.2em] text-[10px]",
-                  finishingId === order.id && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              {finishingId === order.id ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                  <CheckCircle2 className="w-5 h-5" />
-              )}
-              {finishingId === order.id ? "Validation..." : "Prêt pour le Service"}
-            </button>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => handleCancelRequest(order)}
+                disabled={finishingId === order.id}
+                className={cn(
+                    "flex-1 max-w-[80px] bg-red-600/10 hover:bg-red-600/20 text-red-500 font-black py-6 rounded-[2.5rem] flex items-center justify-center transition-all active:scale-95 border border-red-500/20",
+                    finishingId === order.id && "opacity-50 cursor-not-allowed"
+                )}
+                title="Annuler le ticket"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => handleFinishRequest(order)}
+                disabled={finishingId === order.id}
+                className={cn(
+                    "flex-[3] w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-6 rounded-[2.5rem] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-emerald-900/40 uppercase tracking-[0.2em] text-[10px]",
+                    finishingId === order.id && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {finishingId === order.id ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                    <CheckCircle2 className="w-5 h-5" />
+                )}
+                {finishingId === order.id ? "Validation..." : "Prêt pour le Service"}
+              </button>
+            </div>
           </div>
         ))}
       </main>
@@ -306,6 +349,17 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
         message={`Confirmez-vous que la commande de la Table ${pendingOrder?.table} est prête${(pendingOrder as any)?.adresseLivraison ? ' — elle sera renvoyée à la Boutique pour livraison' : ' à être servie'} ?`}
         confirmLabel="Terminer le ticket"
         variant="success"
+        isLoading={finishingId !== null}
+      />
+
+      <ConfirmModal
+        show={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={handleConfirmCancel}
+        title="Annuler la commande"
+        message={`Voulez-vous vraiment annuler la commande de la Table ${pendingCancelOrder?.table} ? Attention, cette action est irréversible.`}
+        confirmLabel="Oui, annuler"
+        variant="danger"
         isLoading={finishingId !== null}
       />
     </div>

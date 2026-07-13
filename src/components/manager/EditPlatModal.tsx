@@ -107,6 +107,7 @@ export function EditPlatModal({ isOpen, onClose, plat, restaurantId }: EditPlatM
               >
                 <option value="ENTREE">Entrée</option>
                 <option value="PLAT">Plat De Résistance</option>
+                <option value="FAST_FOOD">Fast Food (Burger, Pizza...)</option>
                 <option value="DESSERT">Dessert / Sucré</option>
                 <option value="SOFT">Soft Drinks</option>
                 <option value="JUS">Jus Naturels</option>

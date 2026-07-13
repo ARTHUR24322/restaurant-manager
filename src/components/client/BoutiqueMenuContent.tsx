@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { type Plat } from "@/types";
-import { Search, Utensils, Soup, Beef, IceCream, CupSoda, Wine, Beer, Coffee, X } from "lucide-react";
+import { Search, Utensils, Soup, Beef, IceCream, CupSoda, Wine, Beer, Coffee, X, Pizza } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BoutiquePlatCard } from "./BoutiquePlatCard";
 
@@ -19,6 +19,7 @@ export function BoutiqueMenuContent({ initialPlats, exchangeRate = 2800 }: Props
 
   const categoryMap: Record<string, { label: string, icon: React.ElementType }> = {
     "ALL": { label: "Tout", icon: Utensils },
+    "FAST_FOOD": { label: "Fast Food", icon: Pizza },
     "ENTREE": { label: "Entrées", icon: Soup },
     "PLAT": { label: "Plats", icon: Beef },
     "DESSERT": { label: "Desserts", icon: IceCream },

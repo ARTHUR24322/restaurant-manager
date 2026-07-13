@@ -6,7 +6,7 @@ import { type Plat, type CartItem } from "@/types";
 import { useCartStore } from "@/store/cartStore";
 import {
   Plus, Utensils, Coffee, Soup, Clock, CheckCircle2, Flame, Search,
-  Beef, Wine, Beer, CupSoda, IceCream, Heart
+  Beef, Wine, Beer, CupSoda, IceCream, Heart, Pizza
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlateOptionsModal } from "@/components/client/PlateOptionsModal";
@@ -72,6 +72,7 @@ export default function ClientMenuContent({ initialPlats, tableNumber, restauran
 
   const categoryMap: Record<string, { label: string, icon: React.ElementType }> = {
     "ALL": { label: "Menu complet", icon: Utensils },
+    "FAST_FOOD": { label: "Fast Food", icon: Pizza },
     "ENTREE": { label: "Entrées", icon: Soup },
     "PLAT": { label: "Plats", icon: Beef },
     "DESSERT": { label: "Desserts", icon: IceCream },
