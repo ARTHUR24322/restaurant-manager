@@ -42,7 +42,8 @@ export async function getGlobalAnalytics() {
       aggSaaS,
       planGroup,
       cityGroup,
-      recentLogs
+      recentLogs,
+      visitsHistory
     ] = await Promise.all([
       prisma.visite.count(),
       prisma.visite.count({ where: { createdAt: { gte: today } } }),
@@ -72,7 +73,24 @@ export async function getGlobalAnalytics() {
         take: 10,
         orderBy: { createdAt: 'desc' },
         include: { restaurant: { select: { nom: true } } }
-      })
+      }),
+      (async () => {
+        const history = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            const dStart = new Date(d); dStart.setHours(0,0,0,0);
+            const dEnd = new Date(d); dEnd.setHours(23,59,59,999);
+            const count = await prisma.visite.count({
+                where: { createdAt: { gte: dStart, lte: dEnd } }
+            });
+            history.push({
+                name: d.toLocaleDateString('fr-FR', { weekday: 'short' }),
+                visits: count
+            });
+        }
+        return history;
+      })()
     ]);
 
     const topRestaurants = await Promise.all(visitStats.map(async (v) => {
@@ -97,6 +115,7 @@ export async function getGlobalAnalytics() {
       saasRevenue: aggSaaS._sum.monthlyPrice || 0,
       planDistribution: planGroup.map(g => ({ name: g.plan, value: g._count.id })),
       cityDistribution: cityGroup.map(g => ({ name: g.ville, value: g._count.id })),
+      visitsHistory,
       subscriptionActivity: recentLogs.map((log: any) => ({
         ...log,
         restaurantNom: log.restaurant?.nom || "Inconnu"

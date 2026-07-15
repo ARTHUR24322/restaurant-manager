@@ -44,6 +44,8 @@ import {
     Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
+import * as XLSX from 'xlsx';
 import { 
     createRestaurant, 
     getAllRestaurants, 
@@ -73,76 +75,86 @@ import {
     SubscriptionLog 
 } from "@/types";
 
-// --- COMPOSANTS DE VISUALISATION (SVG) ---
+// --- COMPOSANTS DE VISUALISATION (RECHARTS) ---
 
 function DonutChart({ data }: { data: { name: string, value: number }[] }) {
-    const total = data.reduce((acc, curr) => acc + curr.value, 0);
-    let currentOffset = 0;
     const colors = ["#818cf8", "#f472b6", "#fbbf24", "#34d399", "#a78bfa"];
+    const total = data.reduce((acc, curr) => acc + curr.value, 0);
 
     return (
-        <div className="relative w-48 h-48 flex items-center justify-center">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 32 32">
-                {data.map((item, idx) => {
-                    const percentage = (item.value / total) * 100;
-                    const strokeDasharray = `${percentage} ${100 - percentage}`;
-                    const offset = currentOffset;
-                    currentOffset += percentage;
-                    return (
-                        <circle
-                            key={idx}
-                            cx="16" cy="16" r="14"
-                            fill="transparent"
-                            stroke={colors[idx % colors.length]}
-                            strokeWidth="4"
-                            strokeDasharray={strokeDasharray}
-                            strokeDashoffset={-offset}
-                            className="transition-all duration-300 ease-out hover:opacity-80 cursor-pointer"
-                        />
-                    );
-                })}
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 rounded-full m-8 border border-zinc-800 shadow-inner">
+        <div className="w-full h-[200px] flex items-center justify-center relative">
+            <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                    <Tooltip 
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '1rem', color: '#fff' }} 
+                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                    />
+                    <Pie
+                        data={data}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                    >
+                        {data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                        ))}
+                    </Pie>
+                </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-xl font-black text-white">{total}</span>
-                <span className="text-[8px] font-bold text-zinc-500 uppercase">Total Items</span>
+                <span className="text-[8px] font-bold text-zinc-500 uppercase">Total</span>
             </div>
         </div>
     );
 }
 
 function MiniBarChart({ data }: { data: { name: string, value: number }[] }) {
-    const max = Math.max(...data.map(d => d.value), 1);
     return (
-        <div className="flex items-end gap-4 h-48 w-full pt-8 pb-2">
-            {data.map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer">
-                    <div className="relative w-full flex items-end justify-center h-full">
-                        {/* Bar avec Gradient */}
-                        <div
-                            className={cn(
-                                "w-full max-w-[48px] rounded-t-xl transition-all duration-500 relative",
-                                item.value > 0 
-                                    ? "bg-gradient-to-t from-indigo-900/50 via-indigo-600 to-indigo-400 shadow-[0_0_15px_-3px_rgba(99,102,241,0.4)] group-hover:shadow-[0_0_25px_-3px_rgba(99,102,241,0.6)] group-hover:brightness-125" 
-                                    : "bg-zinc-800/50"
-                            )}
-                            style={{ height: `${item.value > 0 ? Math.max((item.value / max) * 100, 10) : 2}%` }}
-                        >
-                            {/* Bulle flottante valeur */}
-                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white text-black px-3 py-1 rounded-xl text-xs font-black shadow-xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 pointer-events-none z-10">
-                                {item.value}
-                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45" />
-                            </div>
-                        </div>
-                    </div>
-                    {/* Label dynamique */}
-                    <span className={cn(
-                        "text-[10px] font-black uppercase truncate w-full text-center mt-4 transition-colors duration-300",
-                        item.value > 0 ? "text-indigo-400/80 group-hover:text-indigo-400" : "text-zinc-600"
-                    )}>
-                        {item.name}
-                    </span>
-                </div>
-            ))}
+        <div className="w-full h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#71717a' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#71717a' }} />
+                    <Tooltip 
+                        cursor={{ fill: '#27272a', opacity: 0.4 }}
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '1rem', color: '#fff' }} 
+                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                    />
+                    <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+}
+
+function TrafficChart({ data }: { data: { name: string, visits: number }[] }) {
+    if (!data || data.length === 0) return null;
+    return (
+        <div className="w-full h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#71717a' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#71717a' }} />
+                    <Tooltip 
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '1rem', color: '#fff' }} 
+                        itemStyle={{ color: '#10b981', fontSize: '12px', fontWeight: 'bold' }}
+                    />
+                    <Line type="monotone" dataKey="visits" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#18181b' }} activeDot={{ r: 6 }} />
+                </LineChart>
+            </ResponsiveContainer>
         </div>
     );
 }
@@ -639,6 +651,18 @@ export default function SuperAdminPage() {
                         ))}
                     </div>
 
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 mt-8 mb-8">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+                                    <Pulse className="w-5 h-5 text-emerald-500" /> Trafic Global (Plateforme)
+                                </h3>
+                                <p className="text-[10px] uppercase font-bold text-emerald-500 mt-1">Scans QR - 7 derniers jours</p>
+                            </div>
+                        </div>
+                        <TrafficChart data={analytics?.visitsHistory || []} />
+                    </div>
+
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                         {/* Graphiques Section */}
                         <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -763,6 +787,27 @@ export default function SuperAdminPage() {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="bg-zinc-800 border-zinc-700 rounded-xl py-2 px-4 text-xs text-white"
                                 />
+                                <button
+                                    onClick={() => {
+                                        const wb = XLSX.utils.book_new();
+                                        const data = restaurants.map(r => ({
+                                            'Nom': r.nom,
+                                            'Email': r.email,
+                                            'Ville': r.ville,
+                                            'Plan': r.plan,
+                                            'Statut': r.active ? 'Actif' : 'Suspendu',
+                                            'Expiration': r.subscriptionEnd ? new Date(r.subscriptionEnd).toLocaleDateString() : 'N/A',
+                                            'Prix/Mois ($)': r.monthlyPrice,
+                                            'Depuis': new Date(r.createdAt).toLocaleDateString(),
+                                        }));
+                                        const ws = XLSX.utils.json_to_sheet(data);
+                                        XLSX.utils.book_append_sheet(wb, ws, 'Restaurants');
+                                        XLSX.writeFile(wb, `smartresto_restaurants_${new Date().toISOString().slice(0,10)}.xlsx`);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                                >
+                                    <BarChart3 className="w-4 h-4" /> Exporter Excel
+                                </button>
                                 <button onClick={() => setShowCreateModal(true)} className="bg-primary text-black p-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase pr-4">
                                     <Plus className="w-4 h-4" /> Nouveau Restaurant
                                 </button>
@@ -887,9 +932,55 @@ export default function SuperAdminPage() {
                         {/* Section Abonnements Actifs */}
                         <div className="xl:col-span-2 space-y-6">
                             <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
-                                <h3 className="text-xl font-black uppercase mb-6 flex items-center gap-2">
-                                    <ShieldCheck className="w-6 h-6 text-emerald-500" /> Abonnements Actifs
-                                </h3>
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-black uppercase flex items-center gap-2">
+                                        <ShieldCheck className="w-6 h-6 text-emerald-500" /> Abonnements Actifs
+                                    </h3>
+                                    <button
+                                        onClick={async () => {
+                                            const jsPDF = (await import('jspdf')).default;
+                                            const { default: autoTable } = await import('jspdf-autotable');
+                                            const doc = new jsPDF();
+                                            const now = new Date();
+                                            doc.setFontSize(20);
+                                            doc.setFont('helvetica', 'bold');
+                                            doc.text('SmartResto — Rapport Abonnements', 14, 22);
+                                            doc.setFontSize(10);
+                                            doc.setFont('helvetica', 'normal');
+                                            doc.setTextColor(120, 120, 120);
+                                            doc.text(`Généré le ${now.toLocaleDateString()} à ${now.toLocaleTimeString()}`, 14, 30);
+                                            doc.setTextColor(0, 0, 0);
+                                            const rows = restaurants
+                                                .filter(r => r.active)
+                                                .map(r => {
+                                                    const sub = r.subscriptionEnd ? new Date(r.subscriptionEnd) : null;
+                                                    const days = sub ? Math.ceil((sub.getTime() - Date.now()) / 86400000) : 'N/A';
+                                                    return [
+                                                        r.nom,
+                                                        r.plan,
+                                                        `$${r.monthlyPrice}/m`,
+                                                        sub ? sub.toLocaleDateString() : 'N/A',
+                                                        `${days} j`,
+                                                        r.ville
+                                                    ];
+                                                });
+                                            autoTable(doc, {
+                                                startY: 38,
+                                                head: [['Restaurant', 'Plan', 'Prix', 'Expiration', 'Jours restants', 'Ville']],
+                                                body: rows,
+                                                headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+                                                bodyStyles: { fontSize: 9 },
+                                                alternateRowStyles: { fillColor: [245, 250, 248] },
+                                                styles: { cellPadding: 4, halign: 'left' },
+                                                margin: { left: 14, right: 14 },
+                                            });
+                                            doc.save(`smartresto_abonnements_${now.toISOString().slice(0,10)}.pdf`);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95"
+                                    >
+                                        <CreditCard className="w-4 h-4" /> Exporter PDF
+                                    </button>
+                                </div>
                                 <div className="space-y-4">
                                     {restaurants
                                         .filter(r => r.active)
