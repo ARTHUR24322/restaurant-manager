@@ -43,7 +43,9 @@ export async function getGlobalAnalytics() {
       planGroup,
       cityGroup,
       recentLogs,
-      visitsHistory
+      visitsHistory,
+      totalRestaurants,
+      inactiveRestaurants
     ] = await Promise.all([
       prisma.visite.count(),
       prisma.visite.count({ where: { createdAt: { gte: today } } }),
@@ -90,7 +92,9 @@ export async function getGlobalAnalytics() {
             });
         }
         return history;
-      })()
+      })(),
+      prisma.restaurant.count(),
+      prisma.restaurant.count({ where: { active: false } })
     ]);
 
     const topRestaurants = await Promise.all(visitStats.map(async (v) => {
@@ -106,13 +110,28 @@ export async function getGlobalAnalytics() {
       };
     }));
 
+    const globalRevenue = aggOrders._sum.totalUsd || 0;
+    const saasRevenue = aggSaaS._sum.monthlyPrice || 0;
+    const activeRestaurants = totalRestaurants - inactiveRestaurants;
+    const churnRate = totalRestaurants > 0 ? (inactiveRestaurants / totalRestaurants) * 100 : 0;
+    const arpu = activeRestaurants > 0 ? saasRevenue / activeRestaurants : 0;
+    // Approximative LTV (ARPU / Churn), if churn is 0 we cap or set to a reasonable max
+    const ltv = churnRate > 0 ? arpu / (churnRate / 100) : (arpu * 12); // If 0 churn, assume 12 months average lifespan minimum
+
     return {
       success: true,
       totalVisites,
       visitesJour,
       topRestaurants,
-      globalRevenue: aggOrders._sum.totalUsd || 0,
-      saasRevenue: aggSaaS._sum.monthlyPrice || 0,
+      globalRevenue,
+      saasRevenue,
+      saasMetrics: {
+          mrr: saasRevenue,
+          arr: saasRevenue * 12,
+          churnRate: parseFloat(churnRate.toFixed(2)),
+          ltv: parseFloat(ltv.toFixed(2)),
+          arpu: parseFloat(arpu.toFixed(2))
+      },
       planDistribution: planGroup.map(g => ({ name: g.plan, value: g._count.id })),
       cityDistribution: cityGroup.map(g => ({ name: g.ville, value: g._count.id })),
       visitsHistory,

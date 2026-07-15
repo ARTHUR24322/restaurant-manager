@@ -639,10 +639,14 @@ export default function SuperAdminPage() {
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         {[
-                            { label: 'Revenu SaaS', val: `$ ${analytics?.saasRevenue?.toFixed(2)}`, color: 'text-indigo-500' },
-                            { label: 'Volume (GMV)', val: `$ ${analytics?.globalRevenue?.toFixed(2)}`, color: 'text-emerald-500' },
+                            { label: 'MRR (Mensuel)', val: `$ ${analytics?.saasMetrics?.mrr?.toFixed(2) || 0}`, color: 'text-indigo-500' },
+                            { label: 'ARR (Annuel)', val: `$ ${analytics?.saasMetrics?.arr?.toFixed(2) || 0}`, color: 'text-indigo-400' },
+                            { label: 'Churn Rate', val: `${analytics?.saasMetrics?.churnRate || 0} %`, color: analytics?.saasMetrics?.churnRate > 5 ? 'text-red-500' : 'text-emerald-500' },
+                            { label: 'LTV (Valeur Vie)', val: `$ ${analytics?.saasMetrics?.ltv?.toFixed(2) || 0}`, color: 'text-amber-500' },
+                            { label: 'ARPU', val: `$ ${analytics?.saasMetrics?.arpu?.toFixed(2) || 0}`, color: 'text-teal-400' },
+                            { label: 'Volume (GMV)', val: `$ ${analytics?.globalRevenue?.toFixed(2) || 0}`, color: 'text-white' },
                             { label: 'Scans QR', val: analytics?.totalVisites || 0, color: 'text-primary' },
-                            { label: 'Restaurants', val: restaurants.length, color: 'text-white' },
+                            { label: 'Restaurants Actifs', val: restaurants.filter(r => r.active).length, color: 'text-white' },
                         ].map((stat, i) => (
                             <div key={i} className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem]">
                                 <p className="text-[10px] font-black text-zinc-500 uppercase mb-1">{stat.label}</p>
