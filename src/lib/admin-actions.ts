@@ -3,6 +3,7 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 import { uploadImageToSupabase } from "./supabase-storage";
 import { slugify } from "./utils/slugify";
@@ -11,6 +12,27 @@ import { ensureSuperAdmin } from "./auth-actions";
 import { PLAN_PRICES } from "./constants";
 import { createNotification } from "./notification-actions";
 import { validateUploadFile } from "./upload-validator";
+
+/**
+ * Helper SÉCURITÉ: Tracer l'activité des super administrateurs
+ */
+async function logSuperAdminAction(action: string, details: string, targetId?: string) {
+    try {
+        const h = headers();
+        const ip = h.get("x-forwarded-for") || h.get("x-real-ip") || "Unknown";
+        await prisma.actionLog.create({
+            data: {
+                action,
+                details,
+                performedBy: "SuperAdmin",
+                targetId,
+                ipAddress: ip
+            }
+        });
+    } catch(e) {
+        console.error("Erreur logSuperAdminAction:", e);
+    }
+}
 
 /**
  * Action Super-Admin : Création d'un nouveau restaurant
@@ -152,6 +174,8 @@ export async function createRestaurant(formData: FormData) {
     }
     console.log("[SaaS-Server] Menu initialisé.");
 
+    await logSuperAdminAction("CREATE_RESTAURANT", `A créé un nouveau restaurant : ${finalNom || nom} (email: ${email}) | Plan: ${plan}`, resto.id);
+
     revalidatePath("/mokolositekisumbule");
     return { success: true, restoId: resto.id, password: tempPassword };
   } catch (error) {
@@ -242,6 +266,16 @@ export async function updateRestaurant(id: string, formData: FormData) {
             }
         }
 
+        const restoBefore = await prisma.restaurant.findUnique({ where: { id }, select: { nom: true, plan: true } });
+        const planChanged = restoBefore && plan && plan !== restoBefore.plan;
+        await logSuperAdminAction(
+            "UPDATE_RESTAURANT",
+            planChanged
+                ? `Plan de ${restoBefore?.nom} changé de ${restoBefore?.plan} vers ${plan}`
+                : `Informations du restaurant ${restoBefore?.nom} mises à jour`,
+            id
+        );
+
         revalidatePath("/mokolositekisumbule");
         return { success: true };
      } catch (error) {
@@ -304,6 +338,13 @@ export async function toggleSubscription(id: string, active: boolean) {
         }
 
         revalidatePath("/mokolositekisumbule");
+        await logSuperAdminAction(
+            "TOGGLE_SUBSCRIPTION",
+            active
+                ? `A réactivé l'abonnement du restaurant ${target.email} (ID: ${id})`
+                : `A suspendu l'abonnement du restaurant ${target.email} (ID: ${id})`,
+            id
+        );
         return { success: true };
     } catch (e) {
         console.error("[SaaS-Server] Erreur toggle:", e);
@@ -317,9 +358,13 @@ export async function toggleSubscription(id: string, active: boolean) {
 export async function deleteRestaurant(id: string) {
     try {
         await ensureSuperAdmin();
+        const resto = await prisma.restaurant.findUnique({ where: { id }, select: { nom: true, email: true } });
         await prisma.restaurant.delete({
             where: { id }
         });
+        if (resto) {
+            await logSuperAdminAction("DELETE_RESTAURANT", `A supprimé le restaurant : ${resto.nom} (${resto.email})`, id);
+        }
         revalidatePath("/mokolositekisumbule");
         return { success: true };
     } catch (e) {
@@ -374,6 +419,7 @@ export async function linkChildToParent(childId: string, parentId: string) {
             where: { id: childId },
             data: { parentId }
         });
+        await logSuperAdminAction("LINK_CHILD_TO_PARENT", `A rattaché le restaurant ${childId} au parent ${parentId}`, childId);
         revalidatePath("/mokolositekisumbule");
         return { success: true };
     } catch (e) {
@@ -445,6 +491,8 @@ export async function renewSubscription(restaurantId: string, durationDays: numb
             type: "SUCCESS"
         });
 
+        await logSuperAdminAction("RENEW_SUBSCRIPTION", `A renouvelé l'abonnement du restaurant ${resto.nom} pour ${durationDays} jours`, restaurantId);
+
         revalidatePath("/mokolositekisumbule");
         return { success: true, newEnd: newEnd.toISOString() };
     } catch (error) {
@@ -471,7 +519,8 @@ export async function getSuperAdminPageData() {
             supportMessages,
             subscriptionLogs,
             systemConfigsRaw,
-            securityLogs
+            securityLogs,
+            actionLogsRaw
         ] = await Promise.all([
             prisma.restaurant.findMany({ orderBy: { createdAt: 'desc' } }),
             prisma.demandeAbonnement.findMany({ orderBy: { createdAt: 'desc' } }),
@@ -492,8 +541,16 @@ export async function getSuperAdminPageData() {
             prisma.securityLog.findMany({
                 orderBy: { createdAt: 'desc' },
                 take: 100
+            }),
+            prisma.actionLog.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: 100
             })
         ]);
+
+        // Reconstruit la variable systemConfigs depuis un tableau
+        const securityLogsData = securityLogs;
+        const actionLogs = actionLogsRaw;
 
         const systemConfigs = systemConfigsRaw.reduce((acc: any, curr) => {
             acc[curr.key] = curr.value === "true";
@@ -512,9 +569,13 @@ export async function getSuperAdminPageData() {
             demandes,
             recoveryRequests,
             supportMessages,
-            subscriptionLogs,
+            subscriptionLogs: subscriptionLogs.map((log: any) => ({
+                ...log,
+                restaurantNom: log.restaurant?.nom || "Inconnu"
+            })),
             systemConfigs,
-            securityLogs
+            securityLogs: securityLogsData,
+            actionLogs
         };
     } catch (e) {
         console.error("[Mega-Action] Super Admin Data Fetch Error:", e);
@@ -684,6 +745,7 @@ export async function updateMaintenanceConfig(key: string, value: boolean) {
         }
         
         revalidatePath("/mokolositekisumbule");
+        await logSuperAdminAction("TOGGLE_MAINTENANCE", `A ${value ? 'activé' : 'désactivé'} la maintenance : ${key}`);
         return { success: true };
     } catch (e) {
         console.error("[Maintenance] Erreur:", e);

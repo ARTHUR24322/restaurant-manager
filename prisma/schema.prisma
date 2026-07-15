@@ -362,3 +362,13 @@ model SecurityLog {
   source    String   @default("MANAGER") // "MANAGER" | "SUPER_ADMIN"
   createdAt DateTime @default(now())
 }
+
+model ActionLog {
+  id          String   @id @default(cuid())
+  action      String   // "TOGGLE_SUBSCRIPTION", "DELETE_RESTAURANT", "MAINTENANCE_TOGGLE", etc.
+  details     String
+  performedBy String
+  targetId    String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+}

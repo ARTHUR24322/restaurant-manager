@@ -41,7 +41,10 @@ import {
     BarChart3,
     Activity as Pulse,
     Link2,
-    Wrench
+    Wrench,
+    ClipboardList,
+    Filter,
+    Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
@@ -183,7 +186,7 @@ export default function SuperAdminPage() {
     const [lastAdminFormData, setLastAdminFormData] = useState<FormData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'maintenance' | 'settings' | 'diagnostic' | 'security'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'maintenance' | 'settings' | 'diagnostic' | 'security' | 'audit'>('dashboard');
     const [monitoringData, setMonitoringData] = useState<any>(null);
     const [subscriptionLogs, setSubscriptionLogs] = useState<SubscriptionLog[]>([]);
     const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
@@ -193,6 +196,7 @@ export default function SuperAdminPage() {
     const [diagAnomalyView, setDiagAnomalyView] = useState<'images' | 'accounts' | 'orders' | null>(null);
     const [systemConfigs, setSystemConfigs] = useState<Record<string, boolean>>({});
     const [securityLogs, setSecurityLogs] = useState<any[]>([]);
+    const [actionLogs, setActionLogs] = useState<any[]>([]);
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -356,6 +360,7 @@ export default function SuperAdminPage() {
                 setSubscriptionLogs(megaData.subscriptionLogs || []);
                 setSupportMessages(megaData.supportMessages || []);
                 setSecurityLogs(megaData.securityLogs || []);
+                setActionLogs((megaData as any).actionLogs || []);
                 if (megaData.systemConfigs) setSystemConfigs(megaData.systemConfigs);
             }
 
@@ -561,6 +566,7 @@ export default function SuperAdminPage() {
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
                         { id: 'diagnostic', label: 'Diagnostic', icon: <Activity className="w-4 h-4" /> },
                         { id: 'security', label: 'Sécurité & Accès', icon: <Lock className="w-4 h-4" /> },
+                        { id: 'audit', label: 'Audit d\'Activité', icon: <ClipboardList className="w-4 h-4" /> },
                         { id: 'maintenance', label: 'Maintenance Globale', icon: <Wrench className="w-4 h-4" /> },
                         { id: 'settings', label: 'Paramètres', icon: <Settings className="w-4 h-4" /> },
                     ].map((tab) => (
@@ -1977,6 +1983,88 @@ export default function SuperAdminPage() {
                                         </div>
                                     </div>
                                 ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {activeTab === 'audit' && (
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-xl font-black uppercase flex items-center gap-2">
+                                    <ClipboardList className="w-6 h-6 text-violet-500" /> Audit d&apos;Activité
+                                </h3>
+                                <p className="text-[10px] font-bold text-zinc-500 uppercase mt-1 tracking-widest">Toutes les actions sensibles effectuées par l&apos;administrateur</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="bg-violet-500/10 border border-violet-500/20 px-4 py-2 rounded-xl">
+                                    <p className="text-[9px] font-black text-violet-400 uppercase">Total Actions</p>
+                                    <p className="text-lg font-black text-violet-400">{actionLogs.length}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Timeline */}
+                        <div className="space-y-3">
+                            {actionLogs.length === 0 ? (
+                                <div className="text-center py-20 opacity-40">
+                                    <ClipboardList className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Aucune action enregistrée</p>
+                                    <p className="text-[9px] text-zinc-600 mt-1">Les actions apparaîtront ici automatiquement</p>
+                                </div>
+                            ) : (
+                                actionLogs.map((log: any) => {
+                                    const actionColors: Record<string, string> = {
+                                        'CREATE_RESTAURANT': 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                                        'DELETE_RESTAURANT': 'bg-red-500/10 text-red-500 border-red-500/20',
+                                        'UPDATE_RESTAURANT': 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                                        'TOGGLE_SUBSCRIPTION': 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+                                        'RENEW_SUBSCRIPTION': 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+                                        'TOGGLE_MAINTENANCE': 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+                                        'LINK_CHILD_TO_PARENT': 'bg-violet-500/10 text-violet-400 border-violet-500/20',
+                                    };
+                                    const colorClass = actionColors[log.action] || 'bg-zinc-800 text-zinc-400 border-zinc-700';
+                                    const actionIcons: Record<string, React.ReactNode> = {
+                                        'CREATE_RESTAURANT': <Plus className="w-4 h-4" />,
+                                        'DELETE_RESTAURANT': <XCircle className="w-4 h-4" />,
+                                        'UPDATE_RESTAURANT': <Pencil className="w-4 h-4" />,
+                                        'TOGGLE_SUBSCRIPTION': <Power className="w-4 h-4" />,
+                                        'RENEW_SUBSCRIPTION': <RefreshCw className="w-4 h-4" />,
+                                        'TOGGLE_MAINTENANCE': <Wrench className="w-4 h-4" />,
+                                        'LINK_CHILD_TO_PARENT': <Link2 className="w-4 h-4" />,
+                                    };
+                                    return (
+                                        <div key={log.id} className="bg-zinc-800/30 border border-zinc-700/30 p-5 rounded-2xl flex items-center gap-5 hover:bg-zinc-800/50 transition-all">
+                                            {/* Icone action */}
+                                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border", colorClass)}>
+                                                {actionIcons[log.action] || <ClipboardList className="w-4 h-4" />}
+                                            </div>
+                                            {/* Contenu */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={cn("text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border", colorClass)}>
+                                                        {log.action.replace(/_/g, ' ')}
+                                                    </span>
+                                                    {log.ipAddress && log.ipAddress !== 'Unknown' && (
+                                                        <span className="text-[8px] font-bold text-zinc-600 uppercase">IP: {log.ipAddress}</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm font-bold text-zinc-200 truncate">{log.details}</p>
+                                                {log.targetId && (
+                                                    <p className="text-[9px] font-mono text-zinc-600 mt-0.5">Target: {log.targetId.substring(0, 16)}...</p>
+                                                )}
+                                            </div>
+                                            {/* Timestamp */}
+                                            <div className="text-right flex-shrink-0">
+                                                <p className="text-[10px] font-black text-zinc-400">{new Date(log.createdAt).toLocaleDateString('fr-FR')}</p>
+                                                <p className="text-xs font-black text-white">{new Date(log.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                                                <p className="text-[9px] text-zinc-600 uppercase mt-1">{log.performedBy}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
