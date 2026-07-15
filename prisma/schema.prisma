@@ -351,3 +351,14 @@ model ClientReward {
   @@index([customerId])
   @@index([restaurantId])
 }
+
+model SecurityLog {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String?
+  userAgent String?
+  status    String   // "SUCCESS" | "FAILED"
+  reason    String?
+  source    String   @default("MANAGER") // "MANAGER" | "SUPER_ADMIN"
+  createdAt DateTime @default(now())
+}

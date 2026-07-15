@@ -470,7 +470,8 @@ export async function getSuperAdminPageData() {
             recoveryRequests,
             supportMessages,
             subscriptionLogs,
-            systemConfigsRaw
+            systemConfigsRaw,
+            securityLogs
         ] = await Promise.all([
             prisma.restaurant.findMany({ orderBy: { createdAt: 'desc' } }),
             prisma.demandeAbonnement.findMany({ orderBy: { createdAt: 'desc' } }),
@@ -487,6 +488,10 @@ export async function getSuperAdminPageData() {
                         in: ["MAINTENANCE_MULTISITE", "MAINTENANCE_BOUTIQUE", "MAINTENANCE_COMMANDE", "MAINTENANCE_FIDELITE", "MAINTENANCE_WHATSAPP"]
                     }
                 }
+            }),
+            prisma.securityLog.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: 100
             })
         ]);
 
@@ -508,7 +513,8 @@ export async function getSuperAdminPageData() {
             recoveryRequests,
             supportMessages,
             subscriptionLogs,
-            systemConfigs
+            systemConfigs,
+            securityLogs
         };
     } catch (e) {
         console.error("[Mega-Action] Super Admin Data Fetch Error:", e);

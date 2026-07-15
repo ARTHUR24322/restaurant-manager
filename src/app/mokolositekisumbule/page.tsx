@@ -171,7 +171,7 @@ export default function SuperAdminPage() {
     const [lastAdminFormData, setLastAdminFormData] = useState<FormData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'maintenance' | 'settings' | 'diagnostic'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'monitoring' | 'restaurants' | 'abonnements' | 'demandes' | 'recuperation' | 'messages' | 'broadcast' | 'maintenance' | 'settings' | 'diagnostic' | 'security'>('dashboard');
     const [monitoringData, setMonitoringData] = useState<any>(null);
     const [subscriptionLogs, setSubscriptionLogs] = useState<SubscriptionLog[]>([]);
     const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
@@ -180,6 +180,7 @@ export default function SuperAdminPage() {
     const [diagLoading, setDiagLoading] = useState(false);
     const [diagAnomalyView, setDiagAnomalyView] = useState<'images' | 'accounts' | 'orders' | null>(null);
     const [systemConfigs, setSystemConfigs] = useState<Record<string, boolean>>({});
+    const [securityLogs, setSecurityLogs] = useState<any[]>([]);
 
     // --- ETATS POUR MODALE PERSONNALISEE ---
     const [modalConfig, setModalConfig] = useState<{
@@ -342,6 +343,7 @@ export default function SuperAdminPage() {
                 setRecoveryRequests(megaData.recoveryRequests || []);
                 setSubscriptionLogs(megaData.subscriptionLogs || []);
                 setSupportMessages(megaData.supportMessages || []);
+                setSecurityLogs(megaData.securityLogs || []);
                 if (megaData.systemConfigs) setSystemConfigs(megaData.systemConfigs);
             }
 
@@ -546,6 +548,7 @@ export default function SuperAdminPage() {
                         { id: 'messages', label: 'Messages', icon: <Mail className="w-4 h-4" />, count: supportMessages.filter(m => m.statut === "NON_LU").length },
                         { id: 'broadcast', label: 'Broadcast', icon: <Globe className="w-4 h-4" /> },
                         { id: 'diagnostic', label: 'Diagnostic', icon: <Activity className="w-4 h-4" /> },
+                        { id: 'security', label: 'Sécurité & Accès', icon: <Lock className="w-4 h-4" /> },
                         { id: 'maintenance', label: 'Maintenance Globale', icon: <Wrench className="w-4 h-4" /> },
                         { id: 'settings', label: 'Paramètres', icon: <Settings className="w-4 h-4" /> },
                     ].map((tab) => (
@@ -1836,6 +1839,50 @@ export default function SuperAdminPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'security' && (
+                <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-8">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h3 className="text-lg font-black uppercase flex items-center gap-2 text-white">
+                                    <Lock className="w-6 h-6 text-primary" /> Sécurité & Logins
+                                </h3>
+                                <p className="text-[10px] uppercase font-bold text-zinc-500 mt-1">Historique des tentatives de connexion</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {securityLogs.length === 0 ? (
+                                <p className="text-[10px] text-zinc-500 font-bold uppercase py-10 text-center">Aucun journal de sécurité trouvé</p>
+                            ) : (
+                                securityLogs.map((log) => (
+                                    <div key={log.id} className="bg-zinc-800/40 p-4 rounded-2xl border border-zinc-700/50 flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className={cn(
+                                                "w-10 h-10 rounded-xl flex items-center justify-center",
+                                                log.status === "SUCCESS" ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                                            )}>
+                                                {log.status === "SUCCESS" ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-white text-sm">{log.email} <span className="ml-2 text-[9px] px-2 py-0.5 rounded border border-zinc-600 bg-zinc-700 text-zinc-300 uppercase">{log.source}</span></p>
+                                                <p className="text-[10px] font-bold uppercase mt-1 text-zinc-400">
+                                                    {log.reason} • IP: {log.ipAddress || "N/A"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black uppercase text-zinc-500 mb-1">{new Date(log.createdAt).toLocaleDateString()}</p>
+                                            <p className="text-xs font-black text-white">{new Date(log.createdAt).toLocaleTimeString()}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>

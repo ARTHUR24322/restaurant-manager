@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { comparePassword, hashPassword } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/jwt";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { type SessionPayload } from "@/types";
 import { generateOTP, sendOTPByEmail } from "@/lib/email-otp";
 
@@ -90,6 +90,10 @@ export async function authenticateManager(formData: FormData) {
     const rawEmail = formData.get("email") as string;
     const rawPassword = formData.get("password") as string;
 
+    const headersList = headers();
+    const ipAddress = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'Inconnue';
+    const userAgent = headersList.get('user-agent') || 'Inconnu';
+
     const validated = loginSchema.safeParse({ email: rawEmail, password: rawPassword });
     
     if (!validated.success) {
@@ -111,16 +115,19 @@ export async function authenticateManager(formData: FormData) {
     });
 
     if (!restaurant) {
+      await prisma.securityLog.create({ data: { email, ipAddress, userAgent, status: "FAILED", reason: "Identifiants invalides", source: "MANAGER" } });
       return { success: false, error: "Identifiants invalides." };
     }
 
     if (!restaurant.active) {
+      await prisma.securityLog.create({ data: { email, ipAddress, userAgent, status: "FAILED", reason: "Compte inactif", source: "MANAGER" } });
       return { success: false, error: "Compte inactif. Veuillez contacter le support." };
     }
 
     const isValid = await comparePassword(password, restaurant.adminPassword);
 
     if (!isValid) {
+      await prisma.securityLog.create({ data: { email, ipAddress, userAgent, status: "FAILED", reason: "Mot de passe incorrect", source: "MANAGER" } });
       return { success: false, error: "Identifiants invalides." };
     }
 
@@ -139,6 +146,8 @@ export async function authenticateManager(formData: FormData) {
       maxAge: 60 * 60 * 24 * 3, // 3 jours
       path: "/",
     });
+
+    await prisma.securityLog.create({ data: { email, ipAddress, userAgent, status: "SUCCESS", reason: "Connexion réussie", source: "MANAGER" } });
 
     return { success: true, requiresPin: false, restoId: restaurant.id, firstLogin: restaurant.firstLogin };
   } catch (error) {
@@ -326,6 +335,10 @@ export async function authenticateSuperAdmin(formData: FormData) {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
+    const headersList = headers();
+    const ipAddress = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'Inconnue';
+    const userAgent = headersList.get('user-agent') || 'Inconnu';
+
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
     const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
     const GMAIL_DEST = process.env.GMAIL_USER;
@@ -371,9 +384,11 @@ export async function authenticateSuperAdmin(formData: FormData) {
         path: "/",
       });
 
+      await prisma.securityLog.create({ data: { email, ipAddress, userAgent, status: "SUCCESS", reason: "OTP Envoyé", source: "SUPER_ADMIN" } });
       return { success: true, requiresPin: true };
     }
 
+    await prisma.securityLog.create({ data: { email, ipAddress, userAgent, status: "FAILED", reason: "Mot de passe ou email incorrect", source: "SUPER_ADMIN" } });
     return { success: false, error: "Identifiants administrateur incorrects." };
   } catch (error) {
     return { success: false, error: "Erreur serveur." };
