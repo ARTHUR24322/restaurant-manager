@@ -26,7 +26,8 @@ import {
   Clock,
   Gift,
   ShoppingBag,
-  Store
+  Store,
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutManager, logoutManagerGlobal } from "@/lib/auth-actions";
@@ -53,8 +54,8 @@ function ManagerLayoutContent({
   const { setTheme, theme } = useTheme();
   // Premier login : modale de sécurité
   const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
-  const [firstLoginPwd, setFirstLoginPwd] = useState("");
-  const [firstLoginPwd2, setFirstLoginPwd2] = useState("");
+  const [firstLoginPin, setFirstLoginPin] = useState("");
+  const [firstLoginPin2, setFirstLoginPin2] = useState("");
   const [firstLoginLoading, setFirstLoginLoading] = useState(false);
 
   useEffect(() => {
@@ -169,6 +170,12 @@ function ManagerLayoutContent({
       label: "Clients Fidélité", 
       href: "/manager/loyalty", 
       icon: Gift, 
+      locked: !["PRO", "PLATINUM", "FREE", "TRIAL"].includes(currentPlan)
+    },
+    { 
+      label: "Marketin-what", 
+      href: "/manager/marketin-what", 
+      icon: MessageCircle, 
       locked: !["PRO", "PLATINUM", "FREE", "TRIAL"].includes(currentPlan)
     },
     ...(isMainAccount ? [{ 
@@ -332,47 +339,46 @@ function ManagerLayoutContent({
 
               <h3 className="text-2xl font-black italic uppercase text-white mb-1">Sécurisez votre compte</h3>
               <p className="text-zinc-400 text-sm font-medium mb-6 leading-relaxed">
-                Bienvenue ! Pour votre sécurité, veuillez définir un <span className="font-black text-white">nouveau mot de passe</span> avant de continuer.
+                Bienvenue ! Pour votre sécurité, veuillez définir un <span className="font-black text-white">nouveau code PIN à 6 chiffres</span> (actuellement 000000) avant de continuer.
               </p>
 
               <div className="w-full space-y-4 mb-6">
                 <input
                   type="password"
-                  value={firstLoginPwd}
-                  onChange={e => setFirstLoginPwd(e.target.value)}
-                  placeholder="Nouveau mot de passe (min. 8 car.)"
-                  className="w-full bg-zinc-800 border border-zinc-700 focus:border-primary rounded-2xl py-4 px-6 text-white font-bold outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-zinc-600 placeholder:font-normal text-sm"
+                  value={firstLoginPin}
+                  onChange={e => setFirstLoginPin(e.target.value.replace(/\D/g, '').substring(0, 6))}
+                  placeholder="Nouveau code PIN (6 chiffres)"
+                  className="w-full bg-zinc-800 border border-zinc-700 focus:border-primary rounded-2xl py-4 px-6 text-white font-bold outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-zinc-600 placeholder:font-normal text-sm text-center tracking-widest text-xl"
                 />
                 <input
                   type="password"
-                  value={firstLoginPwd2}
-                  onChange={e => setFirstLoginPwd2(e.target.value)}
-                  placeholder="Confirmer le mot de passe"
-                  className="w-full bg-zinc-800 border border-zinc-700 focus:border-primary rounded-2xl py-4 px-6 text-white font-bold outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-zinc-600 placeholder:font-normal text-sm"
+                  value={firstLoginPin2}
+                  onChange={e => setFirstLoginPin2(e.target.value.replace(/\D/g, '').substring(0, 6))}
+                  placeholder="Confirmer le code PIN"
+                  className="w-full bg-zinc-800 border border-zinc-700 focus:border-primary rounded-2xl py-4 px-6 text-white font-bold outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-zinc-600 placeholder:font-normal text-sm text-center tracking-widest text-xl"
                 />
-                {firstLoginPwd.length > 0 && firstLoginPwd.length < 8 && (
-                  <p className="text-xs text-red-400 font-bold text-left pl-1">⚠ Minimum 8 caractères requis.</p>
+                {firstLoginPin.length > 0 && firstLoginPin.length < 6 && (
+                  <p className="text-xs text-red-400 font-bold text-center">⚠ 6 chiffres requis.</p>
                 )}
-                {firstLoginPwd.length >= 8 && firstLoginPwd !== firstLoginPwd2 && firstLoginPwd2.length > 0 && (
-                  <p className="text-xs text-red-400 font-bold text-left pl-1">⚠ Les mots de passe ne correspondent pas.</p>
+                {firstLoginPin.length === 6 && firstLoginPin !== firstLoginPin2 && firstLoginPin2.length > 0 && (
+                  <p className="text-xs text-red-400 font-bold text-center">⚠ Les codes PIN ne correspondent pas.</p>
                 )}
               </div>
 
               <button
-                disabled={firstLoginLoading || firstLoginPwd.length < 8 || firstLoginPwd !== firstLoginPwd2}
+                disabled={firstLoginLoading || firstLoginPin.length < 6 || firstLoginPin !== firstLoginPin2}
                 onClick={async () => {
                   if (!restoId) return;
                   setFirstLoginLoading(true);
                   try {
-                    const { updateRestaurantPassword } = await import("@/lib/actions-settings");
-                    // Pour la première connexion on ne vérifie pas l'ancien mot de passe
-                    const res = await updateRestaurantPassword(restoId, "__FIRST_LOGIN__", firstLoginPwd);
+                    const { updateRestaurantPin } = await import("@/lib/actions-settings");
+                    const res = await updateRestaurantPin(restoId, firstLoginPin);
                     if (res?.success) {
                       await markFirstLoginDone(restoId);
                       setShowFirstLoginModal(false);
-                      setFirstLoginPwd("");
-                      setFirstLoginPwd2("");
-                      import("sonner").then(s => s.toast.success("Mot de passe mis à jour ! Votre compte est sécurisé."));
+                      setFirstLoginPin("");
+                      setFirstLoginPin2("");
+                      import("sonner").then(s => s.toast.success("Code PIN mis à jour ! Votre compte est sécurisé."));
                     } else {
                       import("sonner").then(s => s.toast.error(res?.error || "Erreur lors de la mise à jour."));
                     }
