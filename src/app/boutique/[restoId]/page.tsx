@@ -8,6 +8,41 @@ import { BoutiqueMenuContent } from "@/components/client/BoutiqueMenuContent";
 import { BoutiqueCart } from "@/components/client/BoutiqueCart";
 import { BoutiqueWelcomeScreen } from "@/components/client/BoutiqueWelcomeScreen";
 import { type Plat } from "@/types";
+import { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: { restoId: string } }): Promise<Metadata> {
+    let restaurant = await prisma.restaurant.findUnique({
+        where: { boutiqueSlug: params.restoId }
+    });
+
+    if (!restaurant) {
+        restaurant = await prisma.restaurant.findUnique({
+            where: { id: params.restoId }
+        });
+    }
+
+    if (!restaurant) {
+        return {
+            title: "Boutique Introuvable | Scanrestau",
+            description: "La boutique demandée n'existe pas.",
+            robots: { index: false, follow: false }
+        };
+    }
+
+    return {
+        title: `Commander en ligne - ${restaurant.nom}`,
+        description: `Boutique en ligne officielle de ${restaurant.nom}. Commandez vos plats préférés et suivez votre livraison en temps réel.`,
+        openGraph: {
+            title: `Commander chez ${restaurant.nom}`,
+            description: `Commandez en ligne et faites-vous livrer les meilleurs plats de ${restaurant.nom}.`,
+            images: restaurant.logoUrl ? [restaurant.logoUrl] : [],
+        },
+        robots: {
+            index: true,
+            follow: true,
+        }
+    };
+}
 
 export default async function BoutiqueClientPage({ params }: { params: { restoId: string } }) {
     if (await isFeatureInMaintenance("MAINTENANCE_BOUTIQUE")) {

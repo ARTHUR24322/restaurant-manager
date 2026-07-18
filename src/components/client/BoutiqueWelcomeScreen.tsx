@@ -74,7 +74,7 @@ export function BoutiqueWelcomeScreen({
     return (
       <div className="fixed inset-0 z-[100] bg-background flex flex-col text-foreground overflow-hidden">
         {/* Hero Banner — Logo full width with clear top / blurred bottom */}
-        <div className="relative w-full h-[55vh] flex-shrink-0 overflow-hidden">
+        <div className="relative w-full h-[35vh] sm:h-[45vh] flex-shrink-0 overflow-hidden">
           {logoUrl ? (
             <>
               {/* Background image — full coverage */}
@@ -141,7 +141,7 @@ export function BoutiqueWelcomeScreen({
         {/* Form area — slides up */}
         <div 
           className={cn(
-            "relative z-30 flex-1 -mt-4 rounded-t-[2rem] bg-background px-6 pt-8 pb-8 flex flex-col transition-all duration-700 ease-out",
+            "relative z-30 flex-1 -mt-4 rounded-t-[2rem] bg-background px-6 pt-6 pb-6 flex flex-col overflow-y-auto transition-all duration-700 ease-out",
             formReady ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
         >
