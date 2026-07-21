@@ -1735,11 +1735,20 @@ export default function SuperAdminPage() {
             )}
 
             {activeTab === 'settings' && (
-                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-300 bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
-                    <h3 className="text-2xl font-black uppercase mb-8">Configuration PIN</h3>
-                    <button onClick={() => setShowSettings(true)} className="w-full bg-zinc-800 p-6 rounded-3xl border border-zinc-700 text-white font-black uppercase flex justify-between items-center">
-                        Changer le PIN Admin <ChevronRight />
-                    </button>
+                <div className="max-w-2xl mx-auto animate-in slide-in-from-bottom-4 duration-300 space-y-8">
+                    <div className="bg-zinc-900 p-10 border border-zinc-800 rounded-[2.5rem]">
+                        <div className="mb-8">
+                            <h3 className="text-2xl font-black uppercase text-white flex items-center gap-3">
+                                <Lock className="w-6 h-6 text-primary" /> Code de Sécurité (PIN Admin)
+                            </h3>
+                            <p className="text-zinc-500 text-xs mt-2 font-medium">
+                                Ce code à 6 chiffres est exigé comme 2ème barrière de sécurité pour toutes les actions critiques : <strong className="text-white">Création, Suppression, Renouvellement ou Suspension d'un établissement</strong>. 
+                            </p>
+                        </div>
+                        <button onClick={() => setShowSettings(true)} className="w-full bg-zinc-800 hover:bg-zinc-700/80 p-6 rounded-3xl border border-zinc-700 text-white font-black uppercase flex justify-between items-center transition-all">
+                            Changer mon code de sécurité <ChevronRight />
+                        </button>
+                    </div>
                 </div>
             )}
 
