@@ -30,6 +30,7 @@ import {
   getStatsEmployes,
   getShiftsJour,
 } from "@/lib/employe-actions";
+import { getManagerSession } from "@/lib/manager-actions";
 import { toast } from "sonner";
 
 const ROLES = [
@@ -219,7 +220,7 @@ function EmployeModal({
 // ================================================
 
 export default function EquipePage({ searchParams }: { searchParams: { resto_id?: string } }) {
-  const restaurantId = searchParams.resto_id || "";
+  const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   const [employes, setEmployes] = useState<any[]>([]);
   const [stats, setStats] = useState<any[]>([]);
   const [shifts, setShifts] = useState<any[]>([]);
@@ -229,6 +230,19 @@ export default function EquipePage({ searchParams }: { searchParams: { resto_id?
   const [selectedEmploye, setSelectedEmploye] = useState<any | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [periodeStats, setPeriodeStats] = useState<"day" | "week" | "month">("day");
+
+  // Fallback: si pas de resto_id dans l'URL, récupérer depuis la session
+  useEffect(() => {
+    async function loadSession() {
+      if (!searchParams.resto_id) {
+        const session = await getManagerSession();
+        if (session) {
+          setRestaurantId(session.id);
+        }
+      }
+    }
+    loadSession();
+  }, [searchParams.resto_id]);
 
   const reload = useCallback(async () => {
     if (!restaurantId) return;
