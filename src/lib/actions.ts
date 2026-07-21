@@ -415,7 +415,7 @@ export async function getRecentCommandes(restaurantId?: string) {
   }
 }
 
-export async function updateOrderStatus(orderId: string, newStatus: string) {
+export async function updateOrderStatus(orderId: string, newStatus: string, cuisinierId?: string) {
   try {
     const order = await prisma.commande.findUnique({
       where: { id: orderId },
@@ -427,9 +427,15 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     // Vérification de l'autorisation
     await ensureManager(order.restaurantId);
 
+    const updateData: Record<string, unknown> = { statut: newStatus };
+    // Si un cuisinier est identifié lors du passage en READY, on le trace
+    if (cuisinierId && (newStatus === "READY" || newStatus === "READY_FOR_DELIVERY")) {
+      updateData.cuisinierId = cuisinierId;
+    }
+
     await prisma.commande.update({
       where: { id: orderId },
-      data: { statut: newStatus }
+      data: updateData
     });
     
     broadcastToAll("status-updated", { orderId, newStatus, restaurantId: order.restaurantId });

@@ -53,6 +53,7 @@ model Restaurant {
   rewardCatalog             RewardCatalog[]
   subscriptionLogs          SubscriptionLog[]
   visites                   Visite[]
+  employes                  Employe[]
 }
 
 model ArticleStock {
@@ -170,6 +171,15 @@ model Commande {
   stockDeducted  Boolean        @default(false)
   restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   items          CommandeItem[]
+
+  // Multi-personnel
+  createurId     String?
+  caissierId     String?
+  cuisinierId    String?
+  
+  createur       Employe?       @relation("EmployeCreateur", fields: [createurId], references: [id])
+  caissier       Employe?       @relation("EmployeCaisse", fields: [caissierId], references: [id])
+  cuisinier      Employe?       @relation("EmployeCuisine", fields: [cuisinierId], references: [id])
 
   @@index([restaurantId])
 }
@@ -371,4 +381,47 @@ model ActionLog {
   targetId    String?
   ipAddress   String?
   createdAt   DateTime @default(now())
+}
+
+enum RoleEmploye {
+  MANAGER
+  CAISSIER
+  CUISINIER
+  SERVEUR
+  LIVREUR
+}
+
+model Employe {
+  id             String        @id @default(cuid())
+  nom            String
+  codePin        String
+  role           RoleEmploye
+  actif          Boolean       @default(true)
+  restaurantId   String
+  restaurant     Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  
+  commandesCrees   Commande[]  @relation("EmployeCreateur")
+  commandesCaisse  Commande[]  @relation("EmployeCaisse")
+  commandesCuisine Commande[]  @relation("EmployeCuisine")
+  sessionsCaisse   ShiftCaisse[]
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([restaurantId])
+}
+
+model ShiftCaisse {
+  id             String    @id @default(cuid())
+  employeId      String
+  restaurantId   String
+  heureOuverture DateTime  @default(now())
+  heureFermeture DateTime?
+  fondsInitial   Float     @default(0)
+  fondsFinal     Float?
+  
+  employe        Employe   @relation(fields: [employeId], references: [id], onDelete: Cascade)
+  
+  @@index([employeId])
+  @@index([restaurantId])
 }

@@ -680,9 +680,18 @@ export default function PricingPage() {
               en toute simplicité
             </span>
           </h1>
-          <p className="text-zinc-400 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-zinc-400 text-lg max-w-2xl mx-auto leading-relaxed mb-10">
             Rendez vos clients fiers de vos services grâce à une solution de gestion ultra-complète, du menu digitalisé à la cuisine.
           </p>
+
+          <div className="mt-8 mb-4 max-w-5xl mx-auto relative rounded-3xl overflow-hidden shadow-2xl border border-white/10 group">
+             <img 
+               src="/smiling_manager.png" 
+               alt="Gérant de restaurant souriant" 
+               className="w-full h-auto max-h-[500px] object-cover rounded-3xl group-hover:scale-105 transition-transform duration-700" 
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent pointer-events-none" />
+          </div>
         </div>
       </section>
 

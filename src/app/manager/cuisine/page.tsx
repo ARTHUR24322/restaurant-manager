@@ -136,7 +136,11 @@ export default function CuisinePage({ searchParams }: { searchParams: { resto_id
     const nextStatus = isDelivery ? "READY_FOR_DELIVERY" : "READY";
     const msg = isDelivery ? `Commande ${pendingOrder.table} prête — renvoyée à la boutique !` : `Table ${pendingOrder.table} prête !`;
     try {
-        const res = await updateOrderStatus(pendingOrder.id, nextStatus);
+        // Récupérer l'employé actif (cuisinier) depuis sessionStorage
+        const empRaw = typeof window !== 'undefined' ? sessionStorage.getItem("employe_actif") : null;
+        const employe = empRaw ? JSON.parse(empRaw) : null;
+
+        const res = await updateOrderStatus(pendingOrder.id, nextStatus, employe?.id || undefined);
         if (res.success) {
             toast.success(msg);
             fetchProductionOrders(restoId);

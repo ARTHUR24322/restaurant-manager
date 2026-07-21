@@ -62,7 +62,7 @@ import {
     linkChildToParent,
     updateMaintenanceConfig
 } from "@/lib/admin-actions";
-import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal } from "@/lib/auth-actions";
+import { impersonateRestaurant, authenticateSuperAdmin, getSuperAdminSession, verifySuperAdminPin, updateAdminPin, logoutSuperAdminGlobal, verifyAdminSecurityPin } from "@/lib/auth-actions";
 import { getGlobalAnalytics } from "@/lib/analytics-actions";
 import { getAllDemandes, approveDemande, rejectDemande } from "@/lib/demande-actions";
 import { getAllSupportMessages, markMessageRead } from "@/lib/support-actions";
@@ -225,6 +225,38 @@ export default function SuperAdminPage() {
     const [oldPin, setOldPin] = useState("");
     const [newPin, setNewPin] = useState("");
     const [expandedEmails, setExpandedEmails] = useState<Set<string>>(new Set());
+
+    // --- ETATS POUR MODALE PIN DE SECURITE (SENSITIVE ACTIONS) ---
+    const [securityPinModal, setSecurityPinModal] = useState<{
+        show: boolean;
+        title: string;
+        onSuccess: () => void;
+    }>({ show: false, title: "", onSuccess: () => {} });
+    const [securityPinValue, setSecurityPinValue] = useState("");
+    const [securityPinError, setSecurityPinError] = useState("");
+    const [securityPinLoading, setSecurityPinLoading] = useState(false);
+
+    const handleSecurityPinSubmit = async (pin: string) => {
+        setSecurityPinLoading(true);
+        setSecurityPinError("");
+        try {
+            const res = await verifyAdminSecurityPin(pin);
+            if (res.success) {
+                const pendingAction = securityPinModal.onSuccess;
+                setSecurityPinModal({ show: false, title: "", onSuccess: () => {} });
+                setSecurityPinValue("");
+                pendingAction();
+            } else {
+                setSecurityPinError(res.error || "Code incorrect");
+                setSecurityPinValue("");
+            }
+        } catch (err: any) {
+            setSecurityPinError("Erreur technique");
+            setSecurityPinValue("");
+        } finally {
+            setSecurityPinLoading(false);
+        }
+    };
 
     // Groupement des restaurants par email pour identifier Mères & Filiales
     const groupedRestaurants = React.useMemo(() => {
@@ -405,15 +437,21 @@ export default function SuperAdminPage() {
             message: `Voulez-vous vraiment supprimer ${nom.toUpperCase()} ? Cette action est irréversible et supprimera toutes les données associées.`,
             type: "confirm",
             onConfirm: async () => {
-                setLoading(true);
-                const res = await deleteRestaurant(id);
-                if (res.success) {
-                    toast.success("Établissement supprimé avec succès.");
-                    await fetchRestos();
-                } else {
-                    toast.error(res.error || "Erreur lors de la suppression.");
-                }
-                setLoading(false);
+                setSecurityPinModal({
+                    show: true,
+                    title: `Confirmer la suppression de ${nom.toUpperCase()}`,
+                    onSuccess: async () => {
+                        setLoading(true);
+                        const res = await deleteRestaurant(id);
+                        if (res.success) {
+                            toast.success("Établissement supprimé avec succès.");
+                            await fetchRestos();
+                        } else {
+                            toast.error(res.error || "Erreur lors de la suppression.");
+                        }
+                        setLoading(false);
+                    }
+                });
             }
         });
     };
@@ -1032,15 +1070,21 @@ export default function SuperAdminPage() {
                                                             disabled={renewLoadingId === resto.id}
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
-                                                                setRenewLoadingId(resto.id);
-                                                                const res = await renewSubscription(resto.id, 30);
-                                                                setRenewLoadingId(null);
-                                                                if (res.success) {
-                                                                    toast.success(`${resto.nom} réabonné pour 30 jours !`);
-                                                                    fetchRestos();
-                                                                } else {
-                                                                    toast.error(res.error || "Erreur");
-                                                                }
+                                                                setSecurityPinModal({
+                                                                    show: true,
+                                                                    title: `Réabonner ${resto.nom} (30j)`,
+                                                                    onSuccess: async () => {
+                                                                        setRenewLoadingId(resto.id);
+                                                                        const res = await renewSubscription(resto.id, 30);
+                                                                        setRenewLoadingId(null);
+                                                                        if (res.success) {
+                                                                            toast.success(`${resto.nom} réabonné pour 30 jours !`);
+                                                                            await fetchRestos();
+                                                                        } else {
+                                                                            toast.error(res.error || "Erreur");
+                                                                        }
+                                                                    }
+                                                                });
                                                             }}
                                                             className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-2.5 rounded-2xl text-[9px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-emerald-900/30 disabled:opacity-50 whitespace-nowrap"
                                                         >
@@ -1108,7 +1152,17 @@ export default function SuperAdminPage() {
                     <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 relative">
                         <button onClick={() => setShowCreateModal(false)} className="absolute top-8 right-8 text-zinc-500 hover:text-white"><X /></button>
                         <h3 className="text-2xl font-black italic uppercase text-white mb-8">Déployer un Restaurant</h3>
-                        <form action={clientAction} className="space-y-4">
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const fd = new FormData(e.currentTarget);
+                            setSecurityPinModal({
+                                show: true,
+                                title: "Déploiement d'un nouvel établissement",
+                                onSuccess: () => {
+                                    clientAction(fd);
+                                }
+                            });
+                        }} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <input name="nom" required placeholder="Nom du Restaurant" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-1 focus:ring-primary" />
                                 <input name="telephone" required placeholder="Téléphone / WhatsApp" className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-white outline-none focus:ring-1 focus:ring-primary" />
@@ -1715,14 +1769,21 @@ export default function SuperAdminPage() {
                                         <button 
                                             onClick={async () => {
                                                 const newVal = !isMaintained;
-                                                setSystemConfigs(prev => ({ ...prev, [feature.key]: newVal }));
-                                                const res = await updateMaintenanceConfig(feature.key, newVal);
-                                                if (res.success) {
-                                                    toast.success(newVal ? "Mise en maintenance activée" : "Maintenance terminée");
-                                                } else {
-                                                    toast.error("Erreur, annulation...");
-                                                    setSystemConfigs(prev => ({ ...prev, [feature.key]: !newVal }));
-                                                }
+                                                setSecurityPinModal({
+                                                    show: true,
+                                                    title: newVal ? `Activer Maintenance - ${feature.name}` : `Terminer Maintenance - ${feature.name}`,
+                                                    onSuccess: async () => {
+                                                        setSystemConfigs(prev => ({ ...prev, [feature.key]: newVal }));
+                                                        const res = await updateMaintenanceConfig(feature.key, newVal);
+                                                        if (res.success) {
+                                                            toast.success(newVal ? "Mise en maintenance activée" : "Maintenance terminée");
+                                                            await fetchRestos();
+                                                        } else {
+                                                            toast.error("Erreur, annulation...");
+                                                            setSystemConfigs(prev => ({ ...prev, [feature.key]: !newVal }));
+                                                        }
+                                                    }
+                                                });
                                             }}
                                             className={cn("p-3 rounded-xl border transition-all", isMaintained ? "bg-amber-500 text-black border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]" : "bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-white")}
                                             title={isMaintained ? "Terminer la maintenance" : "Activer la maintenance"}
@@ -1750,6 +1811,109 @@ export default function SuperAdminPage() {
                     </div>
                 </div>
             )}
+            {/* --- MODALE PIN DE SECURITE (SENSITIVE ACTIONS) --- */}
+            {securityPinModal.show && (
+                <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[300] flex items-center justify-center p-4 transition-all duration-305 text-zinc-100">
+                    <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-[2.5rem] p-10 shadow-2xl shadow-primary/5 animate-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center">
+                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 border border-primary/20">
+                                <Lock className="w-8 h-8 text-primary" />
+                            </div>
+                            <h3 className="text-xl font-black italic uppercase text-white mb-2">Code de Sécurité</h3>
+                            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest text-center mb-6">{securityPinModal.title}</p>
+                            
+                            {/* Pin circles/dashes */}
+                            <div className="flex gap-3 mb-6">
+                                {[0, 1, 2, 3, 4, 5].map((i) => (
+                                    <div 
+                                        key={i}
+                                        className={cn(
+                                            "w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-150",
+                                            securityPinValue.length > i 
+                                                ? "border-primary bg-primary/10 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]" 
+                                                : "border-zinc-800 bg-zinc-950",
+                                            securityPinError && "border-red-500 bg-red-500/10"
+                                        )}
+                                    >
+                                        {securityPinValue.length > i && (
+                                            <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {securityPinError && (
+                                <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mb-6 animate-in shake duration-300">
+                                    {securityPinError}
+                                </p>
+                            )}
+
+                            {/* Keypad */}
+                            <div className="grid grid-cols-3 gap-3 w-full max-w-[260px] mb-6">
+                                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+                                    <button
+                                        key={num}
+                                        type="button"
+                                        disabled={securityPinLoading}
+                                        onClick={() => {
+                                            if (securityPinValue.length < 6) {
+                                                const newVal = securityPinValue + num;
+                                                setSecurityPinValue(newVal);
+                                                setSecurityPinError("");
+                                                if (newVal.length === 6) {
+                                                    handleSecurityPinSubmit(newVal);
+                                                }
+                                            }
+                                        }}
+                                        className="h-14 rounded-2xl bg-zinc-955 border border-zinc-850 hover:border-zinc-700 text-lg font-black text-white hover:bg-zinc-800 active:scale-95 transition-all disabled:opacity-50"
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSecurityPinModal({ show: false, title: "", onSuccess: () => {} });
+                                        setSecurityPinValue("");
+                                        setSecurityPinError("");
+                                    }}
+                                    className="h-14 rounded-2xl flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={securityPinLoading}
+                                    onClick={() => {
+                                        if (securityPinValue.length < 6) {
+                                            const newVal = securityPinValue + '0';
+                                            setSecurityPinValue(newVal);
+                                            setSecurityPinError("");
+                                            if (newVal.length === 6) {
+                                                handleSecurityPinSubmit(newVal);
+                                            }
+                                        }
+                                    }}
+                                    className="h-14 rounded-2xl bg-zinc-955 border border-zinc-850 hover:border-zinc-700 text-lg font-black text-white hover:bg-zinc-800 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    0
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSecurityPinValue(prev => prev.slice(0, -1));
+                                        setSecurityPinError("");
+                                    }}
+                                    className="h-14 rounded-2xl flex items-center justify-center text-zinc-500 hover:text-white hover:bg-red-500/10 transition-all font-bold text-xs"
+                                >
+                                    Retour
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* --- MODALE D'ACTION PERSONNALISÉE --- */}
             {modalConfig.show && (
                 <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[200] flex items-center justify-center p-4 transition-all duration-300">

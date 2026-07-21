@@ -705,3 +705,38 @@ export async function resetPasswordWithPin(formData: FormData) {
     return { success: false, error: "Une erreur est survenue lors de la réinitialisation." };
   }
 }
+
+/**
+ * Valide le code de sécurité Super Admin à 6 chiffres
+ */
+export async function verifyAdminSecurityPin(pinCode: string) {
+  try {
+    await ensureSuperAdmin();
+
+    if (pinCode.length !== 6 || !/^\d+$/.test(pinCode)) {
+      return { success: false, error: "Le code de sécurité doit contenir exactement 6 chiffres." };
+    }
+
+    const config = await prisma.systemConfig.findUnique({
+      where: { key: "admin_pin" }
+    });
+
+    const storedPin = config ? config.value : "123456";
+
+    let isValid = false;
+    if (storedPin === "123456") {
+      isValid = pinCode === "123456";
+    } else {
+      isValid = await comparePassword(pinCode, storedPin);
+    }
+
+    if (isValid) {
+      return { success: true };
+    }
+
+    return { success: false, error: "Code de sécurité incorrect." };
+  } catch (error: any) {
+    console.error("verifyAdminSecurityPin error:", error);
+    return { success: false, error: error.message || "Erreur serveur lors de la vérification." };
+  }
+}

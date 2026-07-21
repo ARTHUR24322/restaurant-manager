@@ -27,13 +27,15 @@ import {
   Gift,
   ShoppingBag,
   Store,
-  MessageCircle
+  MessageCircle,
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutManager, logoutManagerGlobal } from "@/lib/auth-actions";
 import { getRestaurantById, checkIsMainAccount, markFirstLoginDone } from "@/lib/admin-actions";
 import { checkSubscriptionAlerts } from "@/lib/notification-actions";
 import { NotificationMenu } from "@/components/manager/NotificationMenu";
+import { EmployeActifBadge } from "@/components/manager/EmployeActifBadge";
 import { useTheme } from "next-themes";
 
 function ManagerLayoutContent({
@@ -158,6 +160,7 @@ function ManagerLayoutContent({
     { label: "Tableau de Bord", href: "/manager/dashboard", icon: LayoutDashboard },
     { label: "Gestion du Menu", href: "/manager/menu", icon: Utensils },
     { label: "Boutique en Ligne", href: "/manager/boutique", icon: Store },
+    { label: "Équipe & Personnel", href: "/manager/equipe", icon: Users },
     { label: "QR Codes Tables", href: "/manager/qr", icon: QrCode },
     { 
       label: "Gestion de Stock", 
@@ -408,7 +411,8 @@ function ManagerLayoutContent({
              </button>
              <span className="font-bold text-lg">Smart<span className="text-primary">Resto</span> Admin</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <EmployeActifBadge restaurantId={restoId || ""} />
             <div className="w-8 h-8 rounded-full bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
               {restoProfile?.logoUrl ? (
                  <img src={restoProfile.logoUrl} alt="Logo" className="w-full h-full object-cover" />
