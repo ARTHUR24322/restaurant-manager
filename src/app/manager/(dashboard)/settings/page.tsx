@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any, react/no-unescaped-entities, @typescript-eslint/no-unused-vars */
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp, Upload, MessageSquare, ShieldCheck, Check } from "lucide-react";
+import { Settings, Lock, User, Save, Building2, Globe, CreditCard, Zap, Star, Clock, CheckCircle2, ChevronRight, AlertCircle, Loader2, Sun, Moon, Monitor, DollarSign, RefreshCw, TrendingUp, Upload, MessageSquare, ShieldCheck, Check, Download, Languages } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from 'next/navigation';
 import { Crown, Gift } from "lucide-react";
@@ -16,14 +16,17 @@ import { getWhatsAppSettings, updateWhatsAppSettings, testWhatsAppConnection } f
 import { SubmitButton } from "@/components/manager/SubmitButton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { LANGUAGES, Language, translations } from "@/lib/translations";
+
 
 export default function ManagerSettingsPage({ searchParams }: { searchParams: { resto_id?: string } }) {
   const router = useRouter();
   const [restaurantId, setRestaurantId] = useState<string>(searchParams.resto_id || "");
   
-  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance' | 'monnaie' | 'loyalty' | 'whatsapp'>('security');
+  const [activeTab, setActiveTab] = useState<'security' | 'profile' | 'subscription' | 'appearance' | 'monnaie' | 'loyalty' | 'whatsapp' | 'language'>('security');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState<Language>('fr');
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -93,9 +96,37 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
           setWaEnabled(waInfo.data.whatsappEnabled || false);
         }
       }
+      // Load current language from localStorage or default
+      const savedLang = localStorage.getItem('smartresto-lang') as Language;
+      if (savedLang && LANGUAGES.some(l => l.code === savedLang)) {
+        setCurrentLanguage(savedLang);
+      }
     }
     init();
   }, [searchParams.resto_id]);
+
+  const handleDownloadLanguage = (langCode: Language) => {
+    const data = translations[langCode];
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lang_${langCode}_package.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Package de langue ${langCode.toUpperCase()} téléchargé !`);
+  };
+
+  const handleChangeLanguage = (langCode: Language) => {
+    setCurrentLanguage(langCode);
+    localStorage.setItem('smartresto-lang', langCode);
+    toast.success("Langue mise à jour avec succès !");
+    // Trigger immediate reload to apply language changes if implemented globally
+    // window.location.reload(); 
+  };
+
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,6 +243,15 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                   )}
                 >
                     <Sun className="w-4 h-4" /> Apparence
+                </button>
+                <button 
+                  onClick={() => setActiveTab('language')}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
+                    activeTab === 'language' ? "bg-blue-500 text-white shadow-lg shadow-blue-500/10 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-secondary"
+                  )}
+                >
+                    <Languages className="w-4 h-4" /> Langue
                 </button>
                 <button 
                   onClick={() => setActiveTab('monnaie')}
@@ -640,6 +680,71 @@ export default function ManagerSettingsPage({ searchParams }: { searchParams: { 
                               <p className="text-xs font-bold text-foreground uppercase italic tracking-wider">Astuce de confort</p>
                               <p className="text-[11px] text-muted-foreground leading-relaxed">
                                   Le mode sombre réduit la fatigue oculaire lors des services de nuit, tandis que le mode clair est recommandé pour une lecture optimale sous un éclairage fort en journée.
+                              </p>
+                          </div>
+                      </div>
+                  </div>
+                )}
+
+                {activeTab === 'language' && (
+                  <div className="bg-card border border-border rounded-[2.5rem] p-8 animate-in fade-in zoom-in-95 duration-300">
+                      <h3 className="text-lg font-black uppercase tracking-tighter mb-6 flex items-center gap-2 text-foreground">
+                          Langues du système
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-8">Choisissez la langue d'affichage ou téléchargez les packages de langues.</p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {LANGUAGES.map((lang) => (
+                              <div
+                                  key={lang.code}
+                                  className={cn(
+                                      "flex flex-col gap-4 p-6 rounded-3xl border-2 transition-all",
+                                      currentLanguage === lang.code ? "border-blue-500 bg-blue-500/5" : "border-border bg-secondary/50"
+                                  )}
+                              >
+                                  <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                          <span className="text-3xl">{lang.flag}</span>
+                                          <div>
+                                              <p className="font-bold text-lg text-foreground">{lang.label}</p>
+                                              <p className="text-xs text-muted-foreground font-medium">{lang.nativeName}</p>
+                                          </div>
+                                      </div>
+                                      {currentLanguage === lang.code && <CheckCircle2 className="w-6 h-6 text-blue-500" />}
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-3 mt-4">
+                                      <button
+                                          onClick={() => handleChangeLanguage(lang.code)}
+                                          className={cn(
+                                              "flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all",
+                                              currentLanguage === lang.code 
+                                                  ? "bg-blue-500/20 text-blue-500" 
+                                                  : "bg-primary text-black hover:brightness-110"
+                                          )}
+                                          disabled={currentLanguage === lang.code}
+                                      >
+                                          {currentLanguage === lang.code ? "Activé" : "Activer"}
+                                      </button>
+                                      
+                                      <button
+                                          onClick={() => handleDownloadLanguage(lang.code)}
+                                          className="p-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-all border border-zinc-700 flex items-center justify-center"
+                                          title={`Télécharger le package ${lang.label}`}
+                                      >
+                                          <Download className="w-4 h-4" />
+                                      </button>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+
+                      <div className="mt-8 bg-blue-500/5 border border-blue-500/20 rounded-[2rem] p-6 flex items-start gap-4">
+                          <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                              <p className="text-xs font-bold text-foreground uppercase italic tracking-wider">Information de traduction</p>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                  Le package de traduction est inclus au format JSON. Si vous souhaitez vérifier ou étendre les traductions, vous pouvez télécharger la langue actuelle, la modifier, et l'intégrer au projet.
                               </p>
                           </div>
                       </div>
