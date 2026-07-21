@@ -1815,7 +1815,17 @@ export default function SuperAdminPage() {
                         <div className="space-y-4">
                             <input type="password" value={oldPin} onChange={e => setOldPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-center text-white" placeholder="Ancien PIN" />
                             <input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} className="w-full bg-zinc-800 border-zinc-700 rounded-2xl py-4 px-6 text-center text-primary" placeholder="Nouveau PIN" />
-                            <button onClick={async () => { const r = await updateAdminPin(oldPin, newPin); if(r.success) { setShowSettings(false); setOldPin(""); setNewPin(""); toast.success("PIN MAJ"); }}} className="w-full bg-primary text-black font-black py-4 rounded-2xl uppercase">Confirm</button>
+                            <button onClick={async () => {
+                                const r = await updateAdminPin(oldPin, newPin);
+                                if(r.success) {
+                                    setShowSettings(false);
+                                    setOldPin("");
+                                    setNewPin("");
+                                    toast.success("PIN mis à jour avec succès");
+                                } else {
+                                    toast.error(r.error || "Erreur lors de la mise à jour du PIN");
+                                }
+                            }} className="w-full bg-primary hover:bg-primary/90 text-black font-black py-4 rounded-2xl uppercase transition-all shadow-lg shadow-primary/20">Confirmer la modification</button>
                         </div>
                     </div>
                 </div>

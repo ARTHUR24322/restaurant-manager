@@ -475,6 +475,9 @@ export async function updateAdminPin(oldPin: string, newPin: string) {
             let isPinValid = false;
             if (config.value === "123456") {
                 isPinValid = oldPin === "123456";
+            } else if (!config.value.startsWith('$2')) {
+                // Fallback de sécurité si le PIN a été stocké en texte clair par erreur
+                isPinValid = oldPin === config.value;
             } else {
                 isPinValid = await comparePassword(oldPin, config.value);
             }
@@ -726,6 +729,9 @@ export async function verifyAdminSecurityPin(pinCode: string) {
     let isValid = false;
     if (storedPin === "123456") {
       isValid = pinCode === "123456";
+    } else if (!storedPin.startsWith('$2')) {
+      // Fallback de sécurité si le PIN a été stocké en texte clair
+      isValid = pinCode === storedPin;
     } else {
       isValid = await comparePassword(pinCode, storedPin);
     }
