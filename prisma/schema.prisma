@@ -408,6 +408,7 @@ model Employe {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  @@unique([restaurantId, codePin])
   @@index([restaurantId])
 }
 
