@@ -56,7 +56,7 @@ export async function createEmploye(data: {
     return { success: true, employe };
   } catch (e) {
     console.error("[Employe] createEmploye:", e);
-    return { success: false, error: "Erreur lors de la création." };
+    return { success: false, error: "Erreur lors de la création: " + (e as Error).message };
   }
 }
 
