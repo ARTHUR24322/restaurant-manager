@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChefHat,
@@ -14,7 +14,7 @@ import {
   LogIn,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getEmployes, loginEmployeByPin, ouvrirShift } from "@/lib/employe-actions";
+import { loginEmployeByPin, ouvrirShift, logEmployeConnection } from "@/lib/employe-actions";
 
 const ROLES_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   MANAGER: { label: "Manager", icon: Crown, color: "from-amber-600 to-amber-400" },
@@ -29,9 +29,7 @@ export default function EmployePinPage({ searchParams }: { searchParams: { resto
   const restaurantId = searchParams.resto_id || "";
   const redirectTo = searchParams.redirect || "/manager/dashboard";
 
-  const [employes, setEmployes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedEmploye, setSelectedEmploye] = useState<any | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -42,14 +40,6 @@ export default function EmployePinPage({ searchParams }: { searchParams: { resto
   const [shiftLoading, setShiftLoading] = useState(false);
   const [loggedEmploye, setLoggedEmploye] = useState<any>(null);
 
-  useEffect(() => {
-    if (!restaurantId) return;
-    getEmployes(restaurantId).then((res) => {
-      setEmployes((res.employes || []).filter((e: any) => e.actif));
-      setLoading(false);
-    });
-  }, [restaurantId]);
-
   const handlePinDigit = (digit: string) => {
     if (pin.length < 6) setPin((p) => p + digit);
   };
@@ -58,12 +48,22 @@ export default function EmployePinPage({ searchParams }: { searchParams: { resto
 
 
   const handleConfirmPin = async () => {
-    if (!selectedEmploye || pin.length < 4) return;
+    if (!selectedRole || pin.length < 4) return;
     setLoginLoading(true);
     setError("");
     try {
       const res = await loginEmployeByPin(restaurantId, pin);
-      if (res.success && res.employe && res.employe.id === selectedEmploye.id) {
+      if (res.success && res.employe) {
+        if (res.employe.role !== selectedRole) {
+          setError("Ce code PIN n'appartient pas à ce poste.");
+          setPin("");
+          setTimeout(() => setError(""), 2000);
+          return;
+        }
+
+        // Log the connection
+        await logEmployeConnection(restaurantId, res.employe.id, res.employe.nom, res.employe.role);
+
         setLoggedEmploye(res.employe);
         // Si c'est un caissier, proposer l'ouverture du shift
         if (res.employe.role === "CAISSIER" || res.employe.role === "MANAGER") {
@@ -101,13 +101,7 @@ export default function EmployePinPage({ searchParams }: { searchParams: { resto
     router.push(`${redirectTo}?resto_id=${restaurantId}`);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -124,20 +118,20 @@ export default function EmployePinPage({ searchParams }: { searchParams: { resto
             Smart<span className="text-white">Resto</span>
           </h1>
           <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-2">
-            {selectedEmploye ? "Entrez votre code PIN" : "Qui êtes-vous ?"}
+            {selectedRole ? "Entrez votre code PIN" : "Quel est votre poste ?"}
           </p>
         </div>
 
-        {!selectedEmploye ? (
-          /* ======================== Grille des employés ======================== */
+        {!selectedRole ? (
+          /* ======================== Grille des rôles ======================== */
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {employes.map((emp) => {
-              const conf = ROLES_CONFIG[emp.role] || ROLES_CONFIG.SERVEUR;
+            {Object.keys(ROLES_CONFIG).map((roleKey) => {
+              const conf = ROLES_CONFIG[roleKey];
               const Icon = conf.icon;
               return (
                 <button
-                  key={emp.id}
-                  onClick={() => { setSelectedEmploye(emp); setPin(""); setError(""); }}
+                  key={roleKey}
+                  onClick={() => { setSelectedRole(roleKey); setPin(""); setError(""); }}
                   className="group relative bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-2xl p-5 flex flex-col items-center gap-3 transition-all hover:scale-105 active:scale-95 hover:shadow-xl hover:shadow-primary/5"
                 >
                   <div className={cn(
@@ -147,35 +141,27 @@ export default function EmployePinPage({ searchParams }: { searchParams: { resto
                     <Icon className="w-8 h-8 text-white" />
                   </div>
                   <div className="text-center">
-                    <p className="font-black text-white text-sm truncate max-w-[100px]">{emp.nom}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{conf.label}</p>
+                    <p className="font-black text-white text-sm">{conf.label}</p>
                   </div>
                 </button>
               );
             })}
-
-            {employes.length === 0 && (
-              <div className="col-span-3 py-16 text-center text-zinc-600">
-                <p className="font-bold text-sm">Aucun employé actif.</p>
-                <p className="text-xs mt-1">Créez des employés depuis le Dashboard Manager.</p>
-              </div>
-            )}
           </div>
         ) : (
           /* ======================== Écran PIN ======================== */
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            {/* Employé sélectionné */}
+            {/* Rôle sélectionné */}
             <div className="flex flex-col items-center mb-8">
               {(() => {
-                const conf = ROLES_CONFIG[selectedEmploye.role] || ROLES_CONFIG.SERVEUR;
+                const conf = ROLES_CONFIG[selectedRole] || ROLES_CONFIG.SERVEUR;
                 const Icon = conf.icon;
                 return (
                   <>
                     <div className={cn("w-20 h-20 rounded-3xl flex items-center justify-center bg-gradient-to-br shadow-2xl mb-3", conf.color)}>
                       <Icon className="w-10 h-10 text-white" />
                     </div>
-                    <p className="font-black text-white text-xl">{selectedEmploye.nom}</p>
-                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">{conf.label}</p>
+                    <p className="font-black text-white text-xl">{conf.label}</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Connexion</p>
                   </>
                 );
               })()}
@@ -216,7 +202,7 @@ export default function EmployePinPage({ searchParams }: { searchParams: { resto
                 </button>
               ))}
               <button
-                onClick={() => setSelectedEmploye(null)}
+                onClick={() => setSelectedRole(null)}
                 className="h-16 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-2xl text-zinc-500 text-xs font-black uppercase tracking-widest transition-all active:scale-95 hover:text-white"
               >
                 ← Retour

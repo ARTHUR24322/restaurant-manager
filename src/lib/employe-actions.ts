@@ -130,6 +130,23 @@ export async function loginEmployeByPin(restaurantId: string, codePin: string) {
   }
 }
 
+export async function logEmployeConnection(restaurantId: string, employeId: string, nom: string, role: string) {
+  try {
+    await prisma.actionLog.create({
+      data: {
+        action: "EMPLOYE_LOGIN",
+        details: `Connexion: ${nom} (${role})`,
+        performedBy: nom,
+        targetId: employeId,
+      },
+    });
+    return { success: true };
+  } catch (e) {
+    console.error("[Employe] logEmployeConnection:", e);
+    return { success: false, error: "Erreur enregistrement log." };
+  }
+}
+
 // ============================================================
 // GESTION DES SHIFTS (CAISSE)
 // ============================================================
