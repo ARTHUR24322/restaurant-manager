@@ -17,11 +17,13 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
 
   const handleNumberClick = (num: string) => {
     if (pin.length < 6 && !isLoading) {
-      const newPin = pin + num;
-      setPin(newPin);
-      if (newPin.length === 6) {
-        onComplete(newPin);
-      }
+      setPin(pin + num);
+    }
+  };
+
+  const handleValidate = () => {
+    if (pin.length >= 4 && !isLoading) {
+      onComplete(pin);
     }
   };
 
@@ -40,6 +42,10 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
         handleDelete();
       } else if (e.key === 'Escape') {
         onCancel();
+      } else if (e.key === 'Enter') {
+        if (pin.length >= 4) {
+          handleValidate();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -50,7 +56,7 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
     <div className="flex flex-col items-center gap-8 animate-in zoom-in-95 duration-150">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">Accès Sécurisé</h2>
-        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Saisissez votre code PIN à 6 chiffres</p>
+        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Saisissez votre code PIN (4 à 6 chiffres)</p>
       </div>
 
       {/* Pin Display */}
@@ -83,7 +89,7 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
           <button
             key={num}
             onClick={() => handleNumberClick(num)}
-            className="h-16 rounded-2xl bg-zinc-900 border border-zinc-800 text-xl font-black text-white hover:bg-zinc-800 hover:border-zinc-700 active:scale-90 transition-all"
+            className="h-16 rounded-2xl bg-zinc-900 border border-zinc-800 text-xl font-black text-white hover:bg-zinc-800 hover:border-zinc-700 active:scale-90 transition-all shadow-md"
           >
             {num}
           </button>
@@ -96,7 +102,7 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
         </button>
         <button
           onClick={() => handleNumberClick('0')}
-          className="h-16 rounded-2xl bg-zinc-900 border border-zinc-800 text-xl font-black text-white hover:bg-zinc-800 hover:border-zinc-700 active:scale-90 transition-all"
+          className="h-16 rounded-2xl bg-zinc-900 border border-zinc-800 text-xl font-black text-white hover:bg-zinc-800 hover:border-zinc-700 active:scale-90 transition-all shadow-md"
         >
           0
         </button>
@@ -107,6 +113,14 @@ export function PinInput({ onComplete, onCancel, error, isLoading }: PinInputPro
           <Delete className="w-6 h-6" />
         </button>
       </div>
+
+      <button
+        onClick={handleValidate}
+        disabled={pin.length < 4 || isLoading}
+        className="w-full max-w-[280px] h-16 bg-primary hover:bg-primary/90 text-black font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+      >
+        {isLoading ? "VÉRIFICATION..." : "VALIDER"}
+      </button>
     </div>
   );
 }
