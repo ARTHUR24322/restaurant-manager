@@ -3,6 +3,7 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { headers } from "next/headers";
 import { broadcastEvent } from "@/lib/sse";
 import { ensureManager } from "./auth-actions";
 import { getCachedPlats, getCachedRestaurant } from "./cache";
@@ -12,6 +13,42 @@ import { uploadImageToSupabase } from "./supabase-storage";
 import { notifyOrderReady, sendDigitalReceipt, sendWhatsAppTemplate } from "./whatsapp-service";
 import { LoyaltyService } from "./loyalty-service";
 import { validateUploadFile } from "./upload-validator";
+
+// --- SÉCURITÉ: Rate Limiter en mémoire pour les Server Actions publiques ---
+const actionRateLimitMap = new Map<string, { count: number; lastRequest: number }>();
+let lastActionCleanup = Date.now();
+
+function checkActionRateLimit(ip: string): boolean {
+  const now = Date.now();
+  if (now - lastActionCleanup > 5 * 60 * 1000) {
+    lastActionCleanup = now;
+    // Nettoyer vieilles entrées (> 2 mins)
+    for (const [key, record] of Array.from(actionRateLimitMap.entries())) {
+      if (now - record.lastRequest > 2 * 60 * 1000) {
+        actionRateLimitMap.delete(key);
+      }
+    }
+  }
+
+  const windowMs = 2 * 60 * 1000; // 2 minutes
+  const maxAttempts = 3; // 3 commandes max par IP toutes les 2 minutes
+
+  const record = actionRateLimitMap.get(ip);
+  if (!record) {
+    actionRateLimitMap.set(ip, { count: 1, lastRequest: now });
+    return false;
+  }
+
+  if (now - record.lastRequest > windowMs) {
+    record.count = 1;
+    record.lastRequest = now;
+    return false;
+  }
+
+  record.count++;
+  record.lastRequest = now;
+  return record.count > maxAttempts;
+}
 
 // Utilitaire de diffusion Temps Réel (SSE)
 function broadcastToAll(type: string, data: Record<string, unknown> = {}) {
@@ -288,6 +325,29 @@ export async function createCommande(data: {
   try {
     const restaurantId = data.restaurantId;
     if (!restaurantId) throw new Error("Restaurant ID requis");
+
+    // SÉCURITÉ B0: Rate Limiting
+    const headersList = headers();
+    const fallbackIp = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'anonymous_action';
+    const clientIp = fallbackIp.split(',')[0].trim();
+    if (checkActionRateLimit(clientIp)) {
+      console.warn(`[Anti-Bot] Blocage d'une création abusive de commande pour l'IP : ${clientIp}`);
+      return { success: false, error: "Trop de commandes récentes. Veuillez patienter 2 minutes avant de ré-essayer." };
+    }
+
+    // SÉCURITÉ B0.5: Validation Stricte des entrées (Anti-Spam / Payload trop lourd)
+    if (!data.cartItems || !Array.isArray(data.cartItems) || data.cartItems.length === 0) {
+      return { success: false, error: "Le panier est vide ou invalide." };
+    }
+    if (data.cartItems.length > 50) {
+      return { success: false, error: "Limite de 50 articles par commande atteinte." };
+    }
+    if (data.customerName && data.customerName.length > 100) {
+      return { success: false, error: "Le nom du client est trop long." };
+    }
+    if (data.notes && data.notes.length > 500) {
+      return { success: false, error: "Les notes sont trop longues (max 500 caractères)." };
+    }
 
     // SÉCURITÉ B2 : Vérifier le statut d'abonnement du restaurant
     const restoProfile = await prisma.restaurant.findUnique({

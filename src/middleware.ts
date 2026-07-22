@@ -4,6 +4,7 @@ import { decrypt } from '@/lib/jwt';
 
 // --- CONFIGURATION DU RATE LIMITING ---
 const rateLimitMap = new Map<string, { count: number; lastRequest: number }>();
+const globalRateLimitMap = new Map<string, { count: number; lastRequest: number }>();
 
 // SÉCURITÉ : Nettoyage périodique pour éviter la fuite mémoire
 const CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -20,11 +21,15 @@ function cleanupRateLimitMap() {
       rateLimitMap.delete(ip);
     }
   }
+  for (const [ip, record] of Array.from(globalRateLimitMap.entries())) {
+    if (now - record.lastRequest > windowMs * 2) {
+      globalRateLimitMap.delete(ip);
+    }
+  }
   
   // Sécurité : limite absolue de la Map pour éviter les abus
-  if (rateLimitMap.size > 10000) {
-    rateLimitMap.clear();
-  }
+  if (rateLimitMap.size > 10000) rateLimitMap.clear();
+  if (globalRateLimitMap.size > 10000) globalRateLimitMap.clear();
 }
 
 function isRateLimited(ip: string) {
@@ -53,6 +58,32 @@ function isRateLimited(ip: string) {
   return false;
 }
 
+function isGlobalRateLimited(ip: string) {
+  cleanupRateLimitMap();
+  
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxAttempts = 60; // 60 requêtes POST globales par minute
+
+  const record = globalRateLimitMap.get(ip);
+  if (!record) {
+    globalRateLimitMap.set(ip, { count: 1, lastRequest: now });
+    return false;
+  }
+
+  if (now - record.lastRequest > windowMs) {
+    record.count = 1;
+    record.lastRequest = now;
+    return false;
+  }
+
+  record.count++;
+  if (record.count > maxAttempts) {
+    return true;
+  }
+  return false;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'anonymous';
@@ -62,6 +93,16 @@ export async function middleware(request: NextRequest) {
     if (isRateLimited(ip)) {
       return new NextResponse(
         JSON.stringify({ success: false, error: "Trop de tentatives. Réessayez dans 1 minute." }),
+        { status: 429, headers: { 'content-type': 'application/json' } }
+      );
+    }
+  }
+
+  // 1.5 PROTECTION GLOBALE SUR LES AUTRES REQUÊTES POST
+  if (!pathname.includes('/login') && request.method === 'POST') {
+    if (isGlobalRateLimited(ip)) {
+      return new NextResponse(
+        JSON.stringify({ success: false, error: "Trop de requêtes. Veuillez ralentir." }),
         { status: 429, headers: { 'content-type': 'application/json' } }
       );
     }
