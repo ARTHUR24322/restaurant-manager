@@ -1,6 +1,6 @@
 "use client"
 /* eslint-disable @next/next/no-img-element */
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -284,7 +284,7 @@ export default function ServicePage({ searchParams }: { searchParams: { resto_id
               <div className="space-y-4">
                 {orders.filter(o => o.paiementStatus === 'PAYMENT_REQUESTED').length === 0 ? (
                   <div className="text-center py-20 text-zinc-600 italic font-bold">
-                    Aucune demande d'encaissement en cours.
+                    Aucune demande d&apos;encaissement en cours.
                   </div>
                 ) : (
                   orders.filter(o => o.paiementStatus === 'PAYMENT_REQUESTED').map(order => (
