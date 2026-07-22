@@ -1,35 +1,38 @@
-# Migration du flux de connexion Employé vers la page Sélection
+# Amélioration du Service en Salle : Encaissements et Fidélité
 
-L'objectif est de supprimer la page `/manager/employe-pin` et de centraliser toute la logique de connexion des employés (vérification du PIN, journalisation des connexions et ouverture de caisse) directement dans la page `/manager/selection` qui sert de Portail Opérationnel.
+Dans votre demande, vous avez évoqué deux points très importants concernant le rôle du serveur :
 
-## User Review Required
+1. **Le numéro de client pour les points de fidélité.**
+   - *Statut* : **Déjà intégré !** 🎉 Lors de la conception de la page tout à l'heure, j'ai anticipé ce besoin : si vous regardez le formulaire de commande, sous l'endroit où l'on entre le nom du client, il y a un champ "Téléphone (facultatif)". Si le serveur le remplit, les points de fidélité seront automatiquement attribués dès que la table paiera sa facture finale.
 
-> [!IMPORTANT]
-> Les codes PIN des employés (créés dans la gestion d'équipe) peuvent comporter entre 4 et 6 chiffres. 
-> Actuellement, le composant `PinInput` utilisé sur la page sélection valide automatiquement à 6 chiffres. Il devra être mis à jour pour accepter une validation manuelle.
+2. **La Caisse envoie une demande au serveur pour aller encaisser l'argent sur une table déjà servie.**
+   - *Statut* : À implémenter. Actuellement l'interface du serveur lui permet uniquement d'envoyer de *nouvelles* commandes, pas de gérer celles déjà servies.
 
-## Proposed Changes
+## Choix d'Implémentation Confirmé
 
-### 1. Intégration de la logique métier dans la page Sélection
-#### [MODIFY] [selection/page.tsx](file:///c:/Users/Administrateur/Scanrestau/smartresto/src/app/manager/selection/page.tsx)
-- **Choix du rôle** : Lorsqu'un utilisateur clique sur n'importe quelle carte (`Réception & Caisse`, `Cuisine & Préparation`, etc.), le système ne redirigera plus immédiatement. Il ouvrira la modale de code PIN et mémorisera la destination (le rôle).
-- **Vérification Employé** : Le code PIN sera vérifié via `loginEmployeByPin`. 
-- **Contrôle de conformité** : Si l'employé qui s'est connecté n'a pas le droit d'accéder à ce pôle (ex: Un cuisinier veut ouvrir la caisse), nous afficherons une erreur claire.
-- **Journalisation** : Si le PIN est valide, l'action sera tracée (`logEmployeConnection`).
-- **Gestion de Caisse (Shift)** : Si l'utilisateur clique sur *Réception & Caisse* ou *Gestion & Stratégie*, la modale "Ouverture de Caisse" (Fonds Initial) apparaîtra après le PIN, exactement comme c'était prévu sur l'ancienne page.
+Vous avez confirmé que **C'est la caissière qui valide le paiement** sur sa machine, après que le serveur a récupéré l'argent à la table.
 
-### 2. Adaptation du clavier numérique
-#### [MODIFY] [PinInput.tsx](file:///c:/Users/Administrateur/Scanrestau/smartresto/src/components/manager/PinInput.tsx)
-- Ajout d'un bouton de validation explicite (Bouton "Valider" ou icône "Entrée") pour prendre en charge les PIN à 4 ou 5 chiffres, car le système bloquait (à juste titre pour le global admin, mais plus maintenant pour les employés) la validation tant qu'on n'entrait pas 6 chiffres.
+## Proposed Changes pour le point 2 (La caissière valide)
 
-### 3. Suppression de la page redondante
-#### [DELETE] [employe-pin/page.tsx](file:///c:/Users/Administrateur/Scanrestau/smartresto/src/app/manager/employe-pin/page.tsx)
-- Cette page sera effacée du projet.
+1. **Modification des Types (`src/types/index.ts`)** : 
+   - Ajout d'un nouveau statut de paiement `PAYMENT_REQUESTED` (ou similaire) pour indiquer que la caisse demande l'encaissement.
 
-## Open Questions
+2. **Modification de la Caisse (`caisse/page.tsx`)** : 
+   - Ajout d'un bouton "Déléguer encaissement au serveur" sur les commandes `UNPAID` et (optionnellement) servies.
+   - Ce bouton changera le statut de paiement en `PAYMENT_REQUESTED`.
+   - La caissière gardera le bouton final "Valider le paiement" pour clôturer définitivement la commande une fois que le serveur lui remet l'argent, passant la commande en `PAID_CASH` ou `PAID_MOBILE`.
 
-> [!WARNING]
-> La carte **"Gestion Boutique"** ne correspond pas directement à un rôle classique (CAISSIER, CUISINIER) dans la base de données. Autorisez-vous uniquement les `MANAGER` à y accéder, ou aussi les `CAISSIER` ?
+3. **Modification de la page Serveur (`service/page.tsx`)** : 
+   - Ajout d'un onglet ou d'une section "Encaissements Demandés".
+   - Le serveur y verra les commandes marquées `PAYMENT_REQUESTED`.
+   - Il pourra voir le montant à encaisser et la table concernée.
+   - (Optionnel) Il peut y avoir un bouton "Argent récupéré" pour que la commande disparaisse de sa liste, ou simplement la commande disparaît quand la caissière valide. Nous ferons en sorte que le serveur voie la demande jusqu'à ce que la caissière la valide, ou lui permettre de l'acquitter.
 
-> [!WARNING]
-> La carte **"Gestion & Stratégie"** (Dashboard d'administration) vérifie actuellement un autre type de PIN global propre au propriétaire global . Dois-je conserver la vérification globale du propriétaire pour cette carte, ou tout vérifier via les PIN des vrais `Employés` (avec rôle `MANAGER`) de la base de données ?
+## Verification Plan
+
+### Automated Tests
+- Test de bout en bout du flux : Création de la commande -> Cuisine -> Servie -> Caissière demande encaissement -> Serveur voit la demande -> Caissière valide le paiement.
+- Vérification que la base de données met à jour correctement les statuts.
+
+### Manual Verification
+- S'assurer que les interfaces de la caisse et du serveur se mettent à jour en temps réel (ou au rafraîchissement) pour ce nouveau flux.

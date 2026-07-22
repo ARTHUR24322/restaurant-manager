@@ -4,7 +4,7 @@ export type Categorie = "ENTREE" | "PLAT" | "DESSERT" | "JUS" | "VIN" | "BIERE" 
 // SUBMITTED (Attente Caisse) -> PREPARING (En Cuisine) -> READY (Prêt à servir) -> COMPLETED (Payé/Clôturé) | CANCELLED (Annulé)
 export type CommandeStatut = "SUBMITTED" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
 
-export type PaiementStatut = "UNPAID" | "PAID_CASH" | "PAID_MOBILE";
+export type PaiementStatut = "UNPAID" | "PAID_CASH" | "PAID_MOBILE" | "PAYMENT_REQUESTED";
 
 export interface Option {
   id: string;

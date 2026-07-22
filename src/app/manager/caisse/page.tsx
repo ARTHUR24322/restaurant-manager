@@ -7,7 +7,8 @@ import {
   getRecentCommandes, 
   updateOrderStatus,
   confirmOrderPayment,
-  cancelOrder
+  cancelOrder,
+  requestPaymentByWaiter
 } from "@/lib/actions";
 import { getRestaurantById } from "@/lib/admin-actions";
 import { 
@@ -161,6 +162,26 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
         const res = await updateOrderStatus(id, "PREPARING");
         if (res.success) {
           toast.success("Commande envoyée en cuisine !");
+          fetchOrders(restaurantId);
+        }
+        setActionLoading(false);
+        setModalConfig(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
+  const handleDelegationRequest = (id: string, table: string) => {
+    setModalConfig({
+      show: true,
+      title: "Déléguer Encaissement",
+      message: `Voulez-vous demander au serveur d'encaisser la Table ${table} ?`,
+      confirmLabel: "Demander au serveur",
+      variant: "info",
+      onConfirm: async () => {
+        setActionLoading(true);
+        const res = await requestPaymentByWaiter(id);
+        if (res.success) {
+          toast.success("Demande envoyée au serveur !");
           fetchOrders(restaurantId);
         }
         setActionLoading(false);
@@ -328,7 +349,7 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between bg-zinc-950 p-6 rounded-3xl border border-zinc-800">
+                    <div className="flex items-center justify-between bg-zinc-950 p-6 rounded-3xl border border-zinc-800 mb-4">
                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Total Facturé</span>
                        <div className="flex flex-col items-end">
                           <span className="text-3xl font-black text-white italic tracking-tighter">${order.totalUsd.toFixed(2)}</span>
@@ -341,6 +362,21 @@ export default function CaissePage({ searchParams }: { searchParams: { resto_id?
                           </button>
                        </div>
                     </div>
+
+                    {(order as any).paiementStatus === 'PAYMENT_REQUESTED' ? (
+                      <div className="bg-orange-500/10 px-4 py-3 rounded-2xl border border-orange-500/20 mb-4 flex items-center justify-center gap-2">
+                        <Send className="w-4 h-4 text-orange-500" />
+                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest text-center">Encaissement demandé au serveur</span>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => handleDelegationRequest(order.id, order.table)}
+                        className="w-full mb-4 flex items-center justify-center gap-3 bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-[2rem] transition-all active:scale-95 text-[10px] uppercase tracking-widest shadow-xl shadow-orange-900/40"
+                      >
+                        <Send className="w-4 h-4" />
+                        Demander encaissement au serveur
+                      </button>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                        <button 

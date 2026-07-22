@@ -283,6 +283,7 @@ export async function createCommande(data: {
   totalUsd: number;
   restaurantId?: string;
   promoRewardId?: string;
+  forceStatus?: string;
 }) {
   try {
     const restaurantId = data.restaurantId;
@@ -353,7 +354,7 @@ export async function createCommande(data: {
         noteSpeciale: data.notes,
         totalUsd: calculatedTotal, 
         tauxChange: exchangeRate,
-        statut: data.tableNumber === "EN LIGNE" ? "PENDING_BOUTIQUE" : "SUBMITTED",
+        statut: data.forceStatus || (data.tableNumber === "EN LIGNE" ? "PENDING_BOUTIQUE" : "SUBMITTED"),
         paiementStatus: "UNPAID",
         restaurantId: restaurantId,
         items: {
@@ -594,6 +595,36 @@ export async function markDelivered(orderId: string) {
     return { success: true };
   } catch (error) {
     console.error("Error marking delivered:", error);
+    return { success: false };
+  }
+}
+
+export async function requestPaymentByWaiter(orderId: string) {
+  try {
+    const order = await prisma.commande.findUnique({
+      where: { id: orderId },
+      select: { restaurantId: true, statut: true, id: true }
+    });
+
+    if (!order) throw new Error("Commande introuvable");
+    
+    // Vérification de l'autorisation
+    await ensureManager(order.restaurantId);
+
+    await prisma.commande.update({
+      where: { id: orderId },
+      data: { paiementStatus: "PAYMENT_REQUESTED" }
+    });
+
+    broadcastToAll("status-updated", { orderId, newStatus: "PAYMENT_REQUESTED", restaurantId: order.restaurantId });
+    
+    revalidatePath("/manager/dashboard");
+    revalidatePath("/manager/caisse");
+    revalidatePath("/manager/service");
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error requesting waiter payment:", error);
     return { success: false };
   }
 }
