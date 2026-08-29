@@ -8,7 +8,6 @@ import { type Commande } from "@/types";
  * Auto-prints and auto-closes. The main page is never affected.
  */
 
-
 const PAPER_WIDTH = "80mm";
 
 interface PrinterItem {
@@ -16,6 +15,19 @@ interface PrinterItem {
   plat?: { nom?: string; prixUsd?: number | string };
   selectedOptions?: { detail?: string[] };
   options?: string;
+}
+
+/**
+ * SÉCURITÉ XSS : Échappement des caractères spéciaux HTML
+ */
+function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function openPrintWindow(htmlContent: string) {
@@ -131,26 +143,32 @@ function formatCurrency(amount: number): string {
 
 export function printReceipt(order: Commande, restaurantName: string = "SmartResto", telephone: string = "") {
   const taux = order.tauxChange || 2800;
+  const safeRestoName = escapeHtml(restaurantName);
+  const safeTelephone = escapeHtml(telephone);
+  const safeTable = escapeHtml(order.table || "—");
+
   const itemsHtml = (order as any).items?.map((item: PrinterItem) => {
+    const quantite = escapeHtml(item.quantite);
+    const nom = escapeHtml(item.plat?.nom || "Article");
     return `
     <div class="item-row">
-      <div class="item-name"><span class="bold">${item.quantite}x</span> ${(String(item.plat?.nom || "Article")).toUpperCase()}</div>
+      <div class="item-name"><span class="bold">${quantite}x</span> ${nom.toUpperCase()}</div>
       <div class="right">${formatCurrency(Number(item.plat?.prixUsd || 0) * Number(item.quantite))}</div>
     </div>
-  `}).join("") || `<div class="item-row"><div>Dégustation</div><div>${formatCurrency(order.totalUsd)}</div></div>`;
+  `;}).join("") || `<div class="item-row"><div>Dégustation</div><div>${formatCurrency(order.totalUsd)}</div></div>`;
 
-  const orderIdSuffix = order.id ? order.id.toString().slice(-4).toUpperCase() : "0000";
+  const orderIdSuffix = order.id ? escapeHtml(order.id.toString().slice(-4).toUpperCase()) : "0000";
 
   const html = `
     <div class="center" style="margin-bottom: 12px;">
-      <div class="bold big upper" style="letter-spacing: 1px;">${restaurantName}</div>
-      ${telephone ? `<div class="tiny" style="opacity: 0.8;">Tél: ${telephone}</div>` : ""}
+      <div class="bold big upper" style="letter-spacing: 1px;">${safeRestoName}</div>
+      ${safeTelephone ? `<div class="tiny" style="opacity: 0.8;">Tél: ${safeTelephone}</div>` : ""}
       <div class="small" style="margin-top: 4px; border: 1px solid #000; display: inline-block; padding: 2px 8px; border-radius: 4px;">RECEIPT</div>
       <div class="tiny" style="margin-top: 4px;">${formatDate()}</div>
     </div>
 
     <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 8px;">
-      <span>Table: <span class="bold">${order.table || "—"}</span></span>
+      <span>Table: <span class="bold">${safeTable}</span></span>
       <span>Ticket: <span class="bold">#${orderIdSuffix}</span></span>
     </div>
 
@@ -194,8 +212,12 @@ export function printReceipt(order: Commande, restaurantName: string = "SmartRes
 // ─── KITCHEN TICKET (Cuisine) ────────────────────────────────────
 
 export function printKitchenTicket(order: Commande) {
+  const safeClient = escapeHtml(order.client || "—");
+  const safeTable = escapeHtml(order.table || "—");
+  const safeNote = order.noteSpeciale ? escapeHtml(order.noteSpeciale) : "";
+
   const itemsHtml = (order as any).items?.map((item: PrinterItem) => {
-    let opts = [];
+    let opts: string[] = [];
     if (item.selectedOptions?.detail) {
       opts = item.selectedOptions.detail;
     } else if (item.options) {
@@ -205,12 +227,15 @@ export function printKitchenTicket(order: Commande) {
       } catch { }
     }
     
-    const optsHtml = opts.length > 0 ? `<div class="tiny" style="margin-left: 38px; margin-bottom: 4px; font-style: italic;">- ${opts.join(", ")}</div>` : "";
+    const safeOpts = opts.map(opt => escapeHtml(opt));
+    const optsHtml = safeOpts.length > 0 ? `<div class="tiny" style="margin-left: 38px; margin-bottom: 4px; font-style: italic;">- ${safeOpts.join(", ")}</div>` : "";
+    const quantite = escapeHtml(item.quantite);
+    const nom = escapeHtml(item.plat?.nom || "Article");
 
     return `
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-        <span class="bold" style="font-size: 18px; min-width: 30px;">${item.quantite}x</span>
-        <span class="bold upper" style="font-size: 15px;">${item.plat?.nom || "Article"}</span>
+        <span class="bold" style="font-size: 18px; min-width: 30px;">${quantite}x</span>
+        <span class="bold upper" style="font-size: 15px;">${nom}</span>
       </div>
       ${optsHtml}
     `;
@@ -223,14 +248,14 @@ export function printKitchenTicket(order: Commande) {
 
     <div class="center" style="margin-bottom: 12px;">
       <div class="tiny upper" style="color: #666; letter-spacing: 2px;">Client</div>
-      <div class="bold" style="font-size: 20px; text-transform: uppercase;">${order.client || "—"}</div>
+      <div class="bold" style="font-size: 20px; text-transform: uppercase;">${safeClient}</div>
     </div>
 
     <div class="separator"></div>
 
     <div class="center" style="margin-bottom: 12px;">
       <div class="tiny upper" style="color: #666; letter-spacing: 2px;">Table / N°</div>
-      <div class="bold" style="font-size: 36px;">${order.table || "—"}</div>
+      <div class="bold" style="font-size: 36px;">${safeTable}</div>
     </div>
 
     <div class="separator"></div>
@@ -240,11 +265,11 @@ export function printKitchenTicket(order: Commande) {
       ${itemsHtml}
     </div>
 
-    ${order.noteSpeciale ? `
+    ${safeNote ? `
     <div class="separator"></div>
     <div style="margin-bottom: 8px;">
       <div class="tiny upper bold" style="color: #666; letter-spacing: 2px; margin-bottom: 4px;">Note spéciale</div>
-      <div class="small" style="font-style: italic;">"${order.noteSpeciale}"</div>
+      <div class="small" style="font-style: italic;">"${safeNote}"</div>
     </div>
     ` : ""}
 
@@ -262,9 +287,13 @@ export function printKitchenTicket(order: Commande) {
 export function printInvoice(order: Commande, restaurantName: string = "SmartResto", telephone: string = "") {
   const tva = order.totalUsd * 0.16;
   const totalCdf = order.totalUsd * (order.tauxChange || 2800);
+  const safeRestoName = escapeHtml(restaurantName);
+  const safeTelephone = escapeHtml(telephone);
+  const safeTable = escapeHtml(order.table || "—");
+  const safeClient = escapeHtml(order.client || "—");
 
   const itemsHtml = (order as any).items?.map((item: PrinterItem) => {
-    let opts = [];
+    let opts: string[] = [];
     if (item.selectedOptions?.detail) {
       opts = item.selectedOptions.detail;
     } else if (item.options) {
@@ -274,23 +303,26 @@ export function printInvoice(order: Commande, restaurantName: string = "SmartRes
       } catch { }
     }
     
-    const optsHtml = opts.length > 0 ? `<div class="tiny" style="margin-left: 4px; font-style: italic; margin-bottom: 4px;">- ${opts.join(", ")}</div>` : "";
+    const safeOpts = opts.map(opt => escapeHtml(opt));
+    const optsHtml = safeOpts.length > 0 ? `<div class="tiny" style="margin-left: 4px; font-style: italic; margin-bottom: 4px;">- ${safeOpts.join(", ")}</div>` : "";
+    const quantite = escapeHtml(item.quantite);
+    const nom = escapeHtml(item.plat?.nom || "Article");
 
     return `
       <div class="item-row">
-        <div class="item-name">${item.quantite}x ${item.plat?.nom || "Article"}</div>
+        <div class="item-name">${quantite}x ${nom}</div>
         <div class="right">${formatCurrency(Number(item.plat?.prixUsd || 0) * Number(item.quantite))}</div>
       </div>
       ${optsHtml}
     `;
   }).join("") || `<div class="item-row"><div>Dégustation (Global)</div><div>${formatCurrency(order.totalUsd)}</div></div>`;
 
-  const orderIdSuffix = order.id ? order.id.slice(-6).toUpperCase() : "INV-0000";
+  const orderIdSuffix = order.id ? escapeHtml(order.id.slice(-6).toUpperCase()) : "INV-0000";
 
   const html = `
     <div class="center" style="margin-bottom: 15px;">
-      <div class="bold big upper" style="font-size: 20px; letter-spacing: -0.5px;">${restaurantName}</div>
-      ${telephone ? `<div class="small bold">SERVICE CLIENT : ${telephone}</div>` : ""}
+      <div class="bold big upper" style="font-size: 20px; letter-spacing: -0.5px;">${safeRestoName}</div>
+      ${safeTelephone ? `<div class="small bold">SERVICE CLIENT : ${safeTelephone}</div>` : ""}
       <div class="tiny uppercase" style="letter-spacing: 1px; margin-top: 4px; opacity: 0.6;">Facture Officielle</div>
     </div>
 
@@ -300,8 +332,8 @@ export function printInvoice(order: Commande, restaurantName: string = "SmartRes
 
     <div style="margin-bottom: 12px; font-size: 11px;">
       <div class="row"><span>DATE :</span><span>${formatDate()}</span></div>
-      <div class="row"><span>TABLE :</span><span class="bold big">${order.table || "—"}</span></div>
-      <div class="row"><span>CLIENT :</span><span class="upper">${order.client || "—"}</span></div>
+      <div class="row"><span>TABLE :</span><span class="bold big">${safeTable}</span></div>
+      <div class="row"><span>CLIENT :</span><span class="upper">${safeClient}</span></div>
     </div>
 
     <div style="border-top: 2px solid #000; border-bottom: 1px solid #000; padding: 8px 0; margin-bottom: 8px;">

@@ -3,6 +3,8 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { hashPassword, comparePassword } from "./auth";
+import { ensureManager } from "./auth-actions";
 
 // ============================================================
 // CRUD EMPLOYÉS
@@ -10,8 +12,18 @@ import { revalidatePath } from "next/cache";
 
 export async function getEmployes(restaurantId: string) {
   try {
+    await ensureManager(restaurantId);
     const employes = await prisma.employe.findMany({
       where: { restaurantId },
+      select: {
+        id: true,
+        nom: true,
+        role: true,
+        actif: true,
+        restaurantId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: [{ actif: "desc" }, { nom: "asc" }],
     });
     return { success: true, employes };
@@ -28,6 +40,8 @@ export async function createEmploye(data: {
   role: "MANAGER" | "CAISSIER" | "CUISINIER" | "SERVEUR" | "LIVREUR";
 }) {
   try {
+    await ensureManager(data.restaurantId);
+
     if (!data.nom || data.nom.trim().length < 2) {
       return { success: false, error: "Le nom doit faire au moins 2 caractères." };
     }
@@ -36,22 +50,43 @@ export async function createEmploye(data: {
     }
 
     // Vérifier si le PIN est déjà utilisé dans ce restaurant
-    const existing = await prisma.employe.findFirst({
-      where: { restaurantId: data.restaurantId, codePin: data.codePin },
+    const allEmployees = await prisma.employe.findMany({
+      where: { restaurantId: data.restaurantId },
+      select: { id: true, codePin: true }
     });
-    if (existing) {
-      return { success: false, error: "Ce code PIN est déjà utilisé par un autre employé." };
+
+    for (const emp of allEmployees) {
+      let isSame = false;
+      if (emp.codePin.startsWith("$2a$") || emp.codePin.startsWith("$2b$")) {
+        isSame = await comparePassword(data.codePin, emp.codePin);
+      } else {
+        isSame = (emp.codePin === data.codePin);
+      }
+      if (isSame) {
+        return { success: false, error: "Ce code PIN est déjà utilisé par un autre employé." };
+      }
     }
+
+    const hashedPin = await hashPassword(data.codePin);
 
     const employe = await prisma.employe.create({
       data: {
         nom: data.nom.trim(),
-        codePin: data.codePin,
+        codePin: hashedPin,
         role: data.role,
         restaurantId: data.restaurantId,
         actif: true,
       },
+      select: {
+        id: true,
+        nom: true,
+        role: true,
+        restaurantId: true,
+        actif: true,
+        createdAt: true,
+      }
     });
+
     revalidatePath("/manager/equipe");
     return { success: true, employe };
   } catch (e) {
@@ -70,28 +105,60 @@ export async function updateEmploye(
   }
 ) {
   try {
+    const existingEmp = await prisma.employe.findUnique({ where: { id } });
+    if (!existingEmp) {
+      return { success: false, error: "Employé introuvable." };
+    }
+
+    await ensureManager(existingEmp.restaurantId);
+
     if (data.codePin && !/^\d{4,6}$/.test(data.codePin)) {
       return { success: false, error: "Le code PIN doit être de 4 à 6 chiffres." };
     }
 
+    const updateData: any = {};
+    if (data.nom !== undefined) updateData.nom = data.nom.trim();
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.actif !== undefined) updateData.actif = data.actif;
+
     // Vérifier si le nouveau PIN est déjà pris par un autre employé du même restaurant
     if (data.codePin) {
-      const employe = await prisma.employe.findUnique({ where: { id } });
-      if (employe) {
-        const conflict = await prisma.employe.findFirst({
-          where: {
-            restaurantId: employe.restaurantId,
-            codePin: data.codePin,
-            id: { not: id },
-          },
-        });
-        if (conflict) {
+      const otherEmployees = await prisma.employe.findMany({
+        where: {
+          restaurantId: existingEmp.restaurantId,
+          id: { not: id },
+        },
+        select: { id: true, codePin: true }
+      });
+
+      for (const other of otherEmployees) {
+        let isConflict = false;
+        if (other.codePin.startsWith("$2a$") || other.codePin.startsWith("$2b$")) {
+          isConflict = await comparePassword(data.codePin, other.codePin);
+        } else {
+          isConflict = (other.codePin === data.codePin);
+        }
+        if (isConflict) {
           return { success: false, error: "Ce code PIN est déjà utilisé par un autre employé." };
         }
       }
+
+      updateData.codePin = await hashPassword(data.codePin);
     }
 
-    const updated = await prisma.employe.update({ where: { id }, data });
+    const updated = await prisma.employe.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        nom: true,
+        role: true,
+        restaurantId: true,
+        actif: true,
+        updatedAt: true,
+      }
+    });
+
     revalidatePath("/manager/equipe");
     return { success: true, employe: updated };
   } catch (e) {
@@ -102,6 +169,13 @@ export async function updateEmploye(
 
 export async function deleteEmploye(id: string) {
   try {
+    const existingEmp = await prisma.employe.findUnique({ where: { id } });
+    if (!existingEmp) {
+      return { success: false, error: "Employé introuvable." };
+    }
+
+    await ensureManager(existingEmp.restaurantId);
+
     await prisma.employe.delete({ where: { id } });
     revalidatePath("/manager/equipe");
     return { success: true };
@@ -117,13 +191,45 @@ export async function deleteEmploye(id: string) {
 
 export async function loginEmployeByPin(restaurantId: string, codePin: string) {
   try {
-    const employe = await prisma.employe.findFirst({
-      where: { restaurantId, codePin, actif: true },
+    const employes = await prisma.employe.findMany({
+      where: { restaurantId, actif: true },
     });
-    if (!employe) {
+
+    let matchedEmploye: typeof employes[0] | null = null;
+
+    for (const emp of employes) {
+      if (emp.codePin.startsWith("$2a$") || emp.codePin.startsWith("$2b$")) {
+        const isMatch = await comparePassword(codePin, emp.codePin);
+        if (isMatch) {
+          matchedEmploye = emp;
+          break;
+        }
+      } else if (emp.codePin === codePin) {
+        // Rétrocompatibilité : PIN legacy en clair. On le valide et on le migre automatiquement en bcrypt.
+        matchedEmploye = emp;
+        const hashed = await hashPassword(codePin);
+        await prisma.employe.update({
+          where: { id: emp.id },
+          data: { codePin: hashed }
+        }).catch((err) => console.warn("[Employe] Auto-rehashing failed:", err));
+        break;
+      }
+    }
+
+    if (!matchedEmploye) {
       return { success: false, error: "Code PIN incorrect ou employé inactif." };
     }
-    return { success: true, employe };
+
+    return {
+      success: true,
+      employe: {
+        id: matchedEmploye.id,
+        nom: matchedEmploye.nom,
+        role: matchedEmploye.role,
+        restaurantId: matchedEmploye.restaurantId,
+        actif: matchedEmploye.actif,
+      }
+    };
   } catch (e) {
     console.error("[Employe] loginEmployeByPin:", e);
     return { success: false, error: "Erreur serveur." };
@@ -153,6 +259,8 @@ export async function logEmployeConnection(restaurantId: string, employeId: stri
 
 export async function ouvrirShift(restaurantId: string, employeId: string, fondsInitial: number) {
   try {
+    await ensureManager(restaurantId);
+
     // Vérifier qu'il n'y a pas un shift ouvert pour cet employé aujourd'hui
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -186,6 +294,16 @@ export async function ouvrirShift(restaurantId: string, employeId: string, fonds
 
 export async function fermerShift(shiftId: string, fondsFinal: number) {
   try {
+    const currentShift = await prisma.shiftCaisse.findUnique({
+      where: { id: shiftId }
+    });
+
+    if (!currentShift) {
+      return { success: false, error: "Shift introuvable." };
+    }
+
+    await ensureManager(currentShift.restaurantId);
+
     const shift = await prisma.shiftCaisse.update({
       where: { id: shiftId },
       data: {
@@ -202,6 +320,8 @@ export async function fermerShift(shiftId: string, fondsFinal: number) {
 
 export async function getShiftActif(restaurantId: string, employeId: string) {
   try {
+    await ensureManager(restaurantId);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const shift = await prisma.shiftCaisse.findFirst({
@@ -221,6 +341,8 @@ export async function getShiftActif(restaurantId: string, employeId: string) {
 
 export async function getShiftsJour(restaurantId: string, date?: Date) {
   try {
+    await ensureManager(restaurantId);
+
     const target = date ? new Date(date) : new Date();
     target.setHours(0, 0, 0, 0);
     const endOfDay = new Date(target);
@@ -248,6 +370,8 @@ export async function getShiftsJour(restaurantId: string, date?: Date) {
 
 export async function getStatsEmployes(restaurantId: string, periode: "day" | "week" | "month" = "day") {
   try {
+    await ensureManager(restaurantId);
+
     const now = new Date();
     const startDate = new Date();
 

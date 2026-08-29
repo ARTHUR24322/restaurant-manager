@@ -1,10 +1,13 @@
 "use server";
 
 import { prisma } from "./prisma";
+import { ensureManager } from "./auth-actions";
 
 export async function getMultiSiteStats(restoId: string) {
   try {
     if (!restoId) return [];
+
+    await ensureManager(restoId);
 
     // Trouver le restaurant demandé
     const target = await prisma.restaurant.findUnique({
@@ -85,6 +88,8 @@ export async function getMultiSiteStats(restoId: string) {
 
 export async function verifyEstablishmentPin(restoId: string, pin: string) {
   try {
+    await ensureManager(restoId);
+
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: restoId },
       select: { pinCode: true }
@@ -109,6 +114,18 @@ export async function updateChildPin(childId: string, newPin: string) {
       return { success: false, error: "Le PIN doit faire exactement 6 chiffres." };
     }
 
+    const child = await prisma.restaurant.findUnique({
+      where: { id: childId },
+      select: { id: true, parentId: true }
+    });
+
+    if (!child) {
+      return { success: false, error: "Établissement introuvable." };
+    }
+
+    // Vérifier l'autorisation sur l'établissement parent (ou l'enfant lui-même)
+    await ensureManager(child.parentId ?? child.id);
+
     await prisma.restaurant.update({
       where: { id: childId },
       data: { pinCode: newPin }
@@ -123,8 +140,18 @@ export async function updateChildPin(childId: string, newPin: string) {
 
 export async function toggleChildStatus(childId: string, active: boolean) {
   try {
-    // Note: Dans un environnement de production, on vérifierait ici que 
-    // le restoId de la session est bien la MÈRE de ce childId.
+    const child = await prisma.restaurant.findUnique({
+      where: { id: childId },
+      select: { id: true, parentId: true }
+    });
+
+    if (!child) {
+      return { success: false, error: "Établissement introuvable." };
+    }
+
+    // Vérifier l'autorisation sur l'établissement parent (ou l'enfant lui-même)
+    await ensureManager(child.parentId ?? child.id);
+
     await prisma.restaurant.update({
       where: { id: childId },
       data: { active }

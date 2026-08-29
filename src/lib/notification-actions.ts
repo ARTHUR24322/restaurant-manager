@@ -3,9 +3,11 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { ensureManager } from "./auth-actions";
 
 export async function getNotifications(restaurantId: string) {
   try {
+    await ensureManager(restaurantId);
     return await prisma.notification.findMany({
       where: { restaurantId },
       orderBy: { createdAt: "desc" },
@@ -19,6 +21,16 @@ export async function getNotifications(restaurantId: string) {
 
 export async function markAsRead(id: string) {
   try {
+    const notif = await prisma.notification.findUnique({
+      where: { id }
+    });
+
+    if (!notif) {
+      return { success: false, error: "Notification introuvable" };
+    }
+
+    await ensureManager(notif.restaurantId);
+
     await prisma.notification.update({
       where: { id },
       data: { read: true }
@@ -26,20 +38,23 @@ export async function markAsRead(id: string) {
     revalidatePath("/manager/dashboard");
     return { success: true };
   } catch (error) {
+    console.error("Error markAsRead:", error);
     return { success: false };
   }
 }
 
 export async function clearAllNotifications(restaurantId: string) {
-    try {
-        await prisma.notification.deleteMany({
-            where: { restaurantId }
-        });
-        revalidatePath("/manager/dashboard");
-        return { success: true };
-    } catch (error) {
-        return { success: false };
-    }
+  try {
+    await ensureManager(restaurantId);
+    await prisma.notification.deleteMany({
+      where: { restaurantId }
+    });
+    revalidatePath("/manager/dashboard");
+    return { success: true };
+  } catch (error) {
+    console.error("Error clearAllNotifications:", error);
+    return { success: false };
+  }
 }
 
 /**

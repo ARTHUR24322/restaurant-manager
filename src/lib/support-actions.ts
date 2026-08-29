@@ -2,6 +2,7 @@
 
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { ensureSuperAdmin } from "./auth-actions";
 
 export async function submitSupportMessage(data: {
   nom: string;
@@ -25,8 +26,6 @@ export async function submitSupportMessage(data: {
       },
     });
 
-    console.log("[Support] Message créé avec succès:", newMessage.id);
-
     revalidatePath("/mokolositekisumbule");
     return { success: true, id: newMessage.id };
   } catch (error) {
@@ -38,12 +37,10 @@ export async function submitSupportMessage(data: {
 
 export async function getAllSupportMessages() {
   try {
-    // Note: ensureSuperAdmin checking is omitted here for simplicity 
-    // but should be added in a real production environment or if used directly in components.
+    await ensureSuperAdmin();
     const messages = await prisma.supportMessage.findMany({
       orderBy: { createdAt: "desc" },
     });
-    console.log(`[Support] ${messages.length} messages récupérés.`);
     return messages;
   } catch (error) {
     console.error("[Support] Erreur fetch:", error);
@@ -52,14 +49,16 @@ export async function getAllSupportMessages() {
 }
 
 export async function markMessageRead(id: string) {
-    try {
-        await prisma.supportMessage.update({
-            where: { id },
-            data: { statut: "LU" }
-        });
-        revalidatePath("/mokolositekisumbule");
-        return { success: true };
-    } catch {
-        return { success: false };
-    }
+  try {
+    await ensureSuperAdmin();
+    await prisma.supportMessage.update({
+      where: { id },
+      data: { statut: "LU" }
+    });
+    revalidatePath("/mokolositekisumbule");
+    return { success: true };
+  } catch (error) {
+    console.error("[Support] Erreur markMessageRead:", error);
+    return { success: false };
+  }
 }

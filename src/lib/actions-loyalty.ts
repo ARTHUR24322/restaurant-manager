@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-"use server"
+"use server";
 
 import { LoyaltyService } from "./loyalty-service";
 import { prisma } from "./prisma";
 import { revalidatePath } from "next/cache";
+import { ensureManager } from "./auth-actions";
 
 // --- ACTIONS POUR LES RESTAURANTS (MANAGER) ---
 
 export async function addToRewardCatalog(restaurantId: string, data: any) {
   try {
+    await ensureManager(restaurantId);
+
     await prisma.rewardCatalog.create({
       data: {
         restaurantId,
@@ -29,13 +32,16 @@ export async function addToRewardCatalog(restaurantId: string, data: any) {
 
 export async function deleteFromRewardCatalog(id: string, restaurantId: string) {
   try {
+    await ensureManager(restaurantId);
+
     await prisma.rewardCatalog.delete({
       where: { id, restaurantId }
     });
     revalidatePath("/manager/loyalty");
     return { success: true };
   } catch (error) {
-    return { success: false };
+    console.error("Error deleting from catalog:", error);
+    return { success: false, error: "Erreur lors de la suppression." };
   }
 }
 
@@ -90,8 +96,11 @@ export async function validateAndApplyPromo(restaurantId: string, promoCode: str
     return { success: false, error: "Erreur serveur." };
   }
 }
+
 export async function redeemRewardAsManager(restaurantId: string, phone: string, catalogId: string) {
   try {
+    await ensureManager(restaurantId);
+
     const reward = await LoyaltyService.redeemReward(phone, restaurantId, catalogId);
     
     // Si c'est un produit, on peut considérer qu'il est donné immédiatement au comptoir
