@@ -297,10 +297,6 @@ function PricingCard({ plan, cycle, onSubscribe }: { plan: PricingPlan; cycle: B
         hover:-translate-y-2
       `}
     >
-      {plan.popular && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
-      )}
-
       <div className="p-8 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-6">
           <div>
